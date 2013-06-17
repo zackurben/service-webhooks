@@ -1,0 +1,13 @@
+{
+    "name": "allplayers/webhooks",
+    "description": "AllPlayers webhooks implementation for external services.",
+    "autoload": {
+        "psr-0": {
+            "AllPlayers\\Webhooks": ""
+        }
+    },
+    "require": {
+        "php" : ">=5.3.2",
+        "guzzle/guzzle": "2.8.8"
+    }
+}
