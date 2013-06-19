@@ -9,6 +9,7 @@ namespace Webhooks;
 
 use Guzzle\Http\Client;
 use Guzzle\Http\Plugin\CurlAuthPlugin;
+use Guzzle\Plugin\Oauth\OauthPlugin;
 
 /**
  * Abstract base class to provide interface common to all plugins.
@@ -64,8 +65,16 @@ class Webhook {
                 $curlauth = new CurlAuthPlugin($this->webhook->auth_data['user'], $this->webhook->auth_data['pass']);
                 $this->client->addSubscriber($curlauth);
                 break;
-            default:
-                // No authentication, do nothing.
+            case 'oauth':
+                $oauth_config = array(
+                    'consumer_key' => $this->webhook->auth_data['consumer_key'],
+                    'consumer_secret' => $this->webhook->auth_data['consumer_secret'],
+                    'token' => $this->webhook->auth_data['token'],
+                    'secret' => $this->webhook->auth_data['secret']
+                );
+                $auth_plugin = new OauthPlugin($oauth_config);
+                $this->client->addSubscriber($auth_plugin);
+                break;
         }
     }
 
@@ -73,6 +82,7 @@ class Webhook {
      * Get webhook object.
      *
      * @return Webhook
+     *   Returns the webhook object.
      */
     public function getWebhook() {
         return $this->webhook;
@@ -82,6 +92,7 @@ class Webhook {
      * Get service client.
      *
      * @return \Guzzle\Http\Client
+     *   Returns the http service client.
      */
     public function getClient() {
         return $this->client;
@@ -94,6 +105,7 @@ class Webhook {
      *   URL to post the message to.
      *
      * @return \Guzzle\Http\Message\Request
+     *   Returns the service request object.
      */
     public function post($url) {
         $this->request = $this->client->post($url, $this->headers);
@@ -113,5 +125,5 @@ class Webhook {
         $this->request->addPostFields($data);
         return $this->request->send();
     }
-
 }
+

@@ -11,5 +11,5 @@ if (!file_exists(dirname(__DIR__) . '/composer.lock')) {
 }
 
 require_once dirname(__DIR__) . '/vendor/autoload.php';
-require_once dirname(__DIR__) .'/Webhooks.php';
+require_once dirname(__DIR__) .'/lib/Webhooks/Webhook.php';
 

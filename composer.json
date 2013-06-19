@@ -1,9 +1,11 @@
 {
     "name": "allplayers/webhooks",
     "description": "AllPlayers webhooks implementation for external services.",
+    "license": "MIT",
+    "type": "library",
     "autoload": {
         "psr-0": {
-            "AllPlayers\\Webhooks": ""
+            "Webhooks": "lib/"
         }
     },
     "require": {
