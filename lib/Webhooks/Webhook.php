@@ -14,40 +14,51 @@ use Guzzle\Plugin\Oauth\OauthPlugin;
 /**
  * Abstract base class to provide interface common to all plugins.
  */
-class Webhook {
-
+class Webhook
+{
     /**
      * Headers that will be sent with each request,
      *
      * @var array
      */
-    protected $headers = NULL;
+    protected $headers = array();
 
     /**
      * The top object of a webhook.
      *
      * @var webhook
      */
-    public $webhook = NULL;
+    public $webhook;
 
     /**
      * The service client object.
      *
      * @var client
      */
-    public $client = NULL;
+    public $client;
 
     /**
      * The request to be sent.
      *
      * @var /Guzzle/Http/Message/Request
      */
-    public $request = NULL;
+    public $request;
 
     /**
      * Initialize webhook.
+     *
+     * @param array $auth_data
+     *   The authentication and paramaters for the request.
+     * @param string $authentication
+     *   The type of authentication to be used in service.
+     * @param string $domain
+     *   The domain of the service.
+     *
+     * @return Webhook
+     *   Returns the webhook object.
      */
-    public function __construct($auth_data = array(), $authentication = 'basic_auth', $domain = '') {
+    public function __construct(array $auth_data = array(), $authentication = 'basic_auth', $domain = '')
+    {
         $this->webhook->domain = $domain;
         $this->webhook->authentication = $authentication;
         $this->webhook->auth_data = $auth_data;
@@ -59,7 +70,8 @@ class Webhook {
     /**
      * Authenticate client.
      */
-    public function authenticate() {
+    public function authenticate()
+    {
         switch ($this->webhook->authentication) {
             case 'basic_auth':
                 $curlauth = new CurlAuthPlugin($this->webhook->auth_data['user'], $this->webhook->auth_data['pass']);
@@ -84,7 +96,8 @@ class Webhook {
      * @return Webhook
      *   Returns the webhook object.
      */
-    public function getWebhook() {
+    public function getWebhook()
+    {
         return $this->webhook;
     }
 
@@ -94,7 +107,8 @@ class Webhook {
      * @return \Guzzle\Http\Client
      *   Returns the http service client.
      */
-    public function getClient() {
+    public function getClient()
+    {
         return $this->client;
     }
 
@@ -107,7 +121,8 @@ class Webhook {
      * @return \Guzzle\Http\Message\Request
      *   Returns the service request object.
      */
-    public function post($url) {
+    public function post($url)
+    {
         $this->request = $this->client->post($url, $this->headers);
         return $this->request;
     }
@@ -121,7 +136,8 @@ class Webhook {
      * @return \Guzzle\Http\Message\Response
      *   Response from the service.
      */
-    public function send($data) {
+    public function send(array $data)
+    {
         $this->request->addPostFields($data);
         return $this->request->send();
     }
