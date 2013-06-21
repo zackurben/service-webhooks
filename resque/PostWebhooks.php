@@ -8,7 +8,7 @@
 /**
  * Class that uses basic perform function to process queued jobs.
  */
-class Post_Webhooks
+class PostWebhooks
 {
     /**
      * Before processing, connect to correct instance of redis.
