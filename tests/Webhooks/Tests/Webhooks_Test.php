@@ -34,7 +34,7 @@ class Webhooks_Test extends PHPUnit_Framework_TestCase
 
     function setUp()
     {
-        $this->test = new Webhook(array('user' => static::$user, 'pass' => static::$pass), static::$auth_type, static::$domain);
+        $this->test = new Webhook(array('user' => $this->user, 'pass' => $this->pass), $this->domain, $this->auth_type);
     }
     
     function tearDown()
@@ -48,12 +48,12 @@ class Webhooks_Test extends PHPUnit_Framework_TestCase
         $webhook = $this->test->webhook;
         $this->assertObjectHasAttribute('authentication', $webhook);
         $this->assertObjectHasAttribute('domain', $webhook);
-        $this->assertEquals($webhook->domain, static::$domain);
-        $this->assertObjectHasAttribute('auth_data', $webhook);
-        $this->assertArrayHasKey('user', $webhook->auth_data);
-        $this->assertArrayHasKey('pass', $webhook->auth_data);
-        $this->assertEquals($webhook->auth_data['user'], static::$user);
-        $this->assertEquals($webhook->auth_data['pass'], static::$pass);
+        $this->assertEquals($webhook->domain, $this->domain);
+        $this->assertObjectHasAttribute('data', $webhook);
+        $this->assertArrayHasKey('user', $webhook->data);
+        $this->assertArrayHasKey('pass', $webhook->data);
+        $this->assertEquals($webhook->data['user'], $this->user);
+        $this->assertEquals($webhook->data['pass'], $this->pass);
     }
 
     // Test public function to retrieve webhook.
@@ -67,7 +67,7 @@ class Webhooks_Test extends PHPUnit_Framework_TestCase
     function testGuzzleClient()
     {
         $client = $this->test->getClient();
-        $this->assertEquals($client->getBaseUrl(), static::$domain);
+        $this->assertEquals($client->getBaseUrl(), $this->domain);
     } 
 
     // Test basic authentication.
@@ -75,7 +75,7 @@ class Webhooks_Test extends PHPUnit_Framework_TestCase
     {
         $client = $this->test->getClient();
         $request = $client->get('/');
-        $this->assertEquals(static::$user, $request->getUsername());
-        $this->assertEquals(static::$pass, $request->getPassword());
+        $this->assertEquals($this->user, $request->getUsername());
+        $this->assertEquals($this->pass, $request->getPassword());
     }
 }

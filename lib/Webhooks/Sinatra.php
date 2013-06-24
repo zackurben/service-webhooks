@@ -14,9 +14,9 @@ class Sinatra extends Webhook
     /**
      * Authenticate using basic auth.
      */
-    public function __construct($args = array(), $authentication = 'basic_auth', $domain = 'http://webhooks-test.herokuapp.com')
+    public function __construct($args = array(), $domain = 'http://webhooks-test.herokuapp.com', $authentication = 'basic_auth')
     {
-        parent::__construct(array('user' => $args['user'], 'pass' => $args['pass']), $authentication, $domain);
+        parent::__construct(array('user' => $args['user'], 'pass' => $args['pass']), $domain, $authentication);
     }
 }
 

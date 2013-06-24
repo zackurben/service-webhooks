@@ -47,24 +47,26 @@ class Webhook
     /**
      * Initialize webhook.
      *
-     * @param array $auth_data
-     *   The authentication and paramaters for the request.
-     * @param string $authentication
-     *   The type of authentication to be used in service.
+     * @param array $data
+     *   The paramaters for the request.
      * @param string $domain
      *   The domain of the service.
+     * @param string $authentication
+     *   The type of authentication to be used in service. 
      *
      * @return Webhook
      *   Returns the webhook object.
      */
-    public function __construct(array $auth_data = array(), $authentication = 'basic_auth', $domain = '')
+    public function __construct(array $data = array(), $domain = '', $authentication = 'no_authentication')
     {
         $this->webhook->domain = $domain;
         $this->webhook->authentication = $authentication;
-        $this->webhook->auth_data = $auth_data;
+        $this->webhook->data = $data;
 
         $this->client = new Client($domain);
-        $this->authenticate();
+        if ($authentication != 'no_authentication') {
+            $this->authenticate();
+        }
     }
 
     /**
@@ -74,15 +76,15 @@ class Webhook
     {
         switch ($this->webhook->authentication) {
             case 'basic_auth':
-                $curlauth = new CurlAuthPlugin($this->webhook->auth_data['user'], $this->webhook->auth_data['pass']);
+                $curlauth = new CurlAuthPlugin($this->webhook->data['user'], $this->webhook->data['pass']);
                 $this->client->addSubscriber($curlauth);
                 break;
             case 'oauth':
                 $oauth_config = array(
-                    'consumer_key' => $this->webhook->auth_data['consumer_key'],
-                    'consumer_secret' => $this->webhook->auth_data['consumer_secret'],
-                    'token' => $this->webhook->auth_data['token'],
-                    'secret' => $this->webhook->auth_data['secret']
+                    'consumer_key' => $this->webhook->data['consumer_key'],
+                    'consumer_secret' => $this->webhook->data['consumer_secret'],
+                    'token' => $this->webhook->data['token'],
+                    'secret' => $this->webhook->data['secret']
                 );
                 $auth_plugin = new OauthPlugin($oauth_config);
                 $this->client->addSubscriber($auth_plugin);
