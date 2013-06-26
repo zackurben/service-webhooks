@@ -4,7 +4,7 @@
  * Provides the Importer webhooks plugin definition.
  */
 
-namespace Webhooks;
+namespace AllPlayers/Webhooks;
 
 /**
  * Defines importer app that gets pushed group and member data on events.

@@ -31,7 +31,7 @@ class PostWebhooks
         $event_data = $this->args['event_data'];
         $url = (array_key_exists('url', $subscriber['variables'])) ? $subscriber['variables']['url'] : '';
 
-        $classname = 'Webhooks\\' . $hook['name'];
+        $classname = 'AllPlayers\\Webhooks\\' . $hook['name'];
         $webhook = new $classname($subscriber['variables']);
         $webhook->post($url);
         $result = $webhook->send(array('event_name' => $hook['name'], 'event_data' => $event_data));

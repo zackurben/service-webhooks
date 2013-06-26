@@ -4,7 +4,7 @@
  * Provides the Sinatra webhooks plugin definition.
  */
 
-namespace Webhooks;
+namespace AllPlayers\Webhooks;
 
 /**
  * Defines an example sinatra app that will push events to external test app.

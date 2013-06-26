@@ -5,7 +5,7 @@
  * Provides the basic webhooks plugin definition.
  */
 
-namespace Webhooks;
+namespace AllPlayers\Webhooks;
 
 use Guzzle\Http\Client;
 use Guzzle\Http\Plugin\CurlAuthPlugin;
