@@ -45,26 +45,34 @@ class Webhook
     public $request;
 
     /**
+     * The URL of the webhook.
+     *
+     * @var string
+     */
+    public $domain;
+
+    /**
+     * The authentication method used in the post request.
+     *
+     * @var string
+     */
+    public $authentication = 'no_authentication';
+
+    /**
      * Initialize webhook.
      *
      * @param array $data
      *   The paramaters for the request.
-     * @param string $domain
-     *   The domain of the service.
-     * @param string $authentication
-     *   The type of authentication to be used in service. 
      *
      * @return Webhook
      *   Returns the webhook object.
      */
-    public function __construct(array $data = array(), $domain = '', $authentication = 'no_authentication')
+    public function __construct(array $data = array())
     {
-        $this->webhook->domain = $domain;
-        $this->webhook->authentication = $authentication;
         $this->webhook->data = $data;
 
-        $this->client = new Client($domain);
-        if ($authentication != 'no_authentication') {
+        $this->client = new Client($this->domain);
+        if ($this->authentication != 'no_authentication') {
             $this->authenticate();
         }
     }
@@ -74,7 +82,7 @@ class Webhook
      */
     public function authenticate()
     {
-        switch ($this->webhook->authentication) {
+        switch ($this->authentication) {
             case 'basic_auth':
                 $curlauth = new CurlAuthPlugin($this->webhook->data['user'], $this->webhook->data['pass']);
                 $this->client->addSubscriber($curlauth);
