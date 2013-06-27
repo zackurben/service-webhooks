@@ -11,6 +11,6 @@
     "require": {
         "php" : ">=5.3.2",
         "guzzle/guzzle": "2.8.8",
-        "chrisboulton/php-resque": "dev-master"
+        "chrisboulton/php-resque": "dev-master#59f617e63908ce25e74996f407414dd1491eadf8"
     }
 }
