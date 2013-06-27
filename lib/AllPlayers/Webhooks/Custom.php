@@ -12,10 +12,25 @@ namespace AllPlayers\Webhooks;
 class Custom extends Webhook
 {
     /**
+     * The URL of the webhook.
+     *
+     * @var string
+     */
+    public $domain;
+
+    /**
+     * The authentication method used in the post request.
+     *
+     * @var string
+     */
+    public $authentication = 'no_authentication';
+
+    /**
      * Use custom url as domain.
      */
-    public function __construct($args = array(), $domain = '', $authentication = 'no_authentication')
+    public function __construct($args = array())
     {
-          parent::__construct(array(), $args['url'], $authentication);
+          $this->domain = $args['url'];
+          parent::__construct(array());
     }
 }
