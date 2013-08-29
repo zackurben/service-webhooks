@@ -15,7 +15,7 @@ class PostWebhooks
      */
     public function __construct()
     {
-        include dirname(__DIR__) . '/resque/config/config.php';        
+        include __DIR__ . '/config/config.php';        
         if (isset($config['redis_password']) && !$config['redis_password'] == '') {
             Resque::setBackend('redis://redis:' . $config['redis_password'] . '@' . $config['redis_host']);
         }
