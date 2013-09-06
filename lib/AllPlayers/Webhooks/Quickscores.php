@@ -1,7 +1,7 @@
 <?php
 /**
  * @file
- * Provides the Sinatra webhooks plugin definition.
+ * Provides the Quickscores webhooks plugin definition.
  */
 
 namespace AllPlayers\Webhooks;
@@ -16,7 +16,7 @@ class Quickscores extends Webhook
      *
      * @var string
      */
-    public $domain;
+    public $domain = 'http://www.quickscores.com/API/SynchEvents.php';
 
     /**
      * The authentication method used in the post request.
@@ -30,7 +30,6 @@ class Quickscores extends Webhook
      */
     public function __construct($args = array())
     {
-        $this->domain = $args['url'];
         parent::__construct(array('user' => $args['user'], 'pass' => $args['token']));
     }
 }
