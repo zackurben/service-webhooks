@@ -7,7 +7,7 @@ num_workers.times do |num|
     w.name     = "resque-#{num}"
     w.group    = 'resque'
     w.interval = 30.seconds
-    w.env      = {'QUEUE' => 'webhooks', 'APP_INCLUDE' => 'PostWebhooks.php'}
+    w.env      = {'QUEUE' => 'PostWebhooks', 'APP_INCLUDE' => 'PostWebhooks.php'}
     w.start    = "php bin/resque"
 
     # restart if memory gets too high
