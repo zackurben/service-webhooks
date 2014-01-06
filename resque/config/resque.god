@@ -1,11 +1,11 @@
-app_root = Dir.pwd
+app_root = ENV['WEBHOOKS_DIR'] || "/mnt/service-webhooks/resque"
 num_workers = 2
 
 num_workers.times do |num|
   God.watch do |w|
     w.dir      = "#{app_root}"
-    w.name     = "resque-#{num}"
-    w.group    = 'resque'
+    w.name     = "webhooks-#{num}"
+    w.group    = 'webhooks'
     w.interval = 30.seconds
     w.env      = {'QUEUE' => 'PostWebhooks', 'APP_INCLUDE' => 'PostWebhooks.php'}
     w.start    = "php bin/resque"
