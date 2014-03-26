@@ -42,7 +42,7 @@ class PostWebhooks
         $url = (array_key_exists('url', $subscriber['variables'])) ? $subscriber['variables']['url'] : '';
 
         $classname = 'AllPlayers\\Webhooks\\' . $hook['name'];
-        $webhook = new $classname($subscriber['variables']);
+        $webhook = new $classname($subscriber['variables'], $event_data);
         $webhook_data = array(
           'event_name' => $hook['name'],
           'event_data' => $event_data
