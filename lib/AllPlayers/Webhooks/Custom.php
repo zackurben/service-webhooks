@@ -31,6 +31,5 @@ class Custom extends Webhook
     public function __construct($args = array())
     {
           $this->domain = $args['url'];
-          parent::__construct(array());
     }
 }
