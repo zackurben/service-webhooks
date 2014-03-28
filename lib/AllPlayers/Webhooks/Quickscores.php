@@ -12,14 +12,14 @@ namespace AllPlayers\Webhooks;
 class Quickscores extends Webhook
 {
     /**
-     * The URL of the webhook.
+     * The URL to post the webhook.
      *
      * @var string
      */
     public $domain = 'http://www.quickscores.com/API/SynchEvents.php';
 
     /**
-     * The authentication method used in the post request.
+     * The authentication method used in the post requests.
      *
      * @var string
      */

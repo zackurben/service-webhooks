@@ -12,12 +12,12 @@ use Guzzle\Http\Plugin\CurlAuthPlugin;
 use Guzzle\Plugin\Oauth\OauthPlugin;
 
 /**
- * Abstract base class to provide interface common to all plugins.
+ * Base webhook object to provide a common interface to all plugins.
  */
 class Webhook
 {
     /**
-     * Headers that will be sent with each request,
+     * The list of headers that will be sent with each request.
      *
      * @var array
      */
@@ -45,21 +45,21 @@ class Webhook
     public $request;
 
     /**
-     * The URL of the webhook.
+     * The URL to post the webhook.
      *
      * @var string
      */
     public $domain;
 
     /**
-     * The authentication method used in the post request.
+     * The authentication method used in the post requests.
      *
      * @var string
      */
     public $authentication = 'no_authentication';
 
     /**
-     * Initialize webhook.
+     * Initialize the webhook object.
      *
      * @param array $subscriber
      *   The parameters (subscriber variables) for the request.
@@ -79,12 +79,16 @@ class Webhook
     }
 
     /**
-     * Authenticate client.
+     * Authenticate client based on the webhooks authentication method.
+	 *
+	 * This function is not abstrat due to the possibility that many partners will
+	 * need to use either basic_auth or oauth; those who do not can have a custom
+	 * auth definition here.
      */
     public function authenticate()
     {
         switch ($this->authentication) {
-            case 'basic_auth':
+			case 'basic_auth':
                 $curlauth = new CurlAuthPlugin($this->webhook->subscriber['user'], $this->webhook->subscriber['pass']);
                 $this->client->addSubscriber($curlauth);
                 break;
@@ -93,11 +97,27 @@ class Webhook
                     'consumer_key' => $this->webhook->subscriber['consumer_key'],
                     'consumer_secret' => $this->webhook->subscriber['consumer_secret'],
                     'token' => $this->webhook->subscriber['token'],
-                    'secret' => $this->webhook->subscriber['secret']
+                    'secret' => $this->webhook->subscriber['secret'],
                 );
                 $auth_plugin = new OauthPlugin($oauth_config);
                 $this->client->addSubscriber($auth_plugin);
                 break;
+			case 'teamsnap_auth': // Custom auth for TeamSnap, TODO make more generic.
+				$response = $this->client->post('/authentication/login', array(),
+					array('auth' => array(
+						$this->webhook->subscriber['user'], 
+						$this->webhook->subscriber['pass'],
+						)
+					)
+				)->send();
+				
+				// set 'X-Teamsnap-Token' header to response, add to default calls
+				if($response->isSuccessful())
+				{
+					//$this->client->setDefaultOption('headers', array('X-Teamsnap-Token' => $response->getHeader('X-Teamsnap-Token')));
+					array_push($this->headers, array('X-Teamsnap-Token' => $response->getHeader('X-Teamsnap-Token')));
+				}
+				break;
         }
     }
 
@@ -153,4 +173,3 @@ class Webhook
         return $this->request->send();
     }
 }
-

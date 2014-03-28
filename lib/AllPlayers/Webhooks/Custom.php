@@ -13,14 +13,14 @@ namespace AllPlayers\Webhooks;
 class Custom extends Webhook
 {
     /**
-     * The URL of the webhook.
+     * The URL to post the webhook.
      *
      * @var string
      */
     public $domain;
 
     /**
-     * The authentication method used in the post request.
+     * The authentication method used in the post requests.
      *
      * @var string
      */
