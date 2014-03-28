@@ -103,10 +103,12 @@ class Webhook
                 $this->client->addSubscriber($auth_plugin);
                 break;
 			case 'teamsnap_auth': // Custom auth for TeamSnap, TODO make more generic.
+				// make post to login to get auth token for following requests.
 				$response = $this->client->post('/authentication/login', array(),
-					array('auth' => array(
-						$this->webhook->subscriber['user'], 
-						$this->webhook->subscriber['pass'],
+					array('auth' =>
+						array(
+							$this->webhook->subscriber['user'], 
+							$this->webhook->subscriber['pass'],
 						)
 					)
 				)->send();
@@ -120,6 +122,17 @@ class Webhook
 				break;
         }
     }
+
+	/**
+	 * Get the data to be transmitted for the webhook.
+	 *
+	 * @return array
+	 *   Returns the data to be transmitted in the post request. 
+	 */
+	public function getData()
+	{
+		return $this->webhook['data'];
+	}
 
     /**
      * Get webhook object.

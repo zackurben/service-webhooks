@@ -30,6 +30,6 @@ class Quickscores extends Webhook
      */
     public function __construct(array $subscriber = array(), array $data = array())
     {
-        parent::__construct(array('user' => $subscriber['user'], 'pass' => $subscriber['token']));
+        parent::__construct(array('user' => $subscriber['user'], 'pass' => $subscriber['token']), $data);
     }
 }
