@@ -1,13 +1,14 @@
 <?php
 /**
  * @file
+ *
  * Provides the Custom webhooks plugin definition.
  */
 
 namespace AllPlayers\Webhooks;
 
 /**
- * Defines a custom url webhook that will push events to external app.
+ * Defines a custom url webhook that will push events to an external app.
  */
 class Custom extends Webhook
 {
@@ -28,8 +29,8 @@ class Custom extends Webhook
     /**
      * Use custom url as domain.
      */
-    public function __construct($args = array())
+    public function __construct(array $subscriber = array(), array $data = array())
     {
-          $this->domain = $args['url'];
+		$this->domain = $subscriber['url'];
     }
 }
