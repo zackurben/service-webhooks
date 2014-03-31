@@ -56,9 +56,10 @@ class MyService extends Webhook
     /**
      * The authentication method, defaults to no_authentication.
 	 *
-     * If using basic_auth, $auth_data['user'] and $auth_data['pass'] must be instantiated.
-     * If using oauth, then consumer_key, consumer_secret, token and secret must
-     * be instatiated inside the $auth_data array.
+     * If using basic_auth, user and pass must be instantiated inside the
+	 * $subscriber array.
+     * If using oauth, then consumer_key, consumer_secret, token and secret
+	 * must be instatiated inside the $subscriber array.
      */
     public $authentication = 'no_authentication';
 	
