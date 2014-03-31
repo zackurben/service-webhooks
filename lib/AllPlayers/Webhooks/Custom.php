@@ -3,7 +3,7 @@
  * @file Custom.php
  *
  * Provides the Custom Webhooks plugin definition. The Custom Webhook is a
- * simpleton Webhook for sending all data to a single, non-authenticated, url.
+ * simplex Webhook for sending all data to a single, non-authenticated, url.
  */
 
 namespace AllPlayers\Webhooks;
@@ -34,5 +34,17 @@ class Custom extends Webhook
     {
 		$this->domain = $subscriber['url'];
 		parent::__construct($subscriber, $data);
+		$this->process();
     }
+	
+	/**
+	 * Process the webhook data and set the domain to the appropriate URL
+	 */
+	public function process()
+	{
+		/**
+		 * Do nothing here because this is a simplex webhook that dumps
+		 * all data to out a URL.
+		 */	
+	}
 }

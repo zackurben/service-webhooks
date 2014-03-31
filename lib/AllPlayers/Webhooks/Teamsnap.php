@@ -28,15 +28,16 @@ class Teamsnap extends Webhook
     public $authentication = 'teamsnap_auth';
 
     /**
-     * Authenticate using basic auth.
+     * Authenticate using teamsnap_auth.
      */
     public function __construct(array $subscriber = array(), array $data = array())
     {
         parent::__construct(array('user' => $subscriber['user'], 'pass' => $subscriber['token']), $data);
+		$this->process();
     }
 	
 	/**
-	 * Process the webhook and set the domain to the appropriate URL
+	 * Process the webhook data and set the domain to the appropriate URL
 	 */
 	public function process()
 	{

@@ -30,6 +30,8 @@ class Webhook
      * The top object of a webhook.
      *
      * @var webhook
+	 *   ['subscriber'] => Webhook information.
+	 *   ['data'] => Webhook data.
      */
     public $webhook;
 
@@ -43,7 +45,7 @@ class Webhook
     /**
      * The request to be sent.
      *
-     * @var /Guzzle/Http/Message/Request
+     * @var /Guzzle/Http/Message/EntityEnclosingRequest
      */
     public $request;
 
@@ -61,6 +63,13 @@ class Webhook
      */
     public $authentication = 'no_authentication';
 
+	/**
+	 * Force the processing of the Webhook to be defined. If no processing is
+	 * needed, this function can remain empty; this is where the send data should
+	 * be manipulated, as well as the URL to send the data.
+	 */
+	abstract public function process();
+
     /**
      * Initialize the webhook object.
      *
@@ -76,7 +85,8 @@ class Webhook
 		$this->webhook->data = $data;
 
         $this->client = new Client($this->domain);
-        if ($this->authentication != 'no_authentication') {
+        if ($this->authentication != 'no_authentication')
+		{
             $this->authenticate();
         }
     }
@@ -90,7 +100,8 @@ class Webhook
      */
     public function authenticate()
     {
-        switch ($this->authentication) {
+        switch ($this->authentication)
+		{
 			case 'basic_auth':
                 $curlauth = new CurlAuthPlugin($this->webhook->subscriber['user'], $this->webhook->subscriber['pass']);
                 $this->client->addSubscriber($curlauth);
