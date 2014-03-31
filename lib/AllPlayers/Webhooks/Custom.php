@@ -1,14 +1,15 @@
 <?php
 /**
- * @file
+ * @file Custom.php
  *
- * Provides the Custom webhooks plugin definition.
+ * Provides the Custom Webhooks plugin definition. The Custom Webhook is a
+ * simpleton Webhook for sending all data to a single, non-authenticated, url.
  */
 
 namespace AllPlayers\Webhooks;
 
 /**
- * Defines a custom url webhook that will push events to an external app.
+ * Base Custom Webhook definition, to send data to a custom URL.
  */
 class Custom extends Webhook
 {

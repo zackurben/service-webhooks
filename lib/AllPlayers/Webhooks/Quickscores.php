@@ -1,13 +1,16 @@
 <?php
 /**
- * @file
- * Provides the Quickscores webhooks plugin definition.
+ * @file Quickscores.php
+ *
+ * Provides the Quickscores Webhooks plugin definition. The Quickscores Webhook
+ * sends AllPlayers hook data to a single endpoint for processing the data;
+ * this webhook uses basic authentication.
  */
 
 namespace AllPlayers\Webhooks;
 
 /**
- * Defines quickscores app that will push events to external test app.
+ * Base Quickscores Webhook definition.
  */
 class Quickscores extends Webhook
 {

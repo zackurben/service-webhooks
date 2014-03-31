@@ -1,13 +1,15 @@
 <?php
 /**
- * @file
- * Provides the Teamsnap webhooks plugin definition.
+ * @file Teamsnap.php
+ *
+ * Provides the TeamSnap Webhooks plugin definition. The TeanSnap Webhook sends
+ * data to various API Endpoints, using a custom token based authentication.
  */
 
 namespace AllPlayers\Webhooks;
 
 /**
- * Defines teamsnap app that will push events to external test app.
+ * Base TeamSnap Webhook definition.
  */
 class Teamsnap extends Webhook
 {

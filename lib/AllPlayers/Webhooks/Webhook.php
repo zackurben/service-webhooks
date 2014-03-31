@@ -1,8 +1,11 @@
 <?php
 /**
- * @file
+ * @file Webhook.php
  *
- * Provides the basic webhooks plugin definition.
+ * Provides the basic Webhooks plugin definition. Every custom Webhook should
+ * extend this skeleton, and be throughly documented. Any custom authentication
+ * methods should be communicated to AllPlayers to be included into our
+ * authenticate method.
  */
 
 namespace AllPlayers\Webhooks;
@@ -12,7 +15,7 @@ use Guzzle\Http\Plugin\CurlAuthPlugin;
 use Guzzle\Plugin\Oauth\OauthPlugin;
 
 /**
- * Base webhook object to provide a common interface to all plugins.
+ * Base Webhook definition, to provide structure to all child Webhooks.
  */
 class Webhook
 {

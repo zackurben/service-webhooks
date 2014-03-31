@@ -1,8 +1,8 @@
 <?php
 /**
- * @file
+ * @file PostWebhooks.php
  *
- * Provides definition of resque worker used to make post requests.
+ * Provides the definition of resque worker used to make POST requests.
  */
 
 /**
