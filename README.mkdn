@@ -1,29 +1,21 @@
-AllPlayers Services
-================
+# AllPlayers Webhook Services
+This AllPlayers Webhook Services API acts as a proxy between the defined AllPlayers API and a pre-existing third party API.
 
-How the services work
----------------------
+## How the services work
+1. A post-receive background job is submitted when someone creates a subgroup or adds a role to a member.
+2. If the group has any "Service Hooks" set up, the job makes a request to `http://services-server` with the following data:
+   - `params[:event_data]` containing all of the group/user data
+   - `params[:event_name]` name of the webhook
+3. Your external app does something with that data (sync users and groups, send emails, etc)
 
-1.    A post-receive background job is submitted when someone creates a subgroup or adds a role to a member.
-2.    If the group has any "Service Hooks" set up, the job makes a request to `http://services-server` with the following data:
-        - `params[:event_data]` containing all of the group/user data
-        - `params[:event_name]` name of the webhook
-3.    Your external app does something with that data (sync users and groups, send emails, etc)
-
-Steps to contributing
----------------------
-
-AllPlayers will accept service hooks for production web applications.
-
-Additionally, we would like the following information to provide quality service and support to our users:
-
-+   Documentation about what the hook does.
-+   Tested code, phpunit tests if possible.
-+   A URL for the service.
-+   A URL to a logo for the service
+## Steps to contributing
+AllPlayers will accept service hooks for production web applications. We would like the following information to be included, to provide quality service and support to our users:
+   - Documentation about what the hook does.
+   - Tested code, phpunit tests if possible.
+   - A URL for the service.
+   - A URL to a logo for the service
 
 You can annotate this directly in the hook like so:
-
 ```php
 class MyService extends Webhook
 {
@@ -32,12 +24,14 @@ class MyService extends Webhook
 }
 ```
 
-1.    Fork the project
-2.    Create a new file in lib/AllPlayers/Webhooks/ called `YourService.php`, using the following template:
+1. Fork the project
+2. Create a new file in lib/AllPlayers/Webhooks/ called `YourService.php`, using the template given below.
+3. Send a pull request form your fork to [allplayers/service-webhooks](https://github.com/AllPlayers/service-webhooks)
+4. Once accepted, we'll add any necessary data fields to the AllPlayers front-end so people can start using your application.
 
 ```php
 /**
- * @file
+ * @file MyService.php
  *
  * Every file must have a code block explaining what the file does.
  */
@@ -61,28 +55,33 @@ class MyService extends Webhook
 
     /**
      * The authentication method, defaults to no_authentication.
-     * If basic auth, $auth_data['user'] and $auth_data['pass'] must be instantiated.
-     * If oauth, then consumer_key, consumer_secret, token and secret must
+	 *
+     * If using basic_auth, $auth_data['user'] and $auth_data['pass'] must be instantiated.
+     * If using oauth, then consumer_key, consumer_secret, token and secret must
      * be instatiated inside the $auth_data array.
      */
     public $authentication = 'no_authentication';
-
-    /**
-     * Before actually sending the data, you can do manipulation here.
+	
+	/**
+     * Configure authentication credentials, and other Webhook specifics here.
      */
-    public function send(array $data)
+    public function __construct(array $subscriber = array(), array $data = array())
     {
-        $this->request->addPostFields($data);
-        return $this->request->send();
+        parent::__construct($subscriber, $data);
+		$this->process();
     }
+	
+	/**
+	 * Process the webhook data and set the domain to the appropriate URL.
+	 * (Note that this function is required)
+	 */
+	public function process()
+	{
+		// do webhook processing here, such as, changing URL and the data being sent.
+	}
 }
 ```
 
-3.    Add documentation to `docs/service_name`
-4.    Send a pull request form your fork to [allplayers/service-webhooks](https://github.com/AllPlayers/service-webhooks)
-5.    Once accepted, we'll add any necessary data fields to the AllPlayers front-end so people can start using your application.
-
-
 *Tests are required for all patches*
 
-This webhook implementation was modeled after github and a huge thanks goes out to github developers and to future AllPlayers developers that work on additions to our services.
+This webhook implementation is modeled after the [GitHub Webhooks API](http://developer.github.com/webhooks/). A huge thanks goes out to the GitHub developers and to future AllPlayers developers that work on additions to our services.
