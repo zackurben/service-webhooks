@@ -46,5 +46,6 @@ class Quickscores extends Webhook
 		 * Do nothing here because, QuickScores has a single API endpoint for
 		 * processing our data. 
 		 */
+		parent::post();
 	}
 }

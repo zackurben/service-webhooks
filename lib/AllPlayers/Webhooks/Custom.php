@@ -45,6 +45,7 @@ class Custom extends Webhook
 		/**
 		 * Do nothing here because this is a simplex webhook that dumps
 		 * all data to out a URL.
-		 */	
+		 */
+		parent::post();
 	}
 }
