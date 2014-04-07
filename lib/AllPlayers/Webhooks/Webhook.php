@@ -116,9 +116,10 @@ class Webhook
                 $auth_plugin = new OauthPlugin($oauth_config);
                 $this->client->addSubscriber($auth_plugin);
                 break;
-			case 'teamsnap_auth': // Custom auth for TeamSnap, TODO make more generic.
+			case 'teamsnap_auth':
+				// Custom auth for TeamSnap, TODO make more generic.
 				// make post to login to get auth token for following requests.
-				$response = $this->client->post('/authentication/login', array(),
+				/*$response = $this->client->post('/authentication/login', array(),
 					array('auth' =>
 						array(
 							$this->webhook->subscriber['user'], 
@@ -132,7 +133,12 @@ class Webhook
 				{
 					//$this->client->setDefaultOption('headers', array('X-Teamsnap-Token' => $response->getHeader('X-Teamsnap-Token')));
 					array_push($this->headers, array('X-Teamsnap-Token' => $response->getHeader('X-Teamsnap-Token')));
-				}
+				}*/
+				$auth = array (
+					'token' => $this->webhook->subscriber['token'],
+					'commissioner_id' => $this->webhook->subscriber['commissioner_id'],
+					'division_id' => $this->webhook->subscriber['division_id'],
+				);
 				break;
         }
     }
@@ -173,17 +179,24 @@ class Webhook
     /**
      * Makes a POST request to the external service.
      *
-     * @param string $url
-     *   URL to post the message to.
-     *
      * @return \Guzzle\Http\Message\Request
      *   Returns the service request object.
      */
-    public function post($url)
+    public function post()
     {
-        $this->request = $this->client->post($url, $this->headers);
-        return $this->request;
+        $this->request = $this->client->post($this->webhook->subscriber['url'], $this->headers, $this->webhook['data']);
     }
+	
+	/**
+	 * Makes a PUT request to the external service
+	 *
+     * @return \Guzzle\Http\Message\Request
+     *   Returns the service request object.
+	 */
+	public function put()
+	{
+		$this->request = $this->client->post($this->webhook->subscriber['url'], $this->headers, $this->webhook['data']);
+	}
 
     /**
      * Sends a request.
@@ -196,7 +209,6 @@ class Webhook
      */
     public function send(array $data)
     {
-        $this->request->addPostFields($data);
         return $this->request->send();
     }
 }

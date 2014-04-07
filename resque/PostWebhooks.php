@@ -43,18 +43,18 @@ class PostWebhooks
         $subscriber = $this->args['subscriber'];
         $event_data = $this->args['event_data'];
 		
-        $url = (array_key_exists('url', $subscriber['variables'])) ? $subscriber['variables']['url'] : '';
+//        $url = (array_key_exists('url', $subscriber['variables'])) ? $subscriber['variables']['url'] : '';
         $classname = 'AllPlayers\\Webhooks\\' . $hook['name'];
 
         $webhook = new $classname($subscriber['variables'], $event_data);
-	
-        if (!empty($this->test_url))
+
+/*        if (!empty($this->test_url))
 		{
 			// TODO add original url to webhook data: 'original_url' => $url
 			// $webhook_data['original_url'] = $url;
 			$url = $this->test_url;
         }
-        $webhook->post($url);
+        $webhook->post($url);*/
         $result = $webhook->send($webhook->getData());
     }
 }   
