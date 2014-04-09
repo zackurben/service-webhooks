@@ -27,6 +27,13 @@ class Quickscores extends Webhook
      * @var string
      */
     public $authentication = 'basic_auth';
+	
+	/**
+	 * The method of data transmission.
+	 *
+	 * @var string
+	 */
+	public $method = 'form-urlencoded';
 
     /**
      * Authenticate using basic auth.

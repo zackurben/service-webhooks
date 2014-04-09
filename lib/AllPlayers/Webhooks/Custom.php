@@ -27,6 +27,13 @@ class Custom extends Webhook
      */
     public $authentication = 'no_authentication';
 
+	/**
+	 * The method of data transmission.
+	 *
+	 * @var string
+	 */
+	public $method = 'json';
+
     /**
      * Use custom url as domain.
      */

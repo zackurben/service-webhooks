@@ -31,7 +31,7 @@ class Webhook
      *
      * @var webhook
 	 *   ['subscriber'] => Webhook information.
-	 *   ['data'] => Webhook data.
+	 *   ['data']		=> Webhook data.
      */
     public $webhook;
 
@@ -69,6 +69,14 @@ class Webhook
 	 * be manipulated, as well as the URL to send the data.
 	 */
 	abstract public function process();
+
+	/**
+	 * The method of data transmission.
+	 *   Valid options are:
+	 *     form-urlencoded
+	 *     json
+	 */
+	public $method = 'json';
 
     /**
      * Initialize the webhook object.
@@ -184,7 +192,15 @@ class Webhook
      */
     public function post()
     {
-        $this->request = $this->client->post($this->webhook->subscriber['url'], $this->headers, $this->webhook['data']);
+		if($this->method === 'form-urlencoded')
+		{
+			$this->request = $this->client->post($this->webhook->subscriber['url'], $this->headers);
+			$this->request->addPostFields($this->webhook['data']);
+		}
+		else
+		{
+			$this->request = $this->client->post($this->webhook->subscriber['url'], $this->headers, $this->webhook['data']);
+		}
     }
 	
 	/**
@@ -195,7 +211,15 @@ class Webhook
 	 */
 	public function put()
 	{
-		$this->request = $this->client->post($this->webhook->subscriber['url'], $this->headers, $this->webhook['data']);
+		if($this->method === 'form-urlencoded')
+		{
+			$this->request = $this->client->put($this->webhook->subscriber['url'], $this->headers);
+			$this->request->addPostFields($this->webhook['data']);
+		}
+		else
+		{
+			$this->request = $this->client->put($this->webhook->subscriber['url'], $this->headers, $this->webhook['data']);
+		}
 	}
 
     /**
