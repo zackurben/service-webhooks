@@ -64,19 +64,20 @@ class Webhook
     public $authentication = 'no_authentication';
 
 	/**
+	 * The method of data transmission. Valid options are:
+	 *   'form-urlencoded'
+	 *   'json'
+	 *
+	 * @var string
+	 */
+	public $method;
+
+	/**
 	 * Force the processing of the Webhook to be defined. If no processing is
 	 * needed, this function can remain empty; this is where the send data should
 	 * be manipulated, as well as the URL to send the data.
 	 */
 	abstract public function process();
-
-	/**
-	 * The method of data transmission.
-	 *   Valid options are:
-	 *     form-urlencoded
-	 *     json
-	 */
-	public $method = 'json';
 
     /**
      * Initialize the webhook object.
@@ -97,6 +98,7 @@ class Webhook
 		{
             $this->authenticate();
         }
+		$this->process();
     }
 
     /**
@@ -163,17 +165,6 @@ class Webhook
 	}
 
     /**
-     * Get webhook object.
-     *
-     * @return Webhook
-     *   Returns the webhook object.
-     */
-    public function getWebhook()
-    {
-        return $this->webhook;
-    }
-
-    /**
      * Get service client.
      *
      * @return \Guzzle\Http\Client
@@ -220,6 +211,20 @@ class Webhook
 		{
 			$this->request = $this->client->put($this->webhook->subscriber['url'], $this->headers, $this->webhook['data']);
 		}
+	}
+	
+	/**
+	 * Perform any additional processing on the webhook before sending it.
+	 * This is to avoid passing multiple parameters to the constructor,
+	 * and is called before send().
+	 */
+	public function process($url)
+	{
+		if(isset($url) && $url != '')
+		{
+			$this->webhook['data']['original_url'] = $this->webhook['domain'];
+			$this->webhook['domain'] = $url;
+		}	
 	}
 
     /**
