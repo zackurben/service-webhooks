@@ -71,7 +71,7 @@ class Teamsnap extends Webhook
 				parent::post();
 				break;
 			case "user_updates_group": // TODO, fix blockers
-				// need the ability to get TEAM_ID => INTERNAL BLOCKER
+				// INTERNAL BLOCKER => need the ability to get TEAM_ID
 
 				$this->domain .= '/teams/' . 'INSERT_TEAM_ID'; // TODO
 				
@@ -91,8 +91,9 @@ class Teamsnap extends Webhook
 			case "user_deletes_group": // TODO, get information from TeamSnap on how to properly delete a team.
 				break;
 			case "user_adds_role": // TODO, fix blockers
-				// need the ability to get TEAM_ID => INTERNAL BLOCKER
-				// need the ability to determine if user is the owener of the group => INTERNAL BLOCKER
+				// INTERNAL BLOCKER => need the ability to get TEAM_ID
+				// INTERNAL BLOCKER => need the ability to determine if user is the owener of the group
+				// INTERNAL BLOCKER => need the ability to determine if the user previously exists
 				
 				/**
 				 * Send get request with user id for the team, so we dont make duplicate users
@@ -105,7 +106,7 @@ class Teamsnap extends Webhook
 				 */
 				$method = '';
 				
-				// TODO, Determine the correct url to use
+				// TODO, Determine the correct url to use, dependent on if user exists
 				$this->domain .= '/teams/' . 'INSERT_TEAM_ID' . 'as_roster/' . 'INSERT_COMMISSIONER_ID' . '/rosters'; // POST
 				$this->domain .= '/teams/' . 'INSERT_TEAM_ID' . 'as_roster/' . 'INSERT_COMMISSIONER_ID' . '/rosters/' .
 					'INSERT_USER_ROSTER_ID'; // PUT
@@ -115,7 +116,6 @@ class Teamsnap extends Webhook
 				$send = array(
 					"team" => array(
 						"available_rosters" => array (
-							// Supported roles: "is_owner", "non_player", "is_manager", "is_commissioner"
 							"non_player" => (bool) ($data['member']['role_name'] == "Player" ? false : true),
 							"is_manager" => (bool) ($data['member']['is_admin'] ? true : false),
 							"is_commissioner" => (bool) false,
@@ -135,15 +135,13 @@ class Teamsnap extends Webhook
 				}
 				break;
 			case "user_removes_role":
-				// PUT to “/teams/TEAM_ID/as_roster/AS_ROSTER_ID/rosters” to add change an existing members roles
 				$this->domain .= '/teams/'. 'INSERT_TEAM_ID' . '/as_roster/' . 'INSERT_COMMISSIONER_ID'. '/rosters/' . 'INSERT_ROSTER_ID';
 				
-				// built put to send
+				// build put to send
 				$data = $this->webhook->data;
 				$send = array(
 					"team" => array(
 						"available_rosters" => array(
-							// Supported roles: "is_owner", "non_player", "is_manager", "is_commissioner"
 							"non_player" => (bool) ($data['member']['role_name'] == "Player" ? false : true),
 							"is_manager" => (bool) ($data['member']['is_admin'] ? true : false),
 							"is_commissioner" => (bool) false,
@@ -157,6 +155,7 @@ class Teamsnap extends Webhook
 				break;
 			case "user_adds_submission":
 				// Functionality currently unused by TeamSnap
+				// might want to store in: https://github.com/teamsnap/apiv2-docs/wiki/Roster-Custom-Data
 				break;
 		}
 	}
