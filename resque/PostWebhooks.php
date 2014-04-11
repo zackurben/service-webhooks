@@ -10,16 +10,16 @@
  */
 class PostWebhooks
 {
-    /**
-     * Redirect all requests to this URL for development.
-     *
-     * @var string
-     */
-    public $test_url;
+	/**
+	 * Redirect all requests to this URL for development.
+	 *
+	 * @var string
+	 */
+	public $test_url;
 
-    /**
-     * Initiate redis connection before processing.
-     */
+	/**
+	 * Initiate redis connection before processing.
+	 */
 	public function __construct()
 	{
 		include __DIR__ . '/config/config.php';
@@ -34,19 +34,19 @@ class PostWebhooks
 		}
 	}
 
-    /**
-     * Perform the webhook processing operation.
-     */
-    public function perform()
-    {
-        $hook = $this->args['hook'];
-        $subscriber = $this->args['subscriber'];
-        $event_data = $this->args['event_data'];
+	/**
+	 * Perform the webhook processing operation.
+	 */
+	public function perform()
+	{
+		$hook = $this->args['hook'];
+		$subscriber = $this->args['subscriber'];
+		$event_data = $this->args['event_data'];
 		
-        $classname = 'AllPlayers\\Webhooks\\' . $hook['name'];
+		$classname = 'AllPlayers\\Webhooks\\' . $hook['name'];
 
-        $webhook = new $classname($subscriber['variables'], $event_data);
+		$webhook = new $classname($subscriber['variables'], $event_data);
 		$webhook->process($test_url);
-        $result = $webhook->send($webhook->getData());
-    }
+		$result = $webhook->send($webhook->getData());
+	}
 }   

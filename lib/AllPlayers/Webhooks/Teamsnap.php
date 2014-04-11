@@ -13,19 +13,19 @@ namespace AllPlayers\Webhooks;
  */
 class Teamsnap extends Webhook
 {
-    /**
-     * The URL to post the webhook.
-     *
-     * @var string
-     */
-    public $domain = 'https://api.teamsnap.com/v2';
+	/**
+	 * The URL to post the webhook.
+	 *
+	 * @var string
+	 */
+	public $domain = 'https://api.teamsnap.com/v2';
 
-    /**
-     * The authentication method used in the post requests.
-     *
-     * @var string
-     */
-    public $authentication = 'teamsnap_auth';
+	/**
+	 * The authentication method used in the post requests.
+	 *
+	 * @var string
+	 */
+	public $authentication = 'teamsnap_auth';
 	
 	/**
 	 * The method of data transmission.
@@ -34,16 +34,16 @@ class Teamsnap extends Webhook
 	 */
 	public $method = 'json';
 
-    /**
-     * Authenticate using teamsnap_auth.
-     */
-    public function __construct(array $subscriber = array(), array $data = array())
-    {
-        parent::__construct(array('token' => $subscriber['uuid'],
+	/**
+	 * Authenticate using teamsnap_auth.
+	 */
+	public function __construct(array $subscriber = array(), array $data = array())
+	{
+		parent::__construct(array('token' => $subscriber['uuid'],
 			'commissioner_id' => $subscriber['commissioner_id'],
 			'division_id' => $subscriber['division_id']), $data);
 		$this->process();
-    }
+	}
 	
 	/**
 	 * Process the webhook data and set the domain to the appropriate URL
@@ -72,10 +72,7 @@ class Teamsnap extends Webhook
 				break;
 			case "user_updates_group": // TODO, fix blockers
 				// need the ability to get TEAM_ID => INTERNAL BLOCKER
-				// need the ability to associate a user with the user_updates_group event => INTERNAL BLOCKER
-			
-				// send PUT to /teams/TEAM_ID with all the teams content,
-				// (we cant determine what has changed)
+
 				$this->domain .= '/teams/' . 'INSERT_TEAM_ID'; // TODO
 				
 				// build put to send
@@ -160,8 +157,6 @@ class Teamsnap extends Webhook
 				break;
 			case "user_adds_submission":
 				// Functionality currently unused by TeamSnap
-				break;
-			default:
 				break;
 		}
 	}

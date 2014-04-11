@@ -14,19 +14,19 @@ namespace AllPlayers\Webhooks;
  */
 class Quickscores extends Webhook
 {
-    /**
-     * The URL to post the webhook.
-     *
-     * @var string
-     */
-    public $domain = 'http://www.quickscores.com/API/SynchEvents.php';
+	/**
+	 * The URL to post the webhook.
+	 *
+	 * @var string
+	 */
+	public $domain = 'http://www.quickscores.com/API/SynchEvents.php';
 
-    /**
-     * The authentication method used in the post requests.
-     *
-     * @var string
-     */
-    public $authentication = 'basic_auth';
+	/**
+	 * The authentication method used in the post requests.
+	 *
+	 * @var string
+	 */
+	public $authentication = 'basic_auth';
 	
 	/**
 	 * The method of data transmission.
@@ -35,14 +35,14 @@ class Quickscores extends Webhook
 	 */
 	public $method = 'form-urlencoded';
 
-    /**
-     * Authenticate using basic auth.
-     */
-    public function __construct(array $subscriber = array(), array $data = array())
-    {
-        parent::__construct(array('user' => $subscriber['user'], 'pass' => $subscriber['token']), $data);
+	/**
+	 * Authenticate using basic auth.
+	 */
+	public function __construct(array $subscriber = array(), array $data = array())
+	{
+		parent::__construct(array('user' => $subscriber['user'], 'pass' => $subscriber['token']), $data);
 		$this->process();
-    }
+	}
 	
 	/**
 	 * Process the webhook and set the domain to the appropriate URL
