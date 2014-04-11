@@ -127,23 +127,6 @@ class Webhook
                 $this->client->addSubscriber($auth_plugin);
                 break;
 			case 'teamsnap_auth':
-				// Custom auth for TeamSnap, TODO make more generic.
-				// make post to login to get auth token for following requests.
-				/*$response = $this->client->post('/authentication/login', array(),
-					array('auth' =>
-						array(
-							$this->webhook->subscriber['user'], 
-							$this->webhook->subscriber['pass'],
-						)
-					)
-				)->send();
-				
-				// set 'X-Teamsnap-Token' header to response, add to default calls
-				if($response->isSuccessful())
-				{
-					//$this->client->setDefaultOption('headers', array('X-Teamsnap-Token' => $response->getHeader('X-Teamsnap-Token')));
-					array_push($this->headers, array('X-Teamsnap-Token' => $response->getHeader('X-Teamsnap-Token')));
-				}*/
 				$auth = array (
 					'token' => $this->webhook->subscriber['token'],
 					'commissioner_id' => $this->webhook->subscriber['commissioner_id'],
