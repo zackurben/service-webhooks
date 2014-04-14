@@ -39,7 +39,7 @@ class Teamsnap extends Webhook
 	 */
 	public function __construct(array $subscriber = array(), array $data = array())
 	{
-		parent::__construct(array('token' => $subscriber['uuid'],
+		parent::__construct(array('token' => $subscriber['token'],
 			'commissioner_id' => $subscriber['commissioner_id'],
 			'division_id' => $subscriber['division_id']), $data);
 		$this->process();
@@ -55,7 +55,7 @@ class Teamsnap extends Webhook
 		switch($this->webhook['webhook_type'])
 		{
 			case 'user_creates_group':
-				// INTERNAL BLOCKER => need the ability to get location infrom from group admin
+				// INTERNAL BLOCKER => need the ability to get location information from group admin
 				$this->domain .= '/teams';
 				
 				// post data to send
@@ -97,7 +97,8 @@ class Teamsnap extends Webhook
 				break;
 			case 'user_adds_role':
 				// INTERNAL BLOCKER => need the ability to get TEAM_ID
-				// INTERNAL BLOCKER => need the ability to determine if the user previously exists in the TeamSnap system.
+				// INTERNAL BLOCKER => need the ability to determine if the user previously exists in the
+				//                     TeamSnap system.
 				// INTERNAL BLOCKER => need to process the user_creates_group webhook before user_adds_role,
 				//                     so the owner exists, and we dont need to make extra api calls.
 				
@@ -114,10 +115,10 @@ class Teamsnap extends Webhook
 				$method = '';
 				
 				// determine the correct url to use (dependent on if user exists).
-				$this->domain .= '/teams/' . 'INSERT_TEAM_ID' . '/as_roster/' . $this->webhook->subscriber['commissioner_id'] . 
-					'/rosters'; // POST
-				$this->domain .= '/teams/' . 'INSERT_TEAM_ID' . '/as_roster/' . $this->webhook->subscriber['commissioner_id'] . 
-					'/rosters/' . 'INSERT_USER_ROSTER_ID'; // PUT
+				$this->domain .= '/teams/' . 'INSERT_TEAM_ID' . '/as_roster/' .
+					$this->webhook->subscriber['commissioner_id'] . '/rosters'; // POST
+				$this->domain .= '/teams/' . 'INSERT_TEAM_ID' . '/as_roster/' . 
+					$this->webhook->subscriber['commissioner_id'] . '/rosters/' . 'INSERT_USER_ROSTER_ID'; // PUT
 				
 				// put/post data to send
 				$data = $this->webhook->data;
@@ -143,8 +144,8 @@ class Teamsnap extends Webhook
 				}
 				break;
 			case 'user_removes_role':
-				$this->domain .= '/teams/'. 'INSERT_TEAM_ID' . '/as_roster/' . $this->webhook->subscriber['commissioner_id'] .
-					'/rosters/' . 'INSERT_ROSTER_ID';
+				$this->domain .= '/teams/'. 'INSERT_TEAM_ID' . '/as_roster/' . 
+					$this->webhook->subscriber['commissioner_id'] . '/rosters/' . 'INSERT_ROSTER_ID';
 				
 				// put data to send
 				$data = $this->webhook->data;
