@@ -47,15 +47,18 @@ class Teamsnap extends Webhook
 	
 	/**
 	 * Process the webhook data and set the domain to the appropriate URL
+	 *
+	 * TODO, Fix case blockers.
 	 */
 	public function process()
 	{
 		switch($this->webhook['webhook_type'])
 		{
-			case 'user_creates_group': // TODO, get location info from group admin
+			case 'user_creates_group':
+				// INTERNAL BLOCKER => need the ability to get location infrom from group admin
 				$this->domain .= '/teams';
 				
-				// build post to send
+				// post data to send
 				$data = $this->webhook->data;
 				$send = array(
 					'team' => array(
@@ -71,12 +74,12 @@ class Teamsnap extends Webhook
 				$this->webhook->data = $send;
 				parent::post();
 				break;
-			case 'user_updates_group': // TODO, fix blockers
+			case 'user_updates_group':
 				// INTERNAL BLOCKER => need the ability to get TEAM_ID
 
-				$this->domain .= '/teams/' . 'INSERT_TEAM_ID'; // TODO
+				$this->domain .= '/teams/' . 'INSERT_TEAM_ID';
 				
-				// build put to send
+				// put data to send
 				$data = $this->webhook->data;
 				$send = array(
 					'team' => array(
@@ -89,16 +92,19 @@ class Teamsnap extends Webhook
 				$this->webhook->data = $send;
 				parent::put();
 				break;
-			case 'user_deletes_group': // TODO, get information from TeamSnap on how to properly delete a team.
+			case 'user_deletes_group':
+				// EXTERNAL BLOCKER => need to know how to properly delete a team, from TeamSnap, (NYI).
 				break;
-			case 'user_adds_role': // TODO, fix blockers
+			case 'user_adds_role':
 				// INTERNAL BLOCKER => need the ability to get TEAM_ID
-				// INTERNAL BLOCKER => need the ability to determine if user is the owener of the group
-				// INTERNAL BLOCKER => need the ability to determine if the user previously exists
+				// INTERNAL BLOCKER => need the ability to determine if the user previously exists in the TeamSnap system.
+				// INTERNAL BLOCKER => need to process the user_creates_group webhook before user_adds_role,
+				//                     so the owner exists, and we dont need to make extra api calls.
 				
 				/**
 				 * Send get request with user id for the team, so we dont make duplicate users
-				 * with different roles
+				 * with different roles. Check if user exists by determing if we contain a partner
+				 * ID for the related resource (if not, they havent been added to the TS System).
 				 * 
 				 * if(user exists)
 				 *   send PUT
@@ -107,12 +113,12 @@ class Teamsnap extends Webhook
 				 */
 				$method = '';
 				
-				// TODO, Determine the correct url to use, dependent on if user exists
+				// determine the correct url to use (dependent on if user exists).
 				$this->domain .= '/teams/' . 'INSERT_TEAM_ID' . 'as_roster/' . 'INSERT_COMMISSIONER_ID' . '/rosters'; // POST
 				$this->domain .= '/teams/' . 'INSERT_TEAM_ID' . 'as_roster/' . 'INSERT_COMMISSIONER_ID' . '/rosters/' .
 					'INSERT_USER_ROSTER_ID'; // PUT
 				
-				// build data to send
+				// put/post data to send
 				$data = $this->webhook->data;
 				$send = array(
 					'team' => array(
@@ -138,7 +144,7 @@ class Teamsnap extends Webhook
 			case 'user_removes_role':
 				$this->domain .= '/teams/'. 'INSERT_TEAM_ID' . '/as_roster/' . 'INSERT_COMMISSIONER_ID'. '/rosters/' . 'INSERT_ROSTER_ID';
 				
-				// build put to send
+				// put data to send
 				$data = $this->webhook->data;
 				$send = array(
 					'team' => array(
@@ -155,8 +161,8 @@ class Teamsnap extends Webhook
 				parent::put();
 				break;
 			case 'user_adds_submission':
-				// Functionality currently unused by TeamSnap
-				// might want to store in: https://github.com/teamsnap/apiv2-docs/wiki/Roster-Custom-Data
+				// Functionality currently unused by TeamSnap, however, if they plan to implement it,
+				// we can store it here: https://github.com/teamsnap/apiv2-docs/wiki/Roster-Custom-Data
 				break;
 		}
 	}
