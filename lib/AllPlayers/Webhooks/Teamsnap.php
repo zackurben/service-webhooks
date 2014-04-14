@@ -107,16 +107,17 @@ class Teamsnap extends Webhook
 				 * ID for the related resource (if not, they havent been added to the TS System).
 				 * 
 				 * if(user exists)
-				 *   send PUT
+				 *   method = PUT
 				 * else
-				 *   send POST
+				 *   method = POST
 				 */
 				$method = '';
 				
 				// determine the correct url to use (dependent on if user exists).
-				$this->domain .= '/teams/' . 'INSERT_TEAM_ID' . 'as_roster/' . 'INSERT_COMMISSIONER_ID' . '/rosters'; // POST
-				$this->domain .= '/teams/' . 'INSERT_TEAM_ID' . 'as_roster/' . 'INSERT_COMMISSIONER_ID' . '/rosters/' .
-					'INSERT_USER_ROSTER_ID'; // PUT
+				$this->domain .= '/teams/' . 'INSERT_TEAM_ID' . '/as_roster/' . $this->webhook->subscriber['commissioner_id'] . 
+					'/rosters'; // POST
+				$this->domain .= '/teams/' . 'INSERT_TEAM_ID' . '/as_roster/' . $this->webhook->subscriber['commissioner_id'] . 
+					'/rosters/' . 'INSERT_USER_ROSTER_ID'; // PUT
 				
 				// put/post data to send
 				$data = $this->webhook->data;
@@ -142,7 +143,8 @@ class Teamsnap extends Webhook
 				}
 				break;
 			case 'user_removes_role':
-				$this->domain .= '/teams/'. 'INSERT_TEAM_ID' . '/as_roster/' . 'INSERT_COMMISSIONER_ID'. '/rosters/' . 'INSERT_ROSTER_ID';
+				$this->domain .= '/teams/'. 'INSERT_TEAM_ID' . '/as_roster/' . $this->webhook->subscriber['commissioner_id'] .
+					'/rosters/' . 'INSERT_ROSTER_ID';
 				
 				// put data to send
 				$data = $this->webhook->data;
