@@ -52,25 +52,26 @@ class Teamsnap extends Webhook
 	{
 		switch($this->webhook['webhook_type'])
 		{
-			case "user_creates_group": // TODO, get location info from group admin
+			case 'user_creates_group': // TODO, get location info from group admin
 				$this->domain .= '/teams';
 				
 				// build post to send
 				$data = $this->webhook->data;
 				$send = array(
-					"team" => array(
-						"team_name" => $data['group']['name'],
-						"sport_id" => getSport($data['group']['group_category']),
-						"timezone" => "", // use info from the group admin
-						"country" => "", // use info from the group admin
-						"zipcode" => "", // use info from the group admin
+					'team' => array(
+						'team_name' => $data['group']['name'],
+						'division_id' => $this->webhook->subscriber['division_id'],
+						'sport_id' => getSport($data['group']['group_category']),
+						'timezone' => '', // use info from the group admin
+						'country' => '', // use info from the group admin
+						'zipcode' => '', // use info from the group admin
 					),
 				);
 				
 				$this->webhook->data = $send;
 				parent::post();
 				break;
-			case "user_updates_group": // TODO, fix blockers
+			case 'user_updates_group': // TODO, fix blockers
 				// INTERNAL BLOCKER => need the ability to get TEAM_ID
 
 				$this->domain .= '/teams/' . 'INSERT_TEAM_ID'; // TODO
@@ -78,19 +79,19 @@ class Teamsnap extends Webhook
 				// build put to send
 				$data = $this->webhook->data;
 				$send = array(
-					"team" => array(
-						"team_name" => $data['group']['name'],
-						"logo_url" => $data['group']['logo'],
-						"public_subdomain" => $data['group']['url'],
+					'team' => array(
+						'team_name' => $data['group']['name'],
+						'logo_url' => $data['group']['logo'],
+						'public_subdomain' => $data['group']['url'],
 					),
 				);
 				
 				$this->webhook->data = $send;
 				parent::put();
 				break;
-			case "user_deletes_group": // TODO, get information from TeamSnap on how to properly delete a team.
+			case 'user_deletes_group': // TODO, get information from TeamSnap on how to properly delete a team.
 				break;
-			case "user_adds_role": // TODO, fix blockers
+			case 'user_adds_role': // TODO, fix blockers
 				// INTERNAL BLOCKER => need the ability to get TEAM_ID
 				// INTERNAL BLOCKER => need the ability to determine if user is the owener of the group
 				// INTERNAL BLOCKER => need the ability to determine if the user previously exists
@@ -114,12 +115,12 @@ class Teamsnap extends Webhook
 				// build data to send
 				$data = $this->webhook->data;
 				$send = array(
-					"team" => array(
-						"available_rosters" => array (
-							"non_player" => (bool) ($data['member']['role_name'] == "Player" ? false : true),
-							"is_manager" => (bool) ($data['member']['is_admin'] ? true : false),
-							"is_commissioner" => (bool) false,
-							"is_owner" => (bool) ($data['member']['role_name'] == "Coach" ? true : false),
+					'team' => array(
+						'available_rosters' => array (
+							'non_player' => (bool) ($data['member']['role_name'] == 'Player' ? false : true),
+							'is_manager' => (bool) ($data['member']['is_admin'] ? true : false),
+							'is_commissioner' => (bool) false,
+							'is_owner' => (bool) ($data['member']['role_name'] == 'Coach' ? true : false),
 						),
 					),
 				);
@@ -134,18 +135,18 @@ class Teamsnap extends Webhook
 					parent::put();
 				}
 				break;
-			case "user_removes_role":
+			case 'user_removes_role':
 				$this->domain .= '/teams/'. 'INSERT_TEAM_ID' . '/as_roster/' . 'INSERT_COMMISSIONER_ID'. '/rosters/' . 'INSERT_ROSTER_ID';
 				
 				// build put to send
 				$data = $this->webhook->data;
 				$send = array(
-					"team" => array(
-						"available_rosters" => array(
-							"non_player" => (bool) ($data['member']['role_name'] == "Player" ? false : true),
-							"is_manager" => (bool) ($data['member']['is_admin'] ? true : false),
-							"is_commissioner" => (bool) false,
-							"is_owner" => (bool) ($data['member']['role_name'] == "Coach" ? true : false),
+					'team' => array(
+						'available_rosters' => array(
+							'non_player' => (bool) ($data['member']['role_name'] == 'Player' ? false : true),
+							'is_manager' => (bool) ($data['member']['is_admin'] ? true : false),
+							'is_commissioner' => (bool) false,
+							'is_owner' => (bool) ($data['member']['role_name'] == 'Coach' ? true : false),
 						),
 					),
 				);
@@ -153,7 +154,7 @@ class Teamsnap extends Webhook
 				$this->webhook->data = $send;
 				parent::put();
 				break;
-			case "user_adds_submission":
+			case 'user_adds_submission':
 				// Functionality currently unused by TeamSnap
 				// might want to store in: https://github.com/teamsnap/apiv2-docs/wiki/Roster-Custom-Data
 				break;
@@ -182,184 +183,184 @@ class Teamsnap extends Webhook
 		{
 			switch($data[1])
 			{
-				case "Archery":
+				case 'Archery':
 					$id = 59;
 					break;
-				case "Australian Football":
+				case 'Australian Football':
 					$id = 26;
 					break;
-				case "Badminton":
+				case 'Badminton':
 					$id = 27;
 					break;
-				case "Bandy":
+				case 'Bandy':
 					$id = 28;
 					break;
-				case "Baseball":
+				case 'Baseball':
 					$id = 5;
 					break;
-				case "Basketball":
+				case 'Basketball':
 					$id = 1;
 					break;
-				case "Bocce":
+				case 'Bocce':
 					$id = 29;
 					break;
-				case "Bowling":
+				case 'Bowling':
 					$id = 13;
 					break;
-				case "Broomball":
+				case 'Broomball':
 					$id = 30;
 					break;
-				case "Cheerleading":
+				case 'Cheerleading':
 					$id = 31;
 					break;
-				case "Chess":
+				case 'Chess':
 					$id = 32;
 					break;
-				case "Cow Tipping":
+				case 'Cow Tipping':
 					$id = 54;
 					break;
-				case "Cricket":
+				case 'Cricket':
 					$id = 8;
 					break;
-				case "Croquet":
+				case 'Croquet':
 					$id = 33;
 					break;
-				case "Curling":
+				case 'Curling':
 					$id = 34;
 					break;
-				case "Cycling":
+				case 'Cycling':
 					$id = 35;
 					break;
-				case "Dodgeball":
+				case 'Dodgeball':
 					$id = 14;
 					break;
-				case "Dragon Boat":
+				case 'Dragon Boat':
 					$id = 25;
 					break;
-				case "Fencing":
+				case 'Fencing':
 					$id = 36;
 					break;
-				case "Field Hockey":
+				case 'Field Hockey':
 					$id = 15;
 					break;
-				case "Floor Hockey":
+				case 'Floor Hockey':
 					$id = 60;
 					break;
-				case "Floorball":
+				case 'Floorball':
 					$id = 44;
 					break;
-				case "Foosball":
+				case 'Foosball':
 					$id = 37;
 					break;
-				case "Football":
+				case 'Football':
 					$id = 7;
 					break;
-				case "Golf":
+				case 'Golf':
 					$id = 46;
 					break;
-				case "Gymnastics-Men":
+				case 'Gymnastics-Men':
 					$id = 56;
 					break;
-				case "Gymnastics-Women":
+				case 'Gymnastics-Women':
 					$id = 57;
 					break;
-				case "Hurling":
+				case 'Hurling':
 					$id = 38;
 					break;
-				case "Ice Hockey":
+				case 'Ice Hockey':
 					$id = 16;
 					break;
-				case "Indoor Soccer":
+				case 'Indoor Soccer':
 					$id = 39;
 					break;
-				case "Inline Hockey":
+				case 'Inline Hockey':
 					$id = 17;
 					break;
-				case "Ki-O-Rahi":
+				case 'Ki-O-Rahi':
 					$id = 50;
 					break;
-				case "Kickball":
+				case 'Kickball':
 					$id = 18;
 					break;
-				case "Lacrosse":
+				case 'Lacrosse':
 					$id = 10;
 					break;
-				case "Netball":
+				case 'Netball':
 					$id = 40;
 					break;
-				case "Non-Sport Group":
+				case 'Non-Sport Group':
 					$id = 52;
 					break;
-				case "Other Sport":
+				case 'Other Sport':
 					$id = 24;
 					break;
-				case "Outrigger":
+				case 'Outrigger':
 					$id = 53;
 					break;
-				case "Paintball":
+				case 'Paintball':
 					$id = 19;
 					break;
-				case "Petanque":
+				case 'Petanque':
 					$id = 45;
 					break;
-				case "Polo":
+				case 'Polo':
 					$id = 20;
 					break;
-				case "Racquetball":
+				case 'Racquetball':
 					$id = 55;
 					break;
-				case "Ringette":
+				case 'Ringette':
 					$id = 51;
 					break;
-				case "Roller Derby":
+				case 'Roller Derby':
 					$id = 48;
 					break;
-				case "Rowing":
+				case 'Rowing':
 					$id = 21;
 					break;
-				case "Rugby":
+				case 'Rugby':
 					$id = 9;
 					break;
-				case "Running":
+				case 'Running':
 					$id = 41;
 					break;
-				case "Sailing":
+				case 'Sailing':
 					$id = 47;
 					break;
-				case "Slo-pitch":
+				case 'Slo-pitch':
 					$id = 61;
 					break;
-				case "Soccer":
+				case 'Soccer':
 					$id = 2;
 					break;
-				case "Softball":
+				case 'Softball':
 					$id = 4;
 					break;
-				case "Street Hockey":
+				case 'Street Hockey':
 					$id = 62;
 					break;
-				case "Swimming":
+				case 'Swimming':
 					$id = 42;
 					break;
-				case "Tennis":
+				case 'Tennis':
 					$id = 43;
 					break;
-				case "Track And Field":
+				case 'Track And Field':
 					$id = 58;
 					break;
-				case "Ultimate":
+				case 'Ultimate':
 					$id = 22;
 					break;
-				case "Volleyball":
+				case 'Volleyball':
 					$id = 6;
 					break;
-				case "Water Polo":
+				case 'Water Polo':
 					$id = 23;
 					break;
-				case "Wiffleball":
+				case 'Wiffleball':
 					$id = 11;
 					break;
-				case "Wrestling":
+				case 'Wrestling':
 					$id = 49;
 					break;
 				default:
