@@ -46,6 +46,6 @@ class PostWebhooks
 		$classname = 'AllPlayers\\Webhooks\\' . $hook['name'];
 
 		$webhook = new $classname($subscriber['variables'], $event_data, array("test_url" => $this->test_url));
-		$result = $webhook->send($webhook->getData());
+		$result = $webhook->send();
 	}
 }   

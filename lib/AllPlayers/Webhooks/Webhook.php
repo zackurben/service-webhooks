@@ -211,7 +211,7 @@ class Webhook
 	 * @return \Guzzle\Http\Message\Response
 	 *   Response from the service.
 	 */
-	public function send(array $data)
+	public function send()
 	{
 		return $this->request->send();
 	}
