@@ -70,7 +70,7 @@ class Webhook
 	 *
 	 * @var string
 	 */
-	public $method;
+	public $method = 'json';
 
 	/**
 	 * Force the processing of the Webhook to be defined. If no processing is

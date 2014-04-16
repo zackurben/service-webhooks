@@ -14,7 +14,7 @@ namespace AllPlayers\Webhooks;
 class Custom extends Webhook
 {
 	/**
-	 * The URL to post the webhook.
+	 * The URL to post the webhook
 	 *
 	 * @var string
 	 */
