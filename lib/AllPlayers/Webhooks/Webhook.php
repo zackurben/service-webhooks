@@ -137,7 +137,7 @@ class Webhook
 	 */
 	public function getData()
 	{
-		return $this->webhook['data'];
+		return $this->webhook->data;
 	}
 
 	/**
@@ -162,11 +162,11 @@ class Webhook
 		if($this->method === 'form-urlencoded')
 		{
 			$this->request = $this->client->post($this->webhook->subscriber['url'], $this->headers);
-			$this->request->addPostFields($this->webhook['data']);
+			$this->request->addPostFields($this->webhook->data);
 		}
 		else
 		{
-			$this->request = $this->client->post($this->webhook->subscriber['url'], $this->headers, $this->webhook['data']);
+			$this->request = $this->client->post($this->webhook->subscriber['url'], $this->headers, $this->webhook->data);
 		}
 	}
 	
@@ -181,11 +181,11 @@ class Webhook
 		if($this->method === 'form-urlencoded')
 		{
 			$this->request = $this->client->put($this->webhook->subscriber['url'], $this->headers);
-			$this->request->addPostFields($this->webhook['data']);
+			$this->request->addPostFields($this->webhook->data);
 		}
 		else
 		{
-			$this->request = $this->client->put($this->webhook->subscriber['url'], $this->headers, $this->webhook['data']);
+			$this->request = $this->client->put($this->webhook->subscriber['url'], $this->headers, $this->webhook->data);
 		}
 	}
 	
@@ -198,7 +198,7 @@ class Webhook
 	{
 		if(isset($url) && $url != '')
 		{
-			$this->webhook['data']['original_url'] = $this->webhook['domain'];
+			$this->webhook->data['original_url'] = $this->webhook['domain'];
 			$this->webhook['domain'] = $url;
 		}	
 	}
