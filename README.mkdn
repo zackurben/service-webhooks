@@ -81,7 +81,7 @@ class MyService extends Webhook
 	
 	/**
 	 * Process the webhook data and set the domain to the appropriate URL.
-	 * (Note that this function is required)
+	 * (All webhook processing should be completed here)
 	 */
 	public function process()
 	{
