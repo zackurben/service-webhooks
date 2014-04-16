@@ -73,13 +73,6 @@ class Webhook
 	public $method = 'json';
 
 	/**
-	 * Force the processing of the Webhook to be defined. If no processing is
-	 * needed, this function can remain empty; this is where the send data should
-	 * be manipulated, as well as the URL to send the data.
-	 */
-	abstract public function process();
-
-	/**
 	 * Initialize the webhook object.
 	 *
 	 * @param array $subscriber
