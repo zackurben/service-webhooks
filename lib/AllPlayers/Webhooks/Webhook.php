@@ -200,7 +200,7 @@ class Webhook
 	{
 		if(isset($data['test_url']) && $data['test_url'] != '')
 		{
-			$this->webhook->data->original_url = $this->domain;
+			$this->webhook->data['original_url'] = $this->domain;
 			$this->domain = $data['test_url'];
 		}
 	}
