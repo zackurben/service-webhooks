@@ -37,11 +37,11 @@ class Teamsnap extends Webhook
 	/**
 	 * Authenticate using teamsnap_auth.
 	 */
-	public function __construct(array $subscriber = array(), array $data = array())
+	public function __construct(array $subscriber = array(), array $data = array(), array $preprocess = array())
 	{
 		parent::__construct(array('token' => $subscriber['token'],
 			'commissioner_id' => $subscriber['commissioner_id'],
-			'division_id' => $subscriber['division_id']), $data);
+			'division_id' => $subscriber['division_id']), $data, $preprocess);
 		$this->process();
 	}
 	

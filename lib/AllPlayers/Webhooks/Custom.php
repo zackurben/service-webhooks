@@ -37,10 +37,10 @@ class Custom extends Webhook
 	/**
 	 * Use custom url as domain.
 	 */
-	public function __construct(array $subscriber = array(), array $data = array())
+	public function __construct(array $subscriber = array(), array $data = array(), array $preprocess = array())
 	{
 		$this->domain = $subscriber['url'];
-		parent::__construct($subscriber, $data);
+		parent::__construct($subscriber, $data, $preprocess);
 		$this->process();
 	}
 	
@@ -50,9 +50,13 @@ class Custom extends Webhook
 	public function process()
 	{
 		/**
-		 * Do nothing here because this is a simplex webhook that dumps
-		 * all data to out a URL.
+		 * Set domain to custom url.
+		 *
+		 * Do no processing here, because this is a simplex webhook that dumps
+		 * all raw data to a single URL.
 		 */
+		$this->domain = $this->webhook->subscriber['url'];
+		 
 		parent::post();
 	}
 }

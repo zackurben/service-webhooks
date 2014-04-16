@@ -80,8 +80,11 @@ class Webhook
 	 *
 	 * @param array $data
 	 *   The event data from the webhook.
+	 *
+	 * @param array $preprocess
+	 *   Data that needs to be processed before the REST methods are called.
 	 */
-	public function __construct(array $subscriber = array(), array $data = array())
+	public function __construct(array $subscriber = array(), array $data = array(), array $preprocess = array())
 	{
 		$this->webhook->subscriber = $subscriber;
 		$this->webhook->data = $data;
@@ -91,7 +94,7 @@ class Webhook
 		{
 			$this->authenticate();
 		}
-		$this->preprocess($this->webhook->subscriber['url']);
+		$this->preprocess($preprocess);
 	}
 
 	/**
@@ -120,6 +123,7 @@ class Webhook
 				$this->client->addSubscriber($auth_plugin);
 				break;
 			case 'teamsnap_auth':
+				// remove teamsnap auth, credentials are unique to AllPlayers, and not individual groups
 				$auth = array (
 					'token' => $this->webhook->subscriber['token'],
 					'commissioner_id' => $this->webhook->subscriber['commissioner_id'],
@@ -161,12 +165,12 @@ class Webhook
 	{
 		if($this->method === 'form-urlencoded')
 		{
-			$this->request = $this->client->post($this->webhook->subscriber['url'], $this->headers);
+			$this->request = $this->client->post($this->domain, $this->headers);
 			$this->request->addPostFields($this->webhook->data);
 		}
 		else
 		{
-			$this->request = $this->client->post($this->webhook->subscriber['url'], $this->headers, $this->webhook->data);
+			$this->request = $this->client->post($this->domain, $this->headers, $this->webhook->data);
 		}
 	}
 	
@@ -180,34 +184,29 @@ class Webhook
 	{
 		if($this->method === 'form-urlencoded')
 		{
-			$this->request = $this->client->put($this->webhook->subscriber['url'], $this->headers);
+			$this->request = $this->client->put($this->domain, $this->headers);
 			$this->request->addPostFields($this->webhook->data);
 		}
 		else
 		{
-			$this->request = $this->client->put($this->webhook->subscriber['url'], $this->headers, $this->webhook->data);
+			$this->request = $this->client->put($this->domain, $this->headers, $this->webhook->data);
 		}
 	}
 
 	/**
 	 * Perform any additional processing on the webhook before sending it.
-	 * This is to avoid passing multiple parameters to the constructor,
-	 * and is called before send().
 	 */
-	public function preprocess($url)
+	public function preprocess($data)
 	{
-		if(isset($url) && $url != '')
+		if(isset($data['test_url']) && $data['test_url'] != '')
 		{
 			$this->webhook->data->original_url = $this->domain;
-			$this->domain = $url;
+			$this->domain = $data['test_url'];
 		}
 	}
 
 	/**
 	 * Sends a request.
-	 *
-	 * @param array $data
-	 *   Data to be posted in the request.
 	 *
 	 * @return \Guzzle\Http\Message\Response
 	 *   Response from the service.

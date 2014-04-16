@@ -73,19 +73,19 @@ class MyService extends Webhook
 	/**
      * Configure the authentication credentials, and other Webhook specifics here.
      */
-    public function __construct(array $subscriber = array(), array $data = array())
+    public function __construct(array $subscriber = array(), array $data = array(), array $preprocess = array())
     {
-        parent::__construct($subscriber, $data);
+        parent::__construct($subscriber, $data, $preprocess);
 		$this->process();
     }
 	
 	/**
 	 * Process the webhook data and set the domain to the appropriate URL.
-	 * (All webhook processing should be completed here)
+	 * (This is required, all webhook processing should be completed here)
 	 */
 	public function process()
 	{
-		// do webhook processing here, such as, changing URL and the data being sent.
+		// do webhook processing here, such as, changing the URL and data being sent.
 	}
 }
 ```
