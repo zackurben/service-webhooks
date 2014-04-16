@@ -26,7 +26,7 @@ class Teamsnap extends Webhook
 	 * @var string
 	 */
 	public $authentication = 'teamsnap_auth';
-	
+
 	/**
 	 * The method of data transmission.
 	 *
@@ -44,7 +44,7 @@ class Teamsnap extends Webhook
 			'division_id' => $subscriber['division_id']), $data, $preprocess);
 		$this->process();
 	}
-	
+
 	/**
 	 * Process the webhook data and set the domain to the appropriate URL
 	 *
@@ -57,7 +57,7 @@ class Teamsnap extends Webhook
 			case 'user_creates_group':
 				// INTERNAL BLOCKER => need the ability to get location information from group admin
 				$this->domain .= '/teams';
-				
+
 				// post data to send
 				$data = $this->webhook->data;
 				$send = array(
@@ -70,7 +70,7 @@ class Teamsnap extends Webhook
 						'zipcode' => '', // use info from the group admin
 					),
 				);
-				
+
 				$this->webhook->data = $send;
 				parent::post();
 				break;
@@ -78,7 +78,7 @@ class Teamsnap extends Webhook
 				// INTERNAL BLOCKER => need the ability to get TEAM_ID
 
 				$this->domain .= '/teams/' . 'INSERT_TEAM_ID';
-				
+
 				// put data to send
 				$data = $this->webhook->data;
 				$send = array(
@@ -89,7 +89,7 @@ class Teamsnap extends Webhook
 						'public_subdomain' => $data['group']['url'],
 					),
 				);
-				
+
 				$this->webhook->data = $send;
 				parent::put();
 				break;
@@ -102,7 +102,7 @@ class Teamsnap extends Webhook
 				//                     TeamSnap system.
 				// INTERNAL BLOCKER => need to process the user_creates_group webhook before user_adds_role,
 				//                     so the owner exists, and we dont need to make extra api calls.
-				
+
 				/**
 				 * Send get request with user id for the team, so we dont make duplicate users
 				 * with different roles. Check if user exists by determing if we contain a partner
@@ -114,13 +114,13 @@ class Teamsnap extends Webhook
 				 *   method = POST
 				 */
 				$method = '';
-				
+
 				// determine the correct url to use (dependent on if user exists).
 				$this->domain .= '/teams/' . 'INSERT_TEAM_ID' . '/as_roster/' .
 					$this->webhook->subscriber['commissioner_id'] . '/rosters'; // POST
 				$this->domain .= '/teams/' . 'INSERT_TEAM_ID' . '/as_roster/' . 
 					$this->webhook->subscriber['commissioner_id'] . '/rosters/' . 'INSERT_USER_ROSTER_ID'; // PUT
-				
+
 				// put/post data to send
 				$data = $this->webhook->data;
 				$send = array(
@@ -147,7 +147,7 @@ class Teamsnap extends Webhook
 			case 'user_removes_role':
 				$this->domain .= '/teams/'. 'INSERT_TEAM_ID' . '/as_roster/' . 
 					$this->webhook->subscriber['commissioner_id'] . '/rosters/' . 'INSERT_ROSTER_ID';
-				
+
 				// put data to send
 				$data = $this->webhook->data;
 				$send = array(
@@ -160,7 +160,7 @@ class Teamsnap extends Webhook
 						),
 					),
 				);
-				
+
 				$this->webhook->data = $send;
 				parent::put();
 				break;
@@ -170,7 +170,7 @@ class Teamsnap extends Webhook
 				break;
 		}
 	}
-	
+
 	/**
 	 * Select the id corresponding to the sport name.
 	 *
@@ -183,7 +183,7 @@ class Teamsnap extends Webhook
 	public function getSport($data)
 	{
 		$id = NULL;
-		
+
 		// if the sport group was not selected, default to non-sport group.
 		if(!stristr($data[0], 'Sport'))
 		{
@@ -378,7 +378,7 @@ class Teamsnap extends Webhook
 					break;
 			}	
 		}
-		
+
 		return $id;
 	}
 }

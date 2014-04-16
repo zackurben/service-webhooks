@@ -23,7 +23,7 @@ class PostWebhooks
 	public function __construct()
 	{
 		include __DIR__ . '/config/config.php';
-		
+
 		if (isset($config['redis_password']) && !$config['redis_password'] == '')
 		{
 			Resque::setBackend('redis://redis:' . $config['redis_password'] . '@' . $config['redis_host']);
@@ -42,10 +42,10 @@ class PostWebhooks
 		$hook = $this->args['hook'];
 		$subscriber = $this->args['subscriber'];
 		$event_data = $this->args['event_data'];
-		
+
 		$classname = 'AllPlayers\\Webhooks\\' . $hook['name'];
 
 		$webhook = new $classname($subscriber['variables'], $event_data, array("test_url" => $this->test_url));
 		$result = $webhook->send();
 	}
-}   
+}

@@ -173,7 +173,7 @@ class Webhook
 			$this->request = $this->client->post($this->domain, $this->headers, json_encode($this->webhook->data));
 		}
 	}
-	
+
 	/**
 	 * Makes a PUT request to the external service
 	 *
