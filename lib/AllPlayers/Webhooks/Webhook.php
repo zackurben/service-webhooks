@@ -188,7 +188,7 @@ class Webhook
 			$this->request = $this->client->put($this->webhook->subscriber['url'], $this->headers, $this->webhook->data);
 		}
 	}
-	
+
 	/**
 	 * Perform any additional processing on the webhook before sending it.
 	 * This is to avoid passing multiple parameters to the constructor,
@@ -198,9 +198,9 @@ class Webhook
 	{
 		if(isset($url) && $url != '')
 		{
-			$this->webhook->data['original_url'] = $this->webhook['domain'];
-			$this->webhook['domain'] = $url;
-		}	
+			$this->webhook->data->original_url = $this->domain;
+			$this->domain = $url;
+		}
 	}
 
 	/**

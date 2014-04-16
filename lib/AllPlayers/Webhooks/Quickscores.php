@@ -41,6 +41,18 @@ class Quickscores extends Webhook
 	public function __construct(array $subscriber = array(), array $data = array())
 	{
 		parent::__construct(array('user' => $subscriber['user'], 'pass' => $subscriber['token']), $data);
+		$this->process();
+	}
+	
+	/**
+	 * Process the webhook and set the domain to the appropriate URL
+	 */
+	public function process()
+	{
+		/**
+		 * Do nothing here because, QuickScores has a single API endpoint for
+		 * processing our data. 
+		 */
 		parent::post();
 	}
 }
