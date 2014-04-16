@@ -91,7 +91,7 @@ class Webhook
 		{
 			$this->authenticate();
 		}
-		$this->preprocess();
+		$this->preprocess($this->webhook->subscriber['url']);
 	}
 
 	/**
