@@ -7,21 +7,10 @@ The AllPlayers Service Webhooks act as a proxy between the defined [AllPlayers A
 3. Your external app does something with that data (sync users and groups, send emails, etc).
 
 ## Steps to contributing
-AllPlayers will accept service hooks for production web applications. We would like the following information to be included, to provide quality service and support to our users:
+AllPlayers will accept service hooks for production web applications. We would like the contributions to look like our template below. To provide quality service and support to our users, we would additionally ask that all contributions include:
    - Documentation about what the hook does.
    - Tested code, phpunit tests if possible.
-   - A URL for the service.
    - A URL to a logo for the service
-
-You can annotate this directly in the hook like so:
-
-```php
-class MyService extends Webhook
-{
-    public $domain = 'http://your-service-domain.com';
-    public $service_logo = 'http://your-service-domain.com/logo.png';
-}
-```
 
 1. Fork the project
 2. Create a new file in `lib/AllPlayers/Webhooks/` called `YourService.php`, using the template given below.

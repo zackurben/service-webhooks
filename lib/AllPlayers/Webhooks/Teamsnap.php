@@ -84,6 +84,7 @@ class Teamsnap extends Webhook
 				$send = array(
 					'team' => array(
 						'team_name' => $data['group']['name'],
+						'sport_id' => getSport($data['group']['group_category']),
 						'logo_url' => $data['group']['logo'],
 						'public_subdomain' => $data['group']['url'],
 					),
