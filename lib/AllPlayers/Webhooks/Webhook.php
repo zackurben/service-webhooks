@@ -189,7 +189,7 @@ class Webhook
 		}
 		else
 		{
-			$this->request = $this->client->put($this->domain, $this->headers, $this->webhook->data);
+			$this->request = $this->client->put($this->domain, $this->headers, json_encode($this->webhook->data));
 		}
 	}
 
