@@ -98,7 +98,7 @@ class Webhook
 		{
 			$this->authenticate();
 		}
-		$this->process();
+		$this->preprocess();
 	}
 
 	/**
@@ -201,7 +201,7 @@ class Webhook
 	 * This is to avoid passing multiple parameters to the constructor,
 	 * and is called before send().
 	 */
-	public function process($url)
+	public function preprocess($url)
 	{
 		if(isset($url) && $url != '')
 		{
