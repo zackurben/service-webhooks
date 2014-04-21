@@ -27,7 +27,7 @@ class Teamsnap extends Webhook
      *
      * @var string
      */
-    public $authentication = 'teamsnap_auth';
+    public $authentication = 'no_authentication';
 
     /**
      * The method of data transmission.
@@ -44,6 +44,7 @@ class Teamsnap extends Webhook
         parent::__construct(array('token' => $subscriber['token'],
             'commissioner_id' => $subscriber['commissioner_id'],
             'division_id' => $subscriber['division_id']), $data, $preprocess);
+        array_push($this->headers, array("X-Teamsnap-Token" => $this->webhook->subscriber['token']));
         $this->process();
     }
 
