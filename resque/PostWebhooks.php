@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file PostWebhooks.php
  *
@@ -10,42 +11,42 @@
  */
 class PostWebhooks
 {
-	/**
-	 * Redirect all requests to this URL for development.
-	 *
-	 * @var string
-	 */
-	public $test_url;
 
-	/**
-	 * Initiate redis connection before processing.
-	 */
-	public function __construct()
-	{
-		include __DIR__ . '/config/config.php';
+    /**
+     * Redirect all requests to this URL for development.
+     *
+     * @var string
+     */
+    public $test_url;
 
-		if (isset($config['redis_password']) && !$config['redis_password'] == '')
-		{
-			Resque::setBackend('redis://redis:' . $config['redis_password'] . '@' . $config['redis_host']);
-		}
-		if (isset($config['test_url']))
-		{
-			$this->test_url = $config['test_url'];
-		}
-	}
+    /**
+     * Initiate redis connection before processing.
+     */
+    public function __construct()
+    {
+        include __DIR__ . '/config/config.php';
 
-	/**
-	 * Perform the webhook processing operation.
-	 */
-	public function perform()
-	{
-		$hook = $this->args['hook'];
-		$subscriber = $this->args['subscriber'];
-		$event_data = $this->args['event_data'];
+        if (isset($config['redis_password']) && !$config['redis_password'] == '') {
+            Resque::setBackend('redis://redis:' . $config['redis_password'] . '@' . $config['redis_host']);
+        }
+        if (isset($config['test_url'])) {
+            $this->test_url = $config['test_url'];
+        }
+    }
 
-		$classname = 'AllPlayers\\Webhooks\\' . $hook['name'];
+    /**
+     * Perform the webhook processing operation.
+     */
+    public function perform()
+    {
+        $hook = $this->args['hook'];
+        $subscriber = $this->args['subscriber'];
+        $event_data = $this->args['event_data'];
 
-		$webhook = new $classname($subscriber['variables'], $event_data, array("test_url" => $this->test_url));
-		$result = $webhook->send();
-	}
+        $classname = 'AllPlayers\\Webhooks\\' . $hook['name'];
+
+        $webhook = new $classname($subscriber['variables'], $event_data, array("test_url" => $this->test_url));
+        $result = $webhook->send();
+    }
+
 }

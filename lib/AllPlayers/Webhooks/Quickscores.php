@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file Quickscores.php
  *
@@ -14,45 +15,47 @@ namespace AllPlayers\Webhooks;
  */
 class Quickscores extends Webhook
 {
-	/**
-	 * The URL to post the webhook.
-	 *
-	 * @var string
-	 */
-	public $domain = 'http://www.quickscores.com/API/SynchEvents.php';
 
-	/**
-	 * The authentication method used in the post requests.
-	 *
-	 * @var string
-	 */
-	public $authentication = 'basic_auth';
-	
-	/**
-	 * The method of data transmission.
-	 *
-	 * @var string
-	 */
-	public $method = 'form-urlencoded';
+    /**
+     * The URL to post the webhook.
+     *
+     * @var string
+     */
+    public $domain = 'http://www.quickscores.com/API/SynchEvents.php';
 
-	/**
-	 * Authenticate using basic auth.
-	 */
-	public function __construct(array $subscriber = array(), array $data = array(), array $preprocess = array())
-	{
-		parent::__construct(array('user' => $subscriber['user'], 'pass' => $subscriber['token']), $data, $preprocess);
-		$this->process();
-	}
-	
-	/**
-	 * Process the webhook and set the domain to the appropriate URL
-	 */
-	public function process()
-	{
-		/**
-		 * Do nothing here because, QuickScores has a single API endpoint for
-		 * processing our data. 
-		 */
-		parent::post();
-	}
+    /**
+     * The authentication method used in the post requests.
+     *
+     * @var string
+     */
+    public $authentication = 'basic_auth';
+
+    /**
+     * The method of data transmission.
+     *
+     * @var string
+     */
+    public $method = 'form-urlencoded';
+
+    /**
+     * Authenticate using basic auth.
+     */
+    public function __construct(array $subscriber = array(), array $data = array(), array $preprocess = array())
+    {
+        parent::__construct(array('user' => $subscriber['user'], 'pass' => $subscriber['token']), $data, $preprocess);
+        $this->process();
+    }
+
+    /**
+     * Process the webhook and set the domain to the appropriate URL
+     */
+    public function process()
+    {
+        /**
+         * Do nothing here because, QuickScores has a single API endpoint for
+         * processing our data.
+         */
+        parent::post();
+    }
+
 }

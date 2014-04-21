@@ -1,3 +1,7 @@
 composer.lock
 resque/config/config.php
 vendor
+/nbproject/private/
+nbproject/project.properties
+
+nbproject/project.xml
