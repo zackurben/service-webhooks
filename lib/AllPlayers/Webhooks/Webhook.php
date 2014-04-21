@@ -101,7 +101,7 @@ class Webhook
     /**
      * Authenticate client based on the webhooks authentication method.
      *
-     * This function is not abstrat due to the possibility that many partners will
+     * This function is not abstract due to the possibility that many partners will
      * need to use either basic_auth or oauth; those who do not can have a custom
      * auth definition here.
      */
@@ -129,6 +129,7 @@ class Webhook
                     'commissioner_id' => $this->webhook->subscriber['commissioner_id'],
                     'division_id' => $this->webhook->subscriber['division_id'],
                 );
+                $this->client->addSubscriber($auth);
                 break;
         }
     }
