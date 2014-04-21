@@ -59,6 +59,13 @@ class Webhook
     public $domain;
 
     /**
+     * The URL to send webhook data, if testing.
+     *
+     * @var string
+     */
+    public $test_domain;
+
+    /**
      * The authentication method used in the post requests.
      *
      * @var string
@@ -122,9 +129,6 @@ class Webhook
                 $auth_plugin = new OauthPlugin($oauth_config);
                 $this->client->addSubscriber($auth_plugin);
                 break;
-            case 'teamsnap_auth':
-                array_push($this->headers, array("X-Teamsnap-Token" => $this->webhook->subscriber['token']));
-                break;
         }
     }
 
@@ -158,6 +162,13 @@ class Webhook
      */
     public function post()
     {
+        // swap domain and redirect domain
+        if (isset($this->test_domain) && $this->test_domain != '') {
+            $this->webhook->data['original_url'] = $this->domain;
+            $this->domain = $this->test_domain;
+        }
+
+        // send data in the requested method
         if ($this->method === 'form-urlencoded') {
             $this->request = $this->client->post($this->domain, $this->headers);
             $this->request->addPostFields($this->webhook->data);
@@ -174,6 +185,13 @@ class Webhook
      */
     public function put()
     {
+        // swap domain and redirect domain
+        if (isset($this->test_domain) && $this->test_domain != '') {
+            $this->webhook->data['original_url'] = $this->domain;
+            $this->domain = $this->test_domain;
+        }
+
+        // send data in the requested method
         if ($this->method === 'form-urlencoded') {
             $this->request = $this->client->put($this->domain, $this->headers);
             $this->request->addPostFields($this->webhook->data);
@@ -184,12 +202,15 @@ class Webhook
 
     /**
      * Perform any additional processing on the webhook before sending it.
+     *
+     * @param $data
+     *   An array of data to be processed before the webhook data is sent.
      */
     public function preprocess($data)
     {
+        // set the redirect url, so we can swap domains before sending the data
         if (isset($data['test_url']) && $data['test_url'] != '') {
-            $this->webhook->data['original_url'] = $this->domain;
-            $this->domain = $data['test_url'];
+            $this->test_domain = $data['test_url'];
         }
     }
 
@@ -201,7 +222,7 @@ class Webhook
      */
     public function send()
     {
-        return $this->request->send();
+        $this->request->send();
     }
 
 }

@@ -52,13 +52,9 @@ class Custom extends Webhook
     public function process()
     {
         /**
-         * Set domain to custom url.
-         *
          * Do no processing here, because this is a simplex webhook that dumps
          * all raw data to a single URL.
          */
-        $this->domain = $this->webhook->subscriber['url'];
-
         parent::post();
     }
 
