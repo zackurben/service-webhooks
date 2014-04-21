@@ -123,13 +123,7 @@ class Webhook
                 $this->client->addSubscriber($auth_plugin);
                 break;
             case 'teamsnap_auth':
-                // remove teamsnap auth, credentials are unique to AllPlayers, and not individual groups
-                $auth = array(
-                    'token' => $this->webhook->subscriber['token'],
-                    'commissioner_id' => $this->webhook->subscriber['commissioner_id'],
-                    'division_id' => $this->webhook->subscriber['division_id'],
-                );
-                $this->client->addSubscriber($auth);
+                array_push($this->headers, array("X-Teamsnap-Token" => $this->webhook->subscriber['token']));
                 break;
         }
     }
