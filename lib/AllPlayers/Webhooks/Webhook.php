@@ -165,15 +165,15 @@ class Webhook
         // swap domain and redirect domain
         if (isset($this->test_domain) && $this->test_domain != '') {
             $this->webhook->data['original_url'] = $this->domain;
-            $this->domain = $this->test_domain;
+            $this->client->setBaseUrl($this->test_domain);
         }
 
         // send data in the requested method
         if ($this->method === 'form-urlencoded') {
-            $this->request = $this->client->post($this->domain, $this->headers);
+            $this->request = $this->client->post($this->client->getBaseUrl(), $this->headers);
             $this->request->addPostFields($this->webhook->data);
         } else {
-            $this->request = $this->client->post($this->domain, $this->headers, json_encode($this->webhook->data));
+            $this->request = $this->client->post($this->client->getBaseUrl(), $this->headers, json_encode($this->webhook->data));
         }
     }
 
@@ -188,15 +188,15 @@ class Webhook
         // swap domain and redirect domain
         if (isset($this->test_domain) && $this->test_domain != '') {
             $this->webhook->data['original_url'] = $this->domain;
-            $this->domain = $this->test_domain;
+            $this->client->setBaseUrl($this->test_domain);
         }
 
         // send data in the requested method
         if ($this->method === 'form-urlencoded') {
-            $this->request = $this->client->put($this->domain, $this->headers);
+            $this->request = $this->client->put($this->client->getBaseUrl(), $this->headers);
             $this->request->addPostFields($this->webhook->data);
         } else {
-            $this->request = $this->client->put($this->domain, $this->headers, json_encode($this->webhook->data));
+            $this->request = $this->client->put($this->client->getBaseUrl(), $this->headers, json_encode($this->webhook->data));
         }
     }
 
@@ -212,17 +212,6 @@ class Webhook
         if (isset($data['test_url']) && $data['test_url'] != '') {
             $this->test_domain = $data['test_url'];
         }
-    }
-
-    /**
-     * Sends a request.
-     *
-     * @return \Guzzle\Http\Message\Response
-     *   Response from the service.
-     */
-    public function send()
-    {
-        $this->request->send();
     }
 
 }
