@@ -41,11 +41,18 @@ class Teamsnap extends Webhook
      */
     public function __construct(array $subscriber = array(), array $data = array(), array $preprocess = array())
     {
-        parent::__construct(array('token' => $subscriber['token'],
-            'commissioner_id' => $subscriber['commissioner_id'],
-            'division_id' => $subscriber['division_id']), $data, $preprocess);
-        array_push($this->headers, array("X-Teamsnap-Token" => $this->webhook->subscriber['token']));
-        $this->process();
+        //chdir('../../resque');
+        echo getcwd(), "\n";
+        include 'config/config.php';
+
+        if (isset($config['teamsnap'])) {
+            parent::__construct(array('token' => $config['teamsnap']['token'],
+                'commissioner_id' => $config['teamsnap']['commissioner_id'],
+                'division_id' => $config['teamsnap']['division_id']), $data, $preprocess);
+
+            $this->headers['X-Teamsnap-Token'] = $this->webhook->subscriber['token'];
+            $this->process();
+        }
     }
 
     /**
@@ -55,7 +62,7 @@ class Teamsnap extends Webhook
      */
     public function process()
     {
-        switch ($this->webhook['webhook_type']) {
+        switch ($this->webhook->data['webhook_type']) {
             case 'user_creates_group':
                 // INTERNAL BLOCKER => need the ability to get location information from group admin
                 $this->domain .= '/teams';
@@ -66,10 +73,10 @@ class Teamsnap extends Webhook
                     'team' => array(
                         'team_name' => $data['group']['name'],
                         'division_id' => $this->webhook->subscriber['division_id'],
-                        'sport_id' => getSport($data['group']['group_category']),
-                        'timezone' => '', // use info from the group admin
-                        'country' => '', // use info from the group admin
-                        'zipcode' => '', // use info from the group admin
+                        'sport_id' => $this->getSport($data['group']['group_category']),
+                        'timezone' => '', // determine from zipcode
+                        'country' => 'United States',
+                        'zipcode' => $data['group']['postalcode'],
                     ),
                 );
 
@@ -115,13 +122,7 @@ class Teamsnap extends Webhook
                  * else
                  *   method = POST
                  */
-                $method = '';
-
-                // determine the correct url to use (dependent on if user exists).
-                $this->domain .= '/teams/' . 'INSERT_TEAM_ID' . '/as_roster/' .
-                    $this->webhook->subscriber['commissioner_id'] . '/rosters'; // POST
-                $this->domain .= '/teams/' . 'INSERT_TEAM_ID' . '/as_roster/' .
-                    $this->webhook->subscriber['commissioner_id'] . '/rosters/' . 'INSERT_USER_ROSTER_ID'; // PUT
+                $method = 'post'; // remove hardcoded value
                 // put/post data to send
                 $data = $this->webhook->data;
                 $send = array(
@@ -136,9 +137,16 @@ class Teamsnap extends Webhook
                 );
 
                 $this->webhook->data = $send;
+
+                // set the correct url and call the correct method
                 if ($method == 'post') {
+                    $this->domain .= '/teams/' . 'INSERT_TEAM_ID' . '/as_roster/' .
+                        $this->webhook->subscriber['commissioner_id'] . '/rosters'; // POST
                     parent::post();
                 } elseif ($method == 'put') {
+                    $this->domain .= '/teams/' . 'INSERT_TEAM_ID' . '/as_roster/' .
+                        $this->webhook->subscriber['commissioner_id'] . '/rosters/' .
+                        'INSERT_USER_ROSTER_ID'; // PUT
                     parent::put();
                 }
                 break;
@@ -153,7 +161,7 @@ class Teamsnap extends Webhook
                         'available_rosters' => array(
                             'non_player' => (bool) ($data['member']['role_name'] == 'Player' ? false : true),
                             'is_manager' => (bool) ($data['member']['is_admin'] ? true : false),
-                            'is_commissioner' => (bool) false,
+                            'is_commissioner' => false,
                             'is_owner' => (bool) ($data['member']['role_name'] == 'Coach' ? true : false),
                         ),
                     ),
