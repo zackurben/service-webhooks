@@ -155,6 +155,20 @@ class Webhook
     }
 
     /**
+     * Set the Clients' domain, based on the URL in the webhook definition and test url.
+     */
+    public function setDomain()
+    {
+        // swap domain and redirect domain
+        if (isset($this->test_domain) && $this->test_domain != '') {
+            $this->webhook->data['original_url'] = $this->domain;
+            $this->client->setBaseUrl($this->test_domain);
+        } else {
+            $this->client->setBaseUrl($this->domain);
+        }
+    }
+
+    /**
      * Makes a POST request to the external service.
      *
      * @return \Guzzle\Http\Message\Request
@@ -162,17 +176,14 @@ class Webhook
      */
     public function post()
     {
-        // swap domain and redirect domain
-        if (isset($this->test_domain) && $this->test_domain != '') {
-            $this->webhook->data['original_url'] = $this->domain;
-            $this->client->setBaseUrl($this->test_domain);
-        }
+        $this->setDomain();
 
         // send data in the requested method
         if ($this->method === 'form-urlencoded') {
             $this->request = $this->client->post($this->client->getBaseUrl(), $this->headers);
             $this->request->addPostFields($this->webhook->data);
         } else {
+            $this->headers['Content-Type'] = 'application/json';
             $this->request = $this->client->post($this->client->getBaseUrl(), $this->headers, json_encode($this->webhook->data));
         }
     }
@@ -185,17 +196,14 @@ class Webhook
      */
     public function put()
     {
-        // swap domain and redirect domain
-        if (isset($this->test_domain) && $this->test_domain != '') {
-            $this->webhook->data['original_url'] = $this->domain;
-            $this->client->setBaseUrl($this->test_domain);
-        }
+        $this->setDomain();
 
         // send data in the requested method
         if ($this->method === 'form-urlencoded') {
             $this->request = $this->client->put($this->client->getBaseUrl(), $this->headers);
             $this->request->addPostFields($this->webhook->data);
         } else {
+            $this->headers['Content-Type'] = 'application/json';
             $this->request = $this->client->put($this->client->getBaseUrl(), $this->headers, json_encode($this->webhook->data));
         }
     }
