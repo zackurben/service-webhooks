@@ -41,8 +41,6 @@ class Teamsnap extends Webhook
      */
     public function __construct(array $subscriber = array(), array $data = array(), array $preprocess = array())
     {
-        //chdir('../../resque');
-        echo getcwd(), "\n";
         include 'config/config.php';
 
         if (isset($config['teamsnap'])) {
@@ -69,13 +67,14 @@ class Teamsnap extends Webhook
 
                 // post data to send
                 $data = $this->webhook->data;
+                $geographical = $this->getRegion($data['group']['timezone']);
                 $send = array(
                     'team' => array(
                         'team_name' => $data['group']['name'],
-                        'division_id' => $this->webhook->subscriber['division_id'],
+                        'division_id' => intval($this->webhook->subscriber['division_id']),
                         'sport_id' => $this->getSport($data['group']['group_category']),
-                        'timezone' => '', // determine from zipcode
-                        'country' => 'United States',
+                        'timezone' => $geographical['timezone'],
+                        'country' => $geographical['location'],
                         'zipcode' => $data['group']['postalcode'],
                     ),
                 );
@@ -90,12 +89,16 @@ class Teamsnap extends Webhook
 
                 // put data to send
                 $data = $this->webhook->data;
+                $geographical = $this->getRegion($data['group']['timezone']);
                 $send = array(
                     'team' => array(
                         'team_name' => $data['group']['name'],
-                        'sport_id' => getSport($data['group']['group_category']),
+                        'sport_id' => $this->getSport($data['group']['group_category']),
+                        'timezone' => $geographical['timezone'],
+                        'country' => $geographical['location'],
+                        'zipcode' => $data['group']['postalcode'],
                         'logo_url' => $data['group']['logo'],
-                        'public_subdomain' => $data['group']['url'],
+                        'cname' => $data['group']['url'],
                     ),
                 );
 
@@ -128,10 +131,10 @@ class Teamsnap extends Webhook
                 $send = array(
                     'team' => array(
                         'available_rosters' => array(
-                            'non_player' => (bool) ($data['member']['role_name'] == 'Player' ? false : true),
-                            'is_manager' => (bool) ($data['member']['is_admin'] ? true : false),
-                            'is_commissioner' => (bool) false,
-                            'is_owner' => (bool) ($data['member']['role_name'] == 'Coach' ? true : false),
+                            'non_player' => $data['member']['role_name'] == 'Player' ? 0 : 1,
+                            'is_manager' => $data['member']['is_admin'] ? 1 : 0,
+                            'is_commissioner' => 0,
+                            'is_owner' => $data['member']['role_name'] == 'Coach' ? 1 : 0,
                         ),
                     ),
                 );
@@ -159,10 +162,10 @@ class Teamsnap extends Webhook
                 $send = array(
                     'team' => array(
                         'available_rosters' => array(
-                            'non_player' => (bool) ($data['member']['role_name'] == 'Player' ? false : true),
-                            'is_manager' => (bool) ($data['member']['is_admin'] ? true : false),
-                            'is_commissioner' => false,
-                            'is_owner' => (bool) ($data['member']['role_name'] == 'Coach' ? true : false),
+                            'non_player' => $data['member']['role_name'] == 'Player' ? 0 : 1,
+                            'is_manager' => $data['member']['is_admin'] ? 1 : 0,
+                            'is_commissioner' => 0,
+                            'is_owner' => $data['member']['role_name'] == 'Coach' ? 1 : 0,
                         ),
                     ),
                 );
@@ -191,197 +194,346 @@ class Teamsnap extends Webhook
         $id = NULL;
 
         // if the sport group was not selected, default to non-sport group.
-        if (!stristr($data[0], 'Sport')) {
-            $id = 52; // Non-Sport Group
-        } else {
-            switch ($data[1]) {
-                case 'Archery':
-                    $id = 59;
-                    break;
-                case 'Australian Football':
-                    $id = 26;
-                    break;
-                case 'Badminton':
-                    $id = 27;
-                    break;
-                case 'Bandy':
-                    $id = 28;
-                    break;
-                case 'Baseball':
-                    $id = 5;
-                    break;
-                case 'Basketball':
-                    $id = 1;
-                    break;
-                case 'Bocce':
-                    $id = 29;
-                    break;
-                case 'Bowling':
-                    $id = 13;
-                    break;
-                case 'Broomball':
-                    $id = 30;
-                    break;
-                case 'Cheerleading':
-                    $id = 31;
-                    break;
-                case 'Chess':
-                    $id = 32;
-                    break;
-                case 'Cow Tipping':
-                    $id = 54;
-                    break;
-                case 'Cricket':
-                    $id = 8;
-                    break;
-                case 'Croquet':
-                    $id = 33;
-                    break;
-                case 'Curling':
-                    $id = 34;
-                    break;
-                case 'Cycling':
-                    $id = 35;
-                    break;
-                case 'Dodgeball':
-                    $id = 14;
-                    break;
-                case 'Dragon Boat':
-                    $id = 25;
-                    break;
-                case 'Fencing':
-                    $id = 36;
-                    break;
-                case 'Field Hockey':
-                    $id = 15;
-                    break;
-                case 'Floor Hockey':
-                    $id = 60;
-                    break;
-                case 'Floorball':
-                    $id = 44;
-                    break;
-                case 'Foosball':
-                    $id = 37;
-                    break;
-                case 'Football':
-                    $id = 7;
-                    break;
-                case 'Golf':
-                    $id = 46;
-                    break;
-                case 'Gymnastics-Men':
-                    $id = 56;
-                    break;
-                case 'Gymnastics-Women':
-                    $id = 57;
-                    break;
-                case 'Hurling':
-                    $id = 38;
-                    break;
-                case 'Ice Hockey':
-                    $id = 16;
-                    break;
-                case 'Indoor Soccer':
-                    $id = 39;
-                    break;
-                case 'Inline Hockey':
-                    $id = 17;
-                    break;
-                case 'Ki-O-Rahi':
-                    $id = 50;
-                    break;
-                case 'Kickball':
-                    $id = 18;
-                    break;
-                case 'Lacrosse':
-                    $id = 10;
-                    break;
-                case 'Netball':
-                    $id = 40;
-                    break;
-                case 'Non-Sport Group':
-                    $id = 52;
-                    break;
-                case 'Other Sport':
-                    $id = 24;
-                    break;
-                case 'Outrigger':
-                    $id = 53;
-                    break;
-                case 'Paintball':
-                    $id = 19;
-                    break;
-                case 'Petanque':
-                    $id = 45;
-                    break;
-                case 'Polo':
-                    $id = 20;
-                    break;
-                case 'Racquetball':
-                    $id = 55;
-                    break;
-                case 'Ringette':
-                    $id = 51;
-                    break;
-                case 'Roller Derby':
-                    $id = 48;
-                    break;
-                case 'Rowing':
-                    $id = 21;
-                    break;
-                case 'Rugby':
-                    $id = 9;
-                    break;
-                case 'Running':
-                    $id = 41;
-                    break;
-                case 'Sailing':
-                    $id = 47;
-                    break;
-                case 'Slo-pitch':
-                    $id = 61;
-                    break;
-                case 'Soccer':
-                    $id = 2;
-                    break;
-                case 'Softball':
-                    $id = 4;
-                    break;
-                case 'Street Hockey':
-                    $id = 62;
-                    break;
-                case 'Swimming':
-                    $id = 42;
-                    break;
-                case 'Tennis':
-                    $id = 43;
-                    break;
-                case 'Track And Field':
-                    $id = 58;
-                    break;
-                case 'Ultimate':
-                    $id = 22;
-                    break;
-                case 'Volleyball':
-                    $id = 6;
-                    break;
-                case 'Water Polo':
-                    $id = 23;
-                    break;
-                case 'Wiffleball':
-                    $id = 11;
-                    break;
-                case 'Wrestling':
-                    $id = 49;
-                    break;
-                default:
-                    $id = 24; // Other Sport
-                    break;
-            }
+        switch ($data) {
+            case 'Archery':
+                $id = 59;
+                break;
+            case 'Australian Football':
+                $id = 26;
+                break;
+            case 'Badminton':
+                $id = 27;
+                break;
+            case 'Bandy':
+                $id = 28;
+                break;
+            case 'Baseball':
+                $id = 5;
+                break;
+            case 'Basketball':
+                $id = 1;
+                break;
+            case 'Bocce':
+                $id = 29;
+                break;
+            case 'Bowling':
+                $id = 13;
+                break;
+            case 'Broomball':
+                $id = 30;
+                break;
+            case 'Cheerleading':
+                $id = 31;
+                break;
+            case 'Chess':
+                $id = 32;
+                break;
+            case 'Cow Tipping':
+                $id = 54;
+                break;
+            case 'Cricket':
+                $id = 8;
+                break;
+            case 'Croquet':
+                $id = 33;
+                break;
+            case 'Curling':
+                $id = 34;
+                break;
+            case 'Cycling':
+                $id = 35;
+                break;
+            case 'Dodgeball':
+                $id = 14;
+                break;
+            case 'Dragon Boat':
+                $id = 25;
+                break;
+            case 'Fencing':
+                $id = 36;
+                break;
+            case 'Field Hockey':
+                $id = 15;
+                break;
+            case 'Floor Hockey':
+                $id = 60;
+                break;
+            case 'Floorball':
+                $id = 44;
+                break;
+            case 'Foosball':
+                $id = 37;
+                break;
+            case 'Football':
+                $id = 7;
+                break;
+            case 'Golf':
+                $id = 46;
+                break;
+            case 'Gymnastics-Men':
+                $id = 56;
+                break;
+            case 'Gymnastics-Women':
+                $id = 57;
+                break;
+            case 'Hurling':
+                $id = 38;
+                break;
+            case 'Ice Hockey':
+                $id = 16;
+                break;
+            case 'Indoor Soccer':
+                $id = 39;
+                break;
+            case 'Inline Hockey':
+                $id = 17;
+                break;
+            case 'Ki-O-Rahi':
+                $id = 50;
+                break;
+            case 'Kickball':
+                $id = 18;
+                break;
+            case 'Lacrosse':
+                $id = 10;
+                break;
+            case 'Netball':
+                $id = 40;
+                break;
+            case 'Non-Sport Group':
+                $id = 52;
+                break;
+            case 'Other Sport':
+                $id = 24;
+                break;
+            case 'Outrigger':
+                $id = 53;
+                break;
+            case 'Paintball':
+                $id = 19;
+                break;
+            case 'Petanque':
+                $id = 45;
+                break;
+            case 'Polo':
+                $id = 20;
+                break;
+            case 'Racquetball':
+                $id = 55;
+                break;
+            case 'Ringette':
+                $id = 51;
+                break;
+            case 'Roller Derby':
+                $id = 48;
+                break;
+            case 'Rowing':
+                $id = 21;
+                break;
+            case 'Rugby':
+                $id = 9;
+                break;
+            case 'Running':
+                $id = 41;
+                break;
+            case 'Sailing':
+                $id = 47;
+                break;
+            case 'Slo-pitch':
+                $id = 61;
+                break;
+            case 'Soccer':
+                $id = 2;
+                break;
+            case 'Softball':
+                $id = 4;
+                break;
+            case 'Street Hockey':
+                $id = 62;
+                break;
+            case 'Swimming':
+                $id = 42;
+                break;
+            case 'Tennis':
+                $id = 43;
+                break;
+            case 'Track And Field':
+                $id = 58;
+                break;
+            case 'Ultimate':
+                $id = 22;
+                break;
+            case 'Volleyball':
+                $id = 6;
+                break;
+            case 'Water Polo':
+                $id = 23;
+                break;
+            case 'Wiffleball':
+                $id = 11;
+                break;
+            case 'Wrestling':
+                $id = 49;
+                break;
+            default:
+                $id = 52; // Non-Sport Group
+                break;
         }
 
         return $id;
+    }
+
+    /**
+     * Translate UTC/GMT timezone offset to TeamSnap allocated Timezones and estimated region.
+     *
+     * @param int $offset
+     *   The timezone offset from UTC/GMT.
+     *
+     * @return array
+     *   [timezone] = TeamSnap Timezone
+     *   [location] = Estimated Geographical Location
+     */
+    public function getRegion($offset)
+    {
+        $timezone = '';
+        $location = '';
+
+        switch ($offset) {
+            case '13:00':
+                $timezone = 'Samoa';
+                $location = 'Samoa';
+                break;
+            case '12:00':
+                $timezone = 'Auckland';
+                $location = 'New Zealand';
+                break;
+            case '11:00':
+                $timezone = 'Vladivostok';
+                $location = 'Russia';
+                break;
+            case '10:00':
+                $timezone = 'Sydney';
+                $location = 'Australia';
+                break;
+            case '9:30':
+                $timezone = 'Adelaide';
+                $location = 'Australia';
+                break;
+            case '9:00':
+                $timezone = 'Osaka';
+                $location = 'Japan';
+                break;
+            case '8:00':
+                $timezone = 'Chongqing';
+                $location = 'China';
+                break;
+            case '7:00':
+                $timezone = 'Jakarta';
+                $location = 'Indonesia';
+                break;
+            case '6:30':
+                $timezone = 'Rangoon';
+                $location = 'Myanmar';
+                break;
+            case '6:00':
+                $timezone = 'Dhaka';
+                $location = 'Bangladesh';
+                break;
+            case '5:45':
+                $timezone = 'Kathmandu';
+                $location = 'Nepal';
+                break;
+            case '5:30':
+                $timezone = 'Mumbai';
+                $location = 'India';
+                break;
+            case '5:00':
+                $timezone = 'Karachi';
+                $location = 'Pakistan';
+                break;
+            case '4:30':
+                $timezone = 'Kabul';
+                $location = 'Afghanistan';
+                break;
+            case '4:00':
+                $timezone = 'Moscow';
+                $location = 'Russia';
+                break;
+            case '3:30':
+                $timezone = 'Tehran';
+                $location = 'Iran';
+                break;
+            case '3:00':
+                $timezone = 'Riyadh';
+                $location = 'Saudi Arabia';
+                break;
+            case '2:00':
+                $timezone = 'Athens';
+                $location = 'Greece';
+                break;
+            case '1:00':
+                $timezone = 'Berlin';
+                $location = 'Germany';
+                break;
+            case '-1:00':
+                $timezone = 'Cape Verde Is.';
+                $location = 'Republic of Cabo Verde';
+                break;
+            case '-2:00':
+                $timezone = 'Mid-Atlantic';
+                $location = 'United Kingdom';
+                break;
+            case '-3:00':
+                $timezone = 'Brasilia';
+                $location = 'Brazil';
+                break;
+            case '-3:30':
+                $timezone = 'Newfoundland';
+                $location = 'Canada';
+                break;
+            case '-4:00':
+                $timezone = 'Atlantic Time (Canada)';
+                $location = 'Canada';
+                break;
+            case '-4:00':
+                $timezone = 'Caracas';
+                $location = 'Venezuela';
+                break;
+            case '-5:00':
+                $timezone = 'Eastern Time (US & Canada)';
+                $location = 'United States';
+                break;
+            case '-6:00':
+                $timezone = 'Central Time (US & Canada)';
+                $location = 'United States';
+                break;
+            case '-7:00':
+                $timezone = 'Mountain Time (US & Canada)';
+                $location = 'United States';
+                break;
+            case '-8:00':
+                $timezone = 'Pacific Time (US & Canada)';
+                $location = 'United States';
+                break;
+            case '-9:00':
+                $timezone = 'Alaska';
+                $location = 'United States';
+                break;
+            case '-10:00':
+                $timezone = 'Hawaii';
+                $location = 'United States';
+                break;
+            case '-11:00':
+                $timezone = 'American Samoa';
+                $location = 'United States';
+                break;
+            default:
+                $timezone = 'UTC';
+                $location = 'United Kingdom';
+                break;
+        }
+
+        return array('timezone' => $timezone, 'location' => $location);
     }
 
 }
