@@ -122,44 +122,40 @@ class Teamsnap extends Webhook
                 //                     TeamSnap system.
                 // INTERNAL BLOCKER => need to process the user_creates_group webhook before user_adds_role,
                 //                     so the owner exists, and we dont need to make extra api calls.
-
-                /**
-                 * Send get request with user id for the team, so we dont make duplicate users
-                 * with different roles. Check if user exists by determing if we contain a partner
-                 * ID for the related resource (if not, they havent been added to the TS System).
-                 *
-                 * if(user exists)
-                 *   method = PUT
-                 * else
-                 *   method = POST
-                 */
-                $method = 'post'; // remove hardcoded value
-                // put/post data to send
+                // build put/post data to send
                 $data = $this->webhook->data;
                 $send = array(
-                    'team' => array(
-                        'available_rosters' => array(
-                            'non_player' => $data['member']['role_name'] == 'Player' ? 0 : 1,
-                            'is_manager' => $data['member']['is_admin'] ? 1 : 0,
-                            'is_commissioner' => 0,
-                            'is_owner' => $data['member']['role_name'] == 'Coach' ? 1 : 0,
-                        ),
+                    'roster' => array(
+                        "first" => $data['member']['first_name'],
+                        "last" => $data['member']['last_name'],
+                        'non_player' => $data['member']['role_name'] == 'Player' ? 0 : 1,
+                        'is_manager' => $data['member']['is_admin'] ? 1 : 0,
+                        'is_commissioner' => 0,
+                        'is_owner' => $data['member']['role_name'] == 'Coach' ? 1 : 0,
                     ),
                 );
-
                 $this->webhook->data = $send;
 
-                // set the correct url and call the correct method
-                if ($method == 'post') {
+                /**
+                 * Check partner mapping db to determine if user exists. if not,
+                 * send post to create and add roles, else update roles.
+                 *
+                 * if(user does not exist)
+                 *   method = POST
+                 * else
+                 *   method = PUT
+                 */
+                if (false) {
                     $this->domain .= '/teams/' . 'INSERT_TEAM_ID' . '/as_roster/' .
                         $this->webhook->subscriber['commissioner_id'] . '/rosters'; // POST
+
                     parent::post();
-                } elseif ($method == 'put') {
-                    $this->domain .= '/teams/' . 'INSERT_TEAM_ID' . '/as_roster/' .
-                        $this->webhook->subscriber['commissioner_id'] . '/rosters/' .
-                        'INSERT_USER_ROSTER_ID'; // PUT
+                } else {
+                    $this->domain .= '/' . 'INSERT_USER_ROSTER_ID'; // PUT
+
                     parent::put();
                 }
+
                 break;
             case 'user_removes_role':
                 $this->domain .= '/teams/' . 'INSERT_TEAM_ID' . '/as_roster/' .
@@ -193,7 +189,18 @@ class Teamsnap extends Webhook
      */
     public function processResponse($data)
     {
-        return $data[''];
+        $response = '';
+
+        switch ($this->webhook->data['webhook_type']) {
+            case 'user_creates_group':
+                $response = $data['team']['id'];
+                break;
+            case 'user_adds_role':
+                $response = $data['roster']['id'];
+                break;
+        }
+
+        return $response;
     }
 
     /**
