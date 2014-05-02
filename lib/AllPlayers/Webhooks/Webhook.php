@@ -74,12 +74,19 @@ class Webhook
 
     /**
      * The method of data transmission. Valid options are:
-     *   'form-urlencoded'
-     *   'json'
+     *   'form-urlencoded' and 'json'.
      *
      * @var string
      */
     public $method = 'json';
+
+    /**
+     * Determines if the webhook will return data that requires processing.
+     *   Valid options are: true and false.
+     *
+     * @var boolean
+     */
+    public $processing = false;
 
     /**
      * Initialize the webhook object.

@@ -37,6 +37,14 @@ class Teamsnap extends Webhook
     public $method = 'json';
 
     /**
+     * Determines if the webhook will return data that requires processing.
+     *   Valid options are: true and false.
+     *
+     * @var boolean
+     */
+    public $processing = true;
+
+    /**
      * Authenticate using teamsnap_auth.
      */
     public function __construct(array $subscriber = array(), array $data = array(), array $preprocess = array())
@@ -178,6 +186,14 @@ class Teamsnap extends Webhook
                 // we can store it here: https://github.com/teamsnap/apiv2-docs/wiki/Roster-Custom-Data
                 break;
         }
+    }
+
+    /**
+     * Process the webhook data returned from sending the webhook.
+     */
+    public function processResponse($data)
+    {
+        return $data[''];
     }
 
     /**

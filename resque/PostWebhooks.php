@@ -46,7 +46,13 @@ class PostWebhooks
         $classname = 'AllPlayers\\Webhooks\\' . $hook['name'];
 
         $webhook = new $classname($subscriber['variables'], $event_data, array("test_url" => $this->test_url));
-        $webhook->request->send();
+        $response = $webhook->request->send();
+
+        if ($webhook->processing) {
+            // process the response, according to each specific webhook
+            // call api here to map allplayers to partner uuids
+            $webhook->processResponse($response);
+        }
     }
 
 }
