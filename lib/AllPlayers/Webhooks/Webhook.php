@@ -33,7 +33,7 @@ class Webhook
      *
      * @var webhook
      *   ['subscriber'] => Webhook information.
-     *   ['data']		=> Webhook data.
+     *   ['data']       => Webhook data.
      */
     public $webhook;
 
@@ -66,15 +66,28 @@ class Webhook
     public $test_domain;
 
     /**
-     * The authentication method used in the post requests.
+     * The method used for Client authentication.
      *
-     * @var string
+     * Options:
+     *   'no_authentication'
+     *   'basic_auth'
+     *   'oauth'
+     * Default:
+     *   'no_authentication'
+     *
+     * If using 'basic_auth', the $subscriber must contain: user and pass.
+     * If using 'oauth', the $subscriber must contain: consumer_key, consumer_secret, token, and secret.
      */
     public $authentication = 'no_authentication';
 
     /**
-     * The method of data transmission. Valid options are:
-     *   'form-urlencoded' and 'json'.
+     * The method of data transmission.
+     *
+     * Options:
+     *   'form-urlencoded'
+     *   'json'
+     * Default:
+     *   'json'
      *
      * @var string
      */
@@ -82,7 +95,12 @@ class Webhook
 
     /**
      * Determines if the webhook will return data that requires processing.
-     *   Valid options are: true and false.
+     *
+     * Options:
+     *   true
+     *   false
+     * Default:
+     *   false
      *
      * @var boolean
      */
