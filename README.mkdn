@@ -34,10 +34,10 @@ class MyService extends Webhook
     /**
      * Every property must have a codeblock detailing the reason for it.
      */ 
-	 
-	 /**
-	  * The url to send the Webhook data.
-	  */
+ 
+    /**
+     * The url to send the Webhook data.
+     */
     public $domain = 'http://your-service-domain.com';
 
     /**
@@ -46,47 +46,89 @@ class MyService extends Webhook
     public $service_logo = 'http://your-service-domain.com/logo.png';
 	
     /**
-     * The authentication method, defaults to no_authentication.
-	 *
-	 * The current available methods are:
-	 *   no_authentication
-	 *   basic_auth
-	 *   oauth
-	 *   teamsnap_auth
-	 *
-     * If using basic_auth, user and pass must be instantiated inside the
-	 * $subscriber array.
-     * If using oauth, then consumer_key, consumer_secret, token and secret
-	 * must be instatiated inside the $subscriber array.
+     * The method used for Client authentication.
+     *
+     * Options:
+     *   'no_authentication'
+     *   'basic_auth'
+     *   'oauth'
+     * Default:
+     *   'no_authentication'
+     *
+     * If using 'basic_auth', the $subscriber must contain: user and pass.
+     *
+     * If using 'oauth', the $subscriber must contain: consumer_key, consumer_secret, token, and secret.
      */
     public $authentication = 'no_authentication';
 	
-	/**
-	 * The method of data transmission, defaults to json.
-	 *
-	 * The current available methods are:
-	 *   json
-	 *   form-urlencoded
-	 */
-	public $method = 'json';
+    /**
+     * The method of data transmission.
+     *
+     * Options:
+     *   'form-urlencoded'
+     *   'json'
+     * Default:
+     *   'json'
+     *
+     * @var string
+     */
+    public $method = 'json';
+
+    /**
+     * Determines if the webhook will return data that requires processing.
+     *
+     * Options:
+     *   true
+     *   false
+     * Default:
+     *   false
+     *
+     * @var boolean
+     */
+    public $processing = false;
 	
-	/**
+    /**
      * Configure the authentication credentials, and other Webhook specifics here.
      */
-    public function __construct(array $subscriber = array(), array $data = array(), array $preprocess = array())
+    public function __construct(array $subscriber = array(), array $data = array(),
+        array $preprocess = array())
     {
         parent::__construct($subscriber, $data, $preprocess);
-		$this->process();
+        $this->process();
     }
 	
-	/**
-	 * Process the webhook data and set the domain to the appropriate URL.
-	 * (This is required, all webhook processing should be completed here)
-	 */
-	public function process()
-	{
-		// do webhook processing here, such as, changing the URL and data being sent.
-	}
+    /**
+     * Process the webhook data and set the domain to the appropriate URL.
+     * (This is required, all webhook processing should be completed here)
+     */
+    public function process()
+    {
+        // do webhook processing here, such as, changing the URL and data being sent.
+    }
+
+    /**
+     * Process the webhook data returned from sending the webhook; The value
+     * returned is used to map a AllPlayers internal resource to a partners
+     * resource.
+     * 
+     * @param array $data
+     *   Response from the webhook being processed/called.
+     * 
+     * @return
+     *   The partner resource to be correlated with the AllPlayers resource.
+     */
+    public function processResponse($data)
+    {
+        /**
+         * This function is only required for webhooks with: $processing = true;
+         */
+            
+        $response = "";
+
+        // set response based on $data manipulation here
+
+        return $response;
+    }
 }
 ```
 
