@@ -33,7 +33,11 @@ class Teamsnap extends Webhook
      *   'no_authentication'
      *
      * If using 'basic_auth', the $subscriber must contain: user and pass.
-     * If using 'oauth', the $subscriber must contain: consumer_key, consumer_secret, token, and secret.
+     *
+     * If using 'oauth', the $subscriber must contain: consumer_key,
+     * consumer_secret, token, and secret.
+     *
+     * @var string
      */
     public $authentication = 'no_authentication';
 
@@ -64,7 +68,18 @@ class Teamsnap extends Webhook
     public $processing = true;
 
     /**
-     * Authenticate using teamsnap_auth.
+     * This variable is used for determining the type of the webhook being sent.
+     *
+     * This is required because, the $data of the webhook is being rewrtten
+     * before it is sent, and we lose the type, which is then needed for
+     * processResponse().
+     *
+     * @var string
+     */
+    public $webhook_type;
+
+    /**
+     * Create Teamsnap webhook using no_authentication.
      */
     public function __construct(array $subscriber = array(), array $data = array(), array $preprocess = array())
     {
@@ -87,12 +102,24 @@ class Teamsnap extends Webhook
      */
     public function process()
     {
-        switch ($this->webhook->data['webhook_type']) {
+        $this->webhook_type = $this->webhook->data['webhook_type'];
+
+        switch ($this->webhook_type) {
             case 'user_creates_group':
-                // INTERNAL BLOCKER => need the ability to get location information from group admin
+                /*
+                 * Note: this is a different approach for user_creates_group,
+                 * because we need to send two seperate calls to the TeamSnap
+                 * API, since they do not allow for a roster to be added to a
+                 * Team at creation time (we care about this to preserve the
+                 * unique property of the group creator).
+                 *
+                 * This will first make a Team in the TeamSnap system, and will
+                 * use the response data to add a creator to the Team.
+                 */
+
                 $this->domain .= '/teams';
 
-                // post data to send
+                // team data to send
                 $data = $this->webhook->data;
                 $geographical = $this->getRegion($data['group']['timezone']);
                 $send = array(
@@ -106,12 +133,66 @@ class Teamsnap extends Webhook
                     ),
                 );
 
+                /*
+                 * A copy of the original webhook data for processResponse();
+                 * this is needed because we send more than one API request on
+                 * this webhook call.
+                 */
+                $webhook_data = $data;
+
+                // update request body and send (make the team).
                 $this->webhook->data = $send;
                 parent::post();
+                $response = $this->request->send();
+
+                // process response from team creation (using original data)
+                $this->processResponse($response, $webhook_data);
+
+                /*
+                 * change webhook type, so processResponse() will capture the
+                 * owners uid on the next call (in PostWebhooks#perform()).
+                 */
+                $this->webhook->data['webhook_type'] = 'user_adds_role';
+
+                /*
+                 * Use data returned from creating the team, to attach the owner
+                 *
+                 * (if test mode, account for extra json wrapper from requestbin)
+                 */
+                if (isset($config['test_url'])) {
+                    $response_data = json_decode(json_decode(substr($response->getMessage(), strpos($response->getMessage(), '{')))->body);
+                } else {
+                    $response_data = json_decode(substr($response->getMessage(), strpos($response->getMessage(), '{')));
+                }
+
+                $this->domain .= '/' . $response_data->team->id . '/as_roster/' .
+                    $this->webhook->subscriber['commissioner_id'] . '/rosters';
+
+                // add the owner to the team
+                $send = array(
+                    'roster' => array(
+                        "first" => $data['admin']['first_name'],
+                        "last" => $data['admin']['last_name'],
+                        'non_player' => 1,
+                        'is_manager' => 1,
+                        'is_commissioner' => 0,
+                        'is_owner' => 1,
+                    ),
+                );
+                $this->webhook->data = $send;
+                parent::post();
+
+                /*
+                 * Reset webhook data for processResponse call in
+                 * PostWebhooks#perform(); this is able to happen because the
+                 * request data was set in parent::post(), but the webhook data
+                 * must be reset for the final evaluation in the last
+                 * processResponse call.
+                 */
+                $this->webhook->data = $webhook_data;
                 break;
             case 'user_updates_group':
                 // INTERNAL BLOCKER => need the ability to get TEAM_ID
-
                 $this->domain .= '/teams/' . 'INSERT_TEAM_ID';
 
                 // put data to send
@@ -133,14 +214,12 @@ class Teamsnap extends Webhook
                 parent::put();
                 break;
             case 'user_deletes_group':
-                // EXTERNAL BLOCKER => need to know how to properly delete a team, from TeamSnap, (NYI).
+                // EXTERNAL BLOCKER => NYI by TeamSnap.
                 break;
             case 'user_adds_role':
                 // INTERNAL BLOCKER => need the ability to get TEAM_ID
-                // INTERNAL BLOCKER => need the ability to determine if the user previously exists in the
-                //                     TeamSnap system.
-                // INTERNAL BLOCKER => need to process the user_creates_group webhook before user_adds_role,
-                //                     so the owner exists, and we dont need to make extra api calls.
+                // INTERNAL BLOCKER => need the ability to determine if the user
+                //                     previously exists in the TeamSnap system.
                 // build put/post data to send
                 $data = $this->webhook->data;
                 $send = array(
@@ -149,8 +228,6 @@ class Teamsnap extends Webhook
                         "last" => $data['member']['last_name'],
                         'non_player' => $data['member']['role_name'] == 'Player' ? 0 : 1,
                         'is_manager' => $data['member']['is_admin'] ? 1 : 0,
-                        'is_commissioner' => 0,
-                        'is_owner' => $data['member']['role_name'] == 'Coach' ? 1 : 0,
                     ),
                 );
                 $this->webhook->data = $send;
@@ -187,8 +264,6 @@ class Teamsnap extends Webhook
                         'available_rosters' => array(
                             'non_player' => $data['member']['role_name'] == 'Player' ? 0 : 1,
                             'is_manager' => $data['member']['is_admin'] ? 1 : 0,
-                            'is_commissioner' => 0,
-                            'is_owner' => $data['member']['role_name'] == 'Coach' ? 1 : 0,
                         ),
                     ),
                 );
@@ -197,37 +272,44 @@ class Teamsnap extends Webhook
                 parent::put();
                 break;
             case 'user_adds_submission':
-                // Functionality currently unused by TeamSnap, however, if they plan to implement it,
-                // we can store it here: https://github.com/teamsnap/apiv2-docs/wiki/Roster-Custom-Data
+                /*
+                 * Functionality currently unused by TeamSnap, however, if they
+                 * plan to implement it, we can store it here:
+                 * https://github.com/teamsnap/apiv2-docs/wiki/Roster-Custom-Data
+                 */
                 break;
         }
     }
 
     /**
-     * Process the webhook data returned from sending the webhook; The value
-     * returned is used to map a AllPlayers internal resource to a partners
-     * resource.
+     * Process the webhook data returned from sending the webhook; The function
+     * should relate a piece of AllPlayers data to a piece of TeamSnap data.
      *
-     * @param array $data
+     * @param $response_data
      *   Response from the webhook being processed/called.
      *
-     * @return
-     *   The partner resource to be correlated with the AllPlayers resource.
+     * @param array $webhook_data
+     *   The webhook data used for the response associations.
      */
-    public function processResponse($data)
+    public function processResponse($response_data, array $webhook_data)
     {
-        $response = '';
-
-        switch ($this->webhook->data['webhook_type']) {
-            case 'user_creates_group':
-                $response = $data['team']['id'];
-                break;
-            case 'user_adds_role':
-                $response = $data['roster']['id'];
-                break;
+        // if test mode, account for extra json wrapper from requestbin
+        if (isset($config['test_url'])) {
+            $response_data = json_decode(json_decode(substr($response_data->getMessage(), strpos($response_data->getMessage(), '{')))->body);
+        } else {
+            $response_data = json_decode(substr($response_data->getMessage(), strpos($response_data->getMessage(), '{')));
         }
 
-        return $response;
+        switch ($this->webhook_type) {
+            case 'user_creates_group':
+                // associate AllPlayers team uid with TeamSnap team id
+//                $response = $response_data->team->id;
+                break;
+            case 'user_adds_role':
+                // associate AllPlayers user uid with TeamSnap roster id
+//                $response = $response_data->roster->id;
+                break;
+        }
     }
 
     /**
