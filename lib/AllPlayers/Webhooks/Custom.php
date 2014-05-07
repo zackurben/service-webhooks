@@ -51,19 +51,6 @@ class Custom extends Webhook
     public $method = 'json';
 
     /**
-     * Determines if the webhook will return data that requires processing.
-     *
-     * Options:
-     *   true
-     *   false
-     * Default:
-     *   false
-     *
-     * @var boolean
-     */
-    public $processing = false;
-
-    /**
      * Use custom url as domain.
      */
     public function __construct(array $subscriber = array(), array $data = array(), array $preprocess = array())

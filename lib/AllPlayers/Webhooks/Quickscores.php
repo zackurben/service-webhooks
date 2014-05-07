@@ -52,19 +52,6 @@ class Quickscores extends Webhook
     public $method = 'form-urlencoded';
 
     /**
-     * Determines if the webhook will return data that requires processing.
-     *
-     * Options:
-     *   true
-     *   false
-     * Default:
-     *   false
-     *
-     * @var boolean
-     */
-    public $processing = false;
-
-    /**
      * Authenticate using basic auth.
      */
     public function __construct(array $subscriber = array(), array $data = array(), array $preprocess = array())
