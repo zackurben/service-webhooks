@@ -51,7 +51,7 @@ class PostWebhooks
         if ($webhook->processing) {
             // process the response, according to each specific webhook
             // call api here to map allplayers to partner uuids
-            $webhook->processResponse($response);
+            $webhook->processResponse($response, $webhook->webhook->data);
         }
     }
 
