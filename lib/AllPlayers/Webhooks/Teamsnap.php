@@ -125,6 +125,7 @@ class Teamsnap extends Webhook
                 $send = array(
                     'team' => array(
                         'team_name' => $data['group']['name'],
+                        'team_league' => 'All Players',
                         'division_id' => intval($this->webhook->subscriber['division_id']),
                         'sport_id' => $this->getSport($data['group']['group_category']),
                         'timezone' => $geographical['timezone'],
@@ -193,6 +194,9 @@ class Teamsnap extends Webhook
                 break;
             case 'user_updates_group':
                 // INTERNAL BLOCKER => need the ability to get TEAM_ID
+                // EXTERNAL BLOCKER => This will not work currently due to a bug
+                //                     in the TeamSnap system. I have informed
+                //                     them and they acknowledged the problem.
                 $this->domain .= '/teams/' . 'INSERT_TEAM_ID';
 
                 // put data to send
@@ -217,15 +221,17 @@ class Teamsnap extends Webhook
                 // EXTERNAL BLOCKER => NYI by TeamSnap.
                 break;
             case 'user_adds_role':
-                // INTERNAL BLOCKER => need the ability to get TEAM_ID
-                // INTERNAL BLOCKER => need the ability to determine if the user
-                //                     previously exists in the TeamSnap system.
+                // INTERNAL BLOCKER => Need partner mapping API
+                $test_method = 'PUT';
+                $test_team = 508152;
+                $test_roster = 6050753;
+
                 // build put/post data to send
                 $data = $this->webhook->data;
                 $send = array(
                     'roster' => array(
-                        "first" => $data['member']['first_name'],
-                        "last" => $data['member']['last_name'],
+                        'first' => $data['member']['first_name'],
+                        'last' => $data['member']['last_name'],
                         'non_player' => $data['member']['role_name'] == 'Player' ? 0 : 1,
                         'is_manager' => $data['member']['is_admin'] ? 1 : 0,
                     ),
@@ -241,30 +247,32 @@ class Teamsnap extends Webhook
                  * else
                  *   method = PUT
                  */
-                if (false) {
-                    $this->domain .= '/teams/' . 'INSERT_TEAM_ID' . '/as_roster/' .
+                if ($test_method == 'POST') {
+                    $this->domain .= '/teams/' . $test_team . '/as_roster/' .
                         $this->webhook->subscriber['commissioner_id'] . '/rosters'; // POST
 
                     parent::post();
                 } else {
-                    $this->domain .= '/' . 'INSERT_USER_ROSTER_ID'; // PUT
+                    $this->domain .= '/teams/' . $test_team . '/as_roster/' .
+                        $this->webhook->subscriber['commissioner_id'] . '/rosters/' . $test_roster; // PUT
 
                     parent::put();
                 }
 
                 break;
             case 'user_removes_role':
-                $this->domain .= '/teams/' . 'INSERT_TEAM_ID' . '/as_roster/' .
-                    $this->webhook->subscriber['commissioner_id'] . '/rosters/' . 'INSERT_ROSTER_ID';
+                $test_team = 508152;
+                $test_roster = 6050753;
+
+                $this->domain .= '/teams/' . $test_team . '/as_roster/' .
+                    $this->webhook->subscriber['commissioner_id'] . '/rosters/' . $test_roster;
 
                 // put data to send
                 $data = $this->webhook->data;
                 $send = array(
-                    'team' => array(
-                        'available_rosters' => array(
-                            'non_player' => $data['member']['role_name'] == 'Player' ? 0 : 1,
-                            'is_manager' => $data['member']['is_admin'] ? 1 : 0,
-                        ),
+                    'roster' => array(
+                        'non_player' => $data['member']['role_name'] == 'Player' ? 1 : 0,
+                        'is_manager' => $data['member']['is_admin'] ? 1 : 0,
                     ),
                 );
 
