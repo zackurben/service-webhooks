@@ -96,7 +96,7 @@ class Teamsnap extends Webhook
     }
 
     /**
-     * Process the webhook data and set the domain to the appropriate URL
+     * Process the webhook data and set the domain to the appropriate URL.
      *
      * TODO, Fix case blockers.
      */
@@ -156,8 +156,7 @@ class Teamsnap extends Webhook
                 $this->webhook->data['webhook_type'] = 'user_adds_role';
 
                 /*
-                 * Use data returned from creating the team, to attach the owner
-                 *
+                 * Use data returned from creating the team, to attach the owner.
                  * (if test mode, account for extra json wrapper from requestbin)
                  */
                 if (isset($config['test_url'])) {
@@ -188,18 +187,23 @@ class Teamsnap extends Webhook
                  * PostWebhooks#perform(); this is able to happen because the
                  * request data was set in parent::post(), but the webhook data
                  * must be reset for the final evaluation in the last
-                 * processResponse call.
+                 * processResponse call (in PostWebhooks#perform()).
                  */
                 $this->webhook->data = $webhook_data;
                 break;
             case 'user_updates_group':
-                // INTERNAL BLOCKER => need the ability to get TEAM_ID
-                // EXTERNAL BLOCKER => This will not work currently due to a bug
-                //                     in the TeamSnap system. I have informed
-                //                     them and they acknowledged the problem.
-                $this->domain .= '/teams/' . 'INSERT_TEAM_ID';
+                /*
+                 * INTERNAL BLOCKER:
+                 *   Need partner mapping API
+                 *
+                 * EXTERNAL BLOCKER:
+                 *   This will not work currently due to a bug in the TeamSnap
+                 *   system. I have informed them and they acknowledged the problem.
+                 */
+                $test_team = 508152;
+                $this->domain .= '/teams/' . $test_team;
 
-                // put data to send
+                // team data to update
                 $data = $this->webhook->data;
                 $geographical = $this->getRegion($data['group']['timezone']);
                 $send = array(
@@ -218,15 +222,21 @@ class Teamsnap extends Webhook
                 parent::put();
                 break;
             case 'user_deletes_group':
-                // EXTERNAL BLOCKER => NYI by TeamSnap.
+                /*
+                 * EXTERNAL BLOCKER:
+                 *   NYI by TeamSnap.
+                 */
                 break;
             case 'user_adds_role':
-                // INTERNAL BLOCKER => Need partner mapping API
+                /*
+                 * INTERNAL BLOCKER:
+                 *   Need partner mapping API
+                 */
                 $test_method = 'PUT';
                 $test_team = 508152;
                 $test_roster = 6050753;
 
-                // build put/post data to send
+                // build role data to send
                 $data = $this->webhook->data;
                 $send = array(
                     'roster' => array(
@@ -239,8 +249,8 @@ class Teamsnap extends Webhook
                 $this->webhook->data = $send;
 
                 /**
-                 * Check partner mapping db to determine if user exists. if not,
-                 * send post to create and add roles, else update roles.
+                 * Check partner mapping db to determine if user exists; if not,
+                 * send post to create and add roles, else update existing roles.
                  *
                  * if(user does not exist)
                  *   method = POST
@@ -249,18 +259,22 @@ class Teamsnap extends Webhook
                  */
                 if ($test_method == 'POST') {
                     $this->domain .= '/teams/' . $test_team . '/as_roster/' .
-                        $this->webhook->subscriber['commissioner_id'] . '/rosters'; // POST
+                        $this->webhook->subscriber['commissioner_id'] . '/rosters';
 
                     parent::post();
                 } else {
                     $this->domain .= '/teams/' . $test_team . '/as_roster/' .
-                        $this->webhook->subscriber['commissioner_id'] . '/rosters/' . $test_roster; // PUT
+                        $this->webhook->subscriber['commissioner_id'] . '/rosters/' . $test_roster;
 
                     parent::put();
                 }
 
                 break;
             case 'user_removes_role':
+                /*
+                 * INTERNAL BLOCKER:
+                 *   Need partner mapping API
+                 */
                 $test_team = 508152;
                 $test_roster = 6050753;
 
@@ -291,7 +305,9 @@ class Teamsnap extends Webhook
 
     /**
      * Process the webhook data returned from sending the webhook; The function
-     * should relate a piece of AllPlayers data to a piece of TeamSnap data.
+     * should relate a piece of AllPlayers data to a piece of TeamSnap data;
+     * This information relationship will be made via the AllPlayers Public
+     * PHP API.
      *
      * @param $response_data
      *   Response from the webhook being processed/called.
@@ -311,17 +327,18 @@ class Teamsnap extends Webhook
         switch ($this->webhook_type) {
             case 'user_creates_group':
                 // associate AllPlayers team uid with TeamSnap team id
-//                $response = $response_data->team->id;
+                // $response = $response_data->team->id;
                 break;
             case 'user_adds_role':
                 // associate AllPlayers user uid with TeamSnap roster id
-//                $response = $response_data->roster->id;
+                // $response = $response_data->roster->id;
                 break;
         }
     }
 
     /**
-     * Select the id corresponding to the sport name.
+     * Select the TeamSnap Sport id corresponding to an item from the list of
+     * currently supported Sports.
      *
      * @param array $data
      *   Array of the Group Category selected in the group creation process on AllPlayers.
@@ -524,7 +541,8 @@ class Teamsnap extends Webhook
     }
 
     /**
-     * Translate UTC/GMT timezone offset to TeamSnap allocated Timezones and estimated region.
+     * Translate UTC/GMT timezone offset to TeamSnap supported Timezones and
+     * their corresponding estimated locations.
      *
      * @param int $offset
      *   The timezone offset from UTC/GMT.
