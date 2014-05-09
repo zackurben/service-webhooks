@@ -200,7 +200,7 @@ class Teamsnap extends Webhook
                  *   This will not work currently due to a bug in the TeamSnap
                  *   system. I have informed them and they acknowledged the problem.
                  */
-                $test_team = 508152;
+                $test_team = 509263;
                 $this->domain .= '/teams/' . $test_team;
 
                 // team data to update
@@ -232,9 +232,9 @@ class Teamsnap extends Webhook
                  * INTERNAL BLOCKER:
                  *   Need partner mapping API
                  */
-                $test_method = 'PUT';
-                $test_team = 508152;
-                $test_roster = 6050753;
+                $test_method = 'POST';
+                $test_team = 509263;
+                $test_roster = 6063725;
 
                 // build role data to send
                 $data = $this->webhook->data;
@@ -275,8 +275,8 @@ class Teamsnap extends Webhook
                  * INTERNAL BLOCKER:
                  *   Need partner mapping API
                  */
-                $test_team = 508152;
-                $test_roster = 6050753;
+                $test_team = 509263;
+                $test_roster = 6063725;
 
                 $this->domain .= '/teams/' . $test_team . '/as_roster/' .
                     $this->webhook->subscriber['commissioner_id'] . '/rosters/' . $test_roster;
@@ -295,10 +295,101 @@ class Teamsnap extends Webhook
                 break;
             case 'user_adds_submission':
                 /*
-                 * Functionality currently unused by TeamSnap, however, if they
-                 * plan to implement it, we can store it here:
-                 * https://github.com/teamsnap/apiv2-docs/wiki/Roster-Custom-Data
+                 * INTERNAL BLOCKER:
+                 *   Need partner mapping API
                  */
+
+                /**
+                 * Check partner mapping db to determine if user exists; if not,
+                 * send post to create and add submission information, else
+                 * update existing user information.
+                 *
+                 * if(user does not exist)
+                 *   method = POST
+                 * else
+                 *   method = PUT
+                 */
+                $test_method = 'POST';
+                $test_team = 509263;
+                $test_roster = 6063725;
+
+                $this->domain .= '/teams/' . $test_team . '/as_roster/' .
+                    $this->webhook->subscriber['commissioner_id'] . '/rosters/' . $test_roster;
+
+                $data = $this->webhook->data['webform_submission']['data'];
+                $send = array();
+
+                if (isset($data['profile__field_firstname__profile'])) {
+                    $send['first'] = $data['profile__field_firstname__profile']['value'];
+                } elseif (isset($data['profile__field_firstname__profile'])) {
+
+                }
+
+                if (isset($data['profile__field_lastname__profile'])) {
+                    $send['last'] = $data['profile__field_lastname__profile']['value'];
+                }
+                if (isset($data['profile__field_email__profile'])) {
+                    $send['roster_email_addresses'] = $data['profile__field_email__profile']['value'];
+                }
+                if (isset($data['profile__field_birth_date__profile'])) {
+                    $send['birthdate'] = $data['profile__field_birth_date__profile']['value'];
+                }
+                if (isset($data['profile__field_user_gender__profile'])) {
+                    $send['gender'] = $data['profile__field_user_gender__profile']['value'] == 1 ? 'Male' : 'Female';
+                }
+
+                // add roster phone numbers if any were set
+                $roster_telephone_numbers = array();
+                if (isset($data['profile__field_phone__profile'])) {
+                    $roster_telephone_numbers[] = $data['profile__field_phone__profile']['value'];
+                }
+                if (isset($data['profile__field_phone_cell__profile'])) {
+                    $roster_telephone_numbers[] = $data['profile__field_phone_cell__profile']['value'];
+                }
+                if (isset($data['profile__field_work_number__profile'])) {
+                    $roster_telephone_numbers[] = $data['profile__field_work_number__profile']['value'];
+                }
+                if (count($roster_telephone_numbers) > 0) {
+                    $send['roster_telephone_numbers'] = $roster_telephone_numbers;
+                }
+
+                // add address fields if they were set
+                $address = array();
+                if (isset($data['profile__field_home_address_street__profile'])) {
+                    $address['address'] = $data['profile__field_home_address_street__profile']['value'];
+                }
+                if (isset($data['profile__field_home_address_additional__profile'])) {
+                    $address['address2'] = $data['profile__field_home_address_additional__profile']['value'];
+                }
+                if (isset($data['profile__field_home_address_city__profile'])) {
+                    $address['city'] = $data['profile__field_home_address_city__profile']['value'];
+                }
+                if (isset($data['profile__field_home_address_province__profile'])) {
+                    $address['state'] = $data['profile__field_home_address_province__profile']['value'];
+                }
+                if (isset($data['profile__field_home_address_postal_code__profile'])) {
+                    $address['zip'] = $data['profile__field_home_address_postal_code__profile']['value'];
+                }
+                if (isset($data['profile__field_home_address_country__profile'])) {
+                    $address['country'] = $data['profile__field_home_address_country__profile']['value'];
+                }
+                if (count($address) > 0) {
+                    $send['address'] = $address;
+                }
+
+                $this->webhook->data = array('roster' => $send);
+
+                if ($test_method == 'POST') {
+                    $this->domain .= '/teams/' . $test_team . '/as_roster/' .
+                        $this->webhook->subscriber['commissioner_id'] . '/rosters';
+
+                    parent::post();
+                } else {
+                    $this->domain .= '/teams/' . $test_team . '/as_roster/' .
+                        $this->webhook->subscriber['commissioner_id'] . '/rosters/' . $test_roster;
+
+                    parent::put();
+                }
                 break;
         }
     }
@@ -343,7 +434,7 @@ class Teamsnap extends Webhook
      * @param array $data
      *   Array of the Group Category selected in the group creation process on AllPlayers.
      *
-     * @return int
+     * @return integer
      *   The sport id corresponding to the available sports in the TeamSnap API.
      */
     public function getSport($data)
@@ -544,7 +635,7 @@ class Teamsnap extends Webhook
      * Translate UTC/GMT timezone offset to TeamSnap supported Timezones and
      * their corresponding estimated locations.
      *
-     * @param int $offset
+     * @param integer $offset
      *   The timezone offset from UTC/GMT.
      *
      * @return array
