@@ -84,7 +84,6 @@ class Teamsnap extends Webhook
     public function __construct(array $subscriber = array(), array $data = array(), array $preprocess = array())
     {
         include 'config/config.php';
-
         if (isset($config['teamsnap'])) {
             parent::__construct(array('token' => $config['teamsnap']['token'],
                 'commissioner_id' => $config['teamsnap']['commissioner_id'],
@@ -116,7 +115,6 @@ class Teamsnap extends Webhook
                  * This will first make a Team in the TeamSnap system, and will
                  * use the response data to add a creator to the Team.
                  */
-
                 $this->domain .= '/teams';
 
                 // team data to send
@@ -159,14 +157,18 @@ class Teamsnap extends Webhook
                  * Use data returned from creating the team, to attach the owner.
                  * (if test mode, account for extra json wrapper from requestbin)
                  */
+                include 'config/config.php';
                 if (isset($config['test_url'])) {
                     $response_data = json_decode(json_decode(substr($response->getMessage(), strpos($response->getMessage(), '{')))->body);
+
+                    $this->domain .= '/INSERT_TEAM_ID/as_roster/' .
+                        $this->webhook->subscriber['commissioner_id'] . '/rosters';
                 } else {
                     $response_data = json_decode(substr($response->getMessage(), strpos($response->getMessage(), '{')));
-                }
 
-                $this->domain .= '/' . $response_data->team->id . '/as_roster/' .
-                    $this->webhook->subscriber['commissioner_id'] . '/rosters';
+                    $this->domain .= '/' . $response_data->team->id . '/as_roster/' .
+                        $this->webhook->subscriber['commissioner_id'] . '/rosters';
+                }
 
                 // add the owner to the team
                 $send = array(
@@ -313,9 +315,6 @@ class Teamsnap extends Webhook
                 $test_team = 509263;
                 $test_roster = 6063725;
 
-                $this->domain .= '/teams/' . $test_team . '/as_roster/' .
-                    $this->webhook->subscriber['commissioner_id'] . '/rosters/' . $test_roster;
-
                 $data = $this->webhook->data['webform_submission']['data'];
                 $send = array();
 
@@ -409,6 +408,7 @@ class Teamsnap extends Webhook
     public function processResponse($response_data, array $webhook_data)
     {
         // if test mode, account for extra json wrapper from requestbin
+        include 'config/config.php';
         if (isset($config['test_url'])) {
             $response_data = json_decode(json_decode(substr($response_data->getMessage(), strpos($response_data->getMessage(), '{')))->body);
         } else {
