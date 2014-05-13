@@ -173,8 +173,8 @@ class Teamsnap extends Webhook
                 // add the owner to the team
                 $send = array(
                     'roster' => array(
-                        "first" => $data['admin']['first_name'],
-                        "last" => $data['admin']['last_name'],
+                        'first' => $data['member']['first_name'],
+                        'last' => $data['member']['last_name'],
                         'non_player' => 1,
                         'is_manager' => 1,
                         'is_commissioner' => 0,
@@ -202,7 +202,7 @@ class Teamsnap extends Webhook
                  *   This will not work currently due to a bug in the TeamSnap
                  *   system. I have informed them and they acknowledged the problem.
                  */
-                $test_team = 509263;
+                $test_team = 514741;
                 $this->domain .= '/teams/' . $test_team;
 
                 // team data to update
@@ -234,9 +234,9 @@ class Teamsnap extends Webhook
                  * INTERNAL BLOCKER:
                  *   Need partner mapping API
                  */
-                $test_method = 'POST';
-                $test_team = 509263;
-                $test_roster = 6063725;
+                $test_method = 'PUT';
+                $test_team = 514741;
+                $test_roster = 6132457;
 
                 // build role data to send
                 $data = $this->webhook->data;
@@ -277,8 +277,8 @@ class Teamsnap extends Webhook
                  * INTERNAL BLOCKER:
                  *   Need partner mapping API
                  */
-                $test_team = 509263;
-                $test_roster = 6063725;
+                $test_team = 514741;
+                $test_roster = 6132457;
 
                 $this->domain .= '/teams/' . $test_team . '/as_roster/' .
                     $this->webhook->subscriber['commissioner_id'] . '/rosters/' . $test_roster;
@@ -311,24 +311,40 @@ class Teamsnap extends Webhook
                  * else
                  *   method = PUT
                  */
-                $test_method = 'POST';
-                $test_team = 509263;
-                $test_roster = 6063725;
+                $method = 'PUT';
+                $test_team = 514741;
+                $test_roster = 6132457;
 
                 $data = $this->webhook->data['webform_submission']['data'];
                 $send = array();
 
+                /**
+                 * Gathers all available data to send to TeamSnap. If required
+                 * elements are not present in the submission, and the user does
+                 * not previously exist, this will default to using account
+                 * information.
+                 */
                 if (isset($data['profile__field_firstname__profile'])) {
                     $send['first'] = $data['profile__field_firstname__profile']['value'];
-                } elseif (isset($data['profile__field_firstname__profile'])) {
-
+                } elseif ($method == 'POST' && !isset($data['profile__field_firstname__profile'])) {
+                    /*
+                     * Element required for roster creation, but not present in
+                     * user submission; use information from the users account.
+                     */
+                    $send['first'] = $this->webhook->data['member']['first_name'];
                 }
-
                 if (isset($data['profile__field_lastname__profile'])) {
                     $send['last'] = $data['profile__field_lastname__profile']['value'];
+                } elseif ($method == 'POST' && !isset($data['profile__field_lastname__profile'])) {
+                    /*
+                     * Element required for roster creation, but not present in
+                     * user submission; use information from the users account.
+                     */
+                    $send['last'] = $this->webhook->data['member']['last_name'];
                 }
+
                 if (isset($data['profile__field_email__profile'])) {
-                    $send['roster_email_addresses'] = $data['profile__field_email__profile']['value'];
+                    $send['email'] = $data['profile__field_email__profile']['value'];
                 }
                 if (isset($data['profile__field_birth_date__profile'])) {
                     $send['birthdate'] = $data['profile__field_birth_date__profile']['value'];
@@ -340,13 +356,22 @@ class Teamsnap extends Webhook
                 // add roster phone numbers if any were set
                 $roster_telephone_numbers = array();
                 if (isset($data['profile__field_phone__profile'])) {
-                    $roster_telephone_numbers[] = $data['profile__field_phone__profile']['value'];
+                    $roster_telephone_numbers[] = array(
+                        'label' => 'home',
+                        'phone_number' => $data['profile__field_phone__profile']['value'],
+                    );
                 }
                 if (isset($data['profile__field_phone_cell__profile'])) {
-                    $roster_telephone_numbers[] = $data['profile__field_phone_cell__profile']['value'];
+                    $roster_telephone_numbers[] = array(
+                        'label' => 'cell',
+                        'phone_number' => $data['profile__field_phone_cell__profile']['value'],
+                    );
                 }
                 if (isset($data['profile__field_work_number__profile'])) {
-                    $roster_telephone_numbers[] = $data['profile__field_work_number__profile']['value'];
+                    $roster_telephone_numbers[] = array(
+                        'label' => 'work',
+                        'phone_number' => $data['profile__field_work_number__profile']['value'],
+                    );
                 }
                 if (count($roster_telephone_numbers) > 0) {
                     $send['roster_telephone_numbers'] = $roster_telephone_numbers;
@@ -355,30 +380,27 @@ class Teamsnap extends Webhook
                 // add address fields if they were set
                 $address = array();
                 if (isset($data['profile__field_home_address_street__profile'])) {
-                    $address['address'] = $data['profile__field_home_address_street__profile']['value'];
+                    $send['address'] = $data['profile__field_home_address_street__profile']['value'];
                 }
                 if (isset($data['profile__field_home_address_additional__profile'])) {
-                    $address['address2'] = $data['profile__field_home_address_additional__profile']['value'];
+                    $send['address2'] = $data['profile__field_home_address_additional__profile']['value'];
                 }
                 if (isset($data['profile__field_home_address_city__profile'])) {
-                    $address['city'] = $data['profile__field_home_address_city__profile']['value'];
+                    $send['city'] = $data['profile__field_home_address_city__profile']['value'];
                 }
                 if (isset($data['profile__field_home_address_province__profile'])) {
-                    $address['state'] = $data['profile__field_home_address_province__profile']['value'];
+                    $send['state'] = $data['profile__field_home_address_province__profile']['value'];
                 }
                 if (isset($data['profile__field_home_address_postal_code__profile'])) {
-                    $address['zip'] = $data['profile__field_home_address_postal_code__profile']['value'];
+                    $send['zip'] = $data['profile__field_home_address_postal_code__profile']['value'];
                 }
                 if (isset($data['profile__field_home_address_country__profile'])) {
-                    $address['country'] = $data['profile__field_home_address_country__profile']['value'];
-                }
-                if (count($address) > 0) {
-                    $send['address'] = $address;
+                    $send['country'] = $data['profile__field_home_address_country__profile']['value'];
                 }
 
                 $this->webhook->data = array('roster' => $send);
 
-                if ($test_method == 'POST') {
+                if ($method == 'POST') {
                     $this->domain .= '/teams/' . $test_team . '/as_roster/' .
                         $this->webhook->subscriber['commissioner_id'] . '/rosters';
 
@@ -420,6 +442,9 @@ class Teamsnap extends Webhook
                 // associate AllPlayers team uid with TeamSnap team id
                 // $response = $response_data->team->id;
                 break;
+            case 'user_adds_submission':
+                // associate AllPlayers user uid with TeamSnap roster id
+                break;
             case 'user_adds_role':
                 // associate AllPlayers user uid with TeamSnap roster id
                 // $response = $response_data->roster->id;
@@ -439,7 +464,7 @@ class Teamsnap extends Webhook
      */
     public function getSport($data)
     {
-        $id = NULL;
+        $id = null;
 
         // if the sport group was not selected, default to non-sport group.
         switch ($data) {
