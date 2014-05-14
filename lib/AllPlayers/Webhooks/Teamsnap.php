@@ -97,15 +97,15 @@ class Teamsnap extends Webhook
     /**
      * Process the webhook data and set the domain to the appropriate URL.
      *
-     * TODO, Fix case blockers.
+     * @todo Fix case blockers.
      */
     public function process()
     {
         $this->webhook_type = $this->webhook->data['webhook_type'];
 
         // Consolidate test team/roster variables
-        $test_team = 515616;
-        $test_roster = 6144067;
+        $test_team = 515657;
+        $test_roster = 6144645;
 
         switch ($this->webhook_type) {
             case 'user_creates_group':
@@ -201,10 +201,6 @@ class Teamsnap extends Webhook
                 /*
                  * INTERNAL BLOCKER:
                  *   Need partner mapping API
-                 *
-                 * EXTERNAL BLOCKER:
-                 *   This will not work currently due to a bug in the TeamSnap
-                 *   system. I have informed them and they acknowledged the problem.
                  */
                 $this->domain .= '/teams/' . $test_team;
 
@@ -251,21 +247,22 @@ class Teamsnap extends Webhook
                 );
                 $this->webhook->data = $send;
 
-                /**
-                 * Check partner mapping db to determine if user exists; if not,
-                 * send post to create and add roles, else update existing roles.
-                 *
-                 * if(user does not exist)
-                 *   method = POST
-                 * else
-                 *   method = PUT
-                 */
                 if ($test_method == 'POST') {
+                    /*
+                     * The user does not exist in the TeamSnap system; Create
+                     * the user from the given information.
+                     */
+
                     $this->domain .= '/teams/' . $test_team . '/as_roster/' .
                         $this->webhook->subscriber['commissioner_id'] . '/rosters';
 
                     parent::post();
                 } else {
+                    /*
+                     * The user does exist in the TeamSnap system; Update the
+                     * existing user with the given information.
+                     */
+
                     $this->domain .= '/teams/' . $test_team . '/as_roster/' .
                         $this->webhook->subscriber['commissioner_id'] . '/rosters/' . $test_roster;
 
@@ -338,7 +335,6 @@ class Teamsnap extends Webhook
                      */
                     $send['last'] = $this->webhook->data['member']['last_name'];
                 }
-
                 if (isset($data['profile__field_email__profile'])) {
                     $send['roster_email_addresses_attributes'][] = array(
                         'label' => 'Profile',
@@ -399,11 +395,21 @@ class Teamsnap extends Webhook
                 $this->webhook->data = array('roster' => $send);
 
                 if ($test_method == 'POST') {
+                    /*
+                     * The user does not exist in the TeamSnap system; Create
+                     * the user from the given information.
+                     */
+
                     $this->domain .= '/teams/' . $test_team . '/as_roster/' .
                         $this->webhook->subscriber['commissioner_id'] . '/rosters';
 
                     parent::post();
                 } else {
+                    /*
+                     * The user does exist in the TeamSnap system; Update the
+                     * existing user with the given information.
+                     */
+
                     $this->domain .= '/teams/' . $test_team . '/as_roster/' .
                         $this->webhook->subscriber['commissioner_id'] . '/rosters/' . $test_roster;
 
