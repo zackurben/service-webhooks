@@ -247,4 +247,98 @@ class Webhook
         }
     }
 
+    /**
+     * Create a resource mapping between AllPlayers and a partner.
+     *
+     * @param string $external_resource_id
+     *   The partner resource id to map.
+     * @param string $item_type
+     *   The AllPlayers item type to map. Available options are: user, event,
+     *   group, and resource.
+     * @param string $item_uuid
+     *   The AllPlayers item uuid to map.
+     * @param string $partner_uuid
+     *   The AllPlayers partner uuid.
+     *
+     * @return array
+     *   The AllPlayers response from creating a resource mapping.
+     */
+    public function createPartnerMap($external_resource_id, $item_type, $item_uuid, $partner_uuid)
+    {
+        // temp var to reset client after use
+        $temp_method = $this->method;
+
+        // set required data fields
+        $data = array(
+            'external_resource_id' => $external_resource_id,
+            'item_type' => $item_type,
+            'item_uuid' => $item_uuid,
+            'partner_uuid' => $partner_uuid,
+        );
+
+        // force method to be json
+        $this->method = 'json';
+
+        // set and send json data
+        $this->webhook->data = $data;
+        $this->post();
+
+        // reset client to prior state
+        $this->method = $temp_method;
+        return $this->request->send();
+    }
+
+    /**
+     * Read a resource mapping between AllPlayers and a partner.
+     *
+     * @param string $item_type
+     *   The AllPlayers item type to map. Available options are: user, event,
+     *   group, and resource.
+     * @param string $item_uuid
+     *   The AllPlayers item uuid to map.
+     * @param string $partner_uuid (Optional)
+     *   The AllPlayers partner uuid.
+     *
+     * @return array
+     *   The AllPlayers response from reading a resouce mapping.
+     */
+    public function readPartnerMap($item_type, $item_uuid, $partner_uuid = null)
+    {
+        $data = array(
+            'item_type' => 'event',
+            'item_uuid' => '94018426-f61e-11e0-98df-12313d18191a',
+        );
+
+        if (!is_null($partner_uuid)) {
+            $data['partner_uuid'] = '92920be2-f61e-11e0-98df-12313d18191a';
+        }
+
+        // build and send guzzle GET
+    }
+
+    /**
+     * Delete a resource mapping between AllPlayers and a partner.
+     *
+     * @param string $item_type
+     *   The AllPlayers item type to map. Available options are: user, event,
+     *   group, and resource.
+     * @param string $item_uuid
+     *   The AllPlayers item uuid to map.
+     * @param string $partner_uuid (Optional)
+     *   The AllPlayers partner uuid.
+     */
+    public function deletePartnerMap($item_type, $item_uuid, $partner_uuid = null)
+    {
+        $data = array(
+            'item_type' => 'event',
+            'item_uuid' => '94018426-f61e-11e0-98df-12313d18191a',
+        );
+
+        if (!is_null($partner_uuid)) {
+            $data['partner_uuid'] = '92920be2-f61e-11e0-98df-12313d18191a';
+        }
+
+        // build and send guzzle DELETE
+    }
+
 }
