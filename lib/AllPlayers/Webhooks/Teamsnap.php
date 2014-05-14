@@ -296,6 +296,9 @@ class Teamsnap extends Webhook
                  *   Need partner mapping API
                  */
 
+                $data = $this->webhook->data['webform_submission']['data'];
+                $partner_response = parent::readPartnerMap($item_type, $data['member']['uuid']);
+
                 /**
                  * Check partner mapping db to determine if user exists; if not,
                  * send post to create and add submission information, else
@@ -307,8 +310,6 @@ class Teamsnap extends Webhook
                  *   method = PUT
                  */
                 $test_method = 'PUT';
-
-                $data = $this->webhook->data['webform_submission']['data'];
                 $send = array();
 
                 /**
@@ -440,13 +441,20 @@ class Teamsnap extends Webhook
         } else {
             $response_data = json_decode(substr($response_data->getMessage(), strpos($response_data->getMessage(), '{')));
         }
+        $this->domain = 'https://www.allplayers.com/api/v2/externalid';
 
         switch ($this->webhook_type) {
             case 'user_creates_group':
                 // associate AllPlayers team uid with TeamSnap team id
+                $response = parent::createPartnerMap($external_resource_id, $item_type, $item_uuid, $partner_uuid);
+
                 // $response = $response_data->team->id;
                 break;
             case 'user_adds_submission':
+                $this->domain .= "/{$item_type}/{$item_uuid}/{$partner_uuid}";
+
+
+                $response = parent::readPartnerMap($item_type, $item_uuid);
                 // associate AllPlayers user uid with TeamSnap roster id
                 break;
             case 'user_adds_role':
