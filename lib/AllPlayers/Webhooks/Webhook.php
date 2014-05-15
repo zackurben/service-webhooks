@@ -265,8 +265,11 @@ class Webhook
      */
     public function createPartnerMap($external_resource_id, $item_type, $item_uuid, $partner_uuid)
     {
-        // temp var to reset client after use
-        $temp_method = $this->method;
+        $url = 'https://api.zurben.apci.ws/api/v2/externalid';
+        $client = new Client($url, array(
+            'curl.CURLOPT_SSL_VERIFYPEER' => false,
+            'curl.CURLOPT_CERTINFO' => false,
+        ));
 
         // set required data fields
         $data = array(
@@ -276,16 +279,11 @@ class Webhook
             'partner_uuid' => $partner_uuid,
         );
 
-        // force method to be json
-        $this->method = 'json';
-
-        // set and send json data
-        $this->webhook->data = $data;
-        $this->post();
-
-        // reset client to prior state
-        $this->method = $temp_method;
-        return $this->request->send();
+        // send API request and return response
+        $request = $client->post($client->getBaseUrl() . '.json?q=1', array('Content-Type' => 'application/json'), json_encode($data));
+        $response = $request->send();
+        $response = json_decode(substr($response->getMessage(), strpos($response->getMessage(), '{')), true);
+        return $response;
     }
 
     /**
@@ -304,20 +302,36 @@ class Webhook
      */
     public function readPartnerMap($item_type, $item_uuid, $partner_uuid = null)
     {
+        $url = "https://api.zurben.apci.ws/api/v2/externalid/{$item_type}/{$item_uuid}";
+        $client = new Client($url, array(
+            'curl.CURLOPT_SSL_VERIFYPEER' => false,
+            'curl.CURLOPT_CERTINFO' => false,
+        ));
+
         $data = array(
-            'item_type' => 'event',
-            'item_uuid' => '94018426-f61e-11e0-98df-12313d18191a',
+            'item_type' => $item_type,
+            'item_uuid' => $item_uuid,
         );
 
+        // read single row
         if (!is_null($partner_uuid)) {
-            $data['partner_uuid'] = '92920be2-f61e-11e0-98df-12313d18191a';
+            $client->domain .= "/{$partner_uuid}";
+            $data['partner_uuid'] = $partner_uuid;
         }
 
-        // build and send guzzle GET
+        // send API request and return response
+        $request = $client->get($client->getBaseUrl() . '.json?q=1', array('Content-Type' => 'application/json'), json_encode($data));
+        $response = $request->send();
+        $response = json_decode(substr($response->getMessage(), strpos($response->getMessage(), '{')), true);
+        return $response;
     }
 
     /**
      * Delete a resource mapping between AllPlayers and a partner.
+     *
+     * Note, if the $partner_uuid is not included, the $item_uuid will be used
+     * in its place; this is to satisfy the requirements for a Partner Mapping
+     * API call.
      *
      * @param string $item_type
      *   The AllPlayers item type to map. Available options are: user, event,
@@ -329,16 +343,28 @@ class Webhook
      */
     public function deletePartnerMap($item_type, $item_uuid, $partner_uuid = null)
     {
+        $url = "https://api.zurben.apci.ws/api/v2/externalid/{$item_type}/{$item_uuid}";
+        $client = new Client($url, array(
+            'curl.CURLOPT_SSL_VERIFYPEER' => false,
+            'curl.CURLOPT_CERTINFO' => false,
+        ));
+
         $data = array(
-            'item_type' => 'event',
-            'item_uuid' => '94018426-f61e-11e0-98df-12313d18191a',
+            'item_type' => "{$item_type}",
+            'item_uuid' => "{$item_uuid}",
         );
 
+        // delete single row
         if (!is_null($partner_uuid)) {
-            $data['partner_uuid'] = '92920be2-f61e-11e0-98df-12313d18191a';
+            $client->domain .= "/{$partner_uuid}";
+            $data['partner_uuid'] = $partner_uuid;
         }
 
-        // build and send guzzle DELETE
+        // send API request and return response
+        $request = $client->delete($client->getBaseUrl() . '.json?q=1', array('Content-Type' => 'application/json'), json_encode($data));
+        $response = $request->send();
+        $response = json_decode(substr($response->getMessage(), strpos($response->getMessage(), '{')), true);
+        return $response;
     }
 
 }
