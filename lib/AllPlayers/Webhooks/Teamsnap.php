@@ -104,8 +104,8 @@ class Teamsnap extends Webhook
         $this->webhook_type = $this->webhook->data['webhook_type'];
 
         // Consolidate test team/roster variables
-        $test_team = 515657;
-        $test_roster = 6144645;
+//        $test_team = 515657;
+//        $test_roster = 6144645;
 
         switch ($this->webhook_type) {
             case 'user_creates_group':
@@ -141,7 +141,7 @@ class Teamsnap extends Webhook
                  * this is needed because we send more than one API request on
                  * this webhook call.
                  */
-                $webhook_data = $data;
+                $webhook_data = $this->webhook->data;
 
                 // update request body and send (make the team).
                 $this->webhook->data = $send;
@@ -155,7 +155,7 @@ class Teamsnap extends Webhook
                  * change webhook type, so processResponse() will capture the
                  * owners uid on the next call (in PostWebhooks#perform()).
                  */
-                $this->webhook->data['webhook_type'] = 'user_adds_role';
+                $this->webhook_type = 'user_adds_role';
 
                 /*
                  * Use data returned from creating the team, to attach the owner.
@@ -202,7 +202,9 @@ class Teamsnap extends Webhook
                  * INTERNAL BLOCKER:
                  *   Need partner mapping API
                  */
-                $this->domain .= '/teams/' . $test_team;
+                $team = parent::readPartnerMap('group', $this->webhook->data['group']['uuid'], $this->webhook->data['group']['uuid']);
+                $team = $team['external_resource_id'];
+                $this->domain .= '/teams/' . $team;
 
                 // team data to update
                 $data = $this->webhook->data;
@@ -233,7 +235,23 @@ class Teamsnap extends Webhook
                  * INTERNAL BLOCKER:
                  *   Need partner mapping API
                  */
-                $test_method = 'PUT';
+                $method = $roster = '';
+                $group = parent::readPartnerMap('user', $webhook_data['member']['uuid'], $webhook_data['member']['uuid']);
+                if (isset($group['message'])) {
+                    // resource was not found
+                    $method = 'POST';
+                } else {
+                    $method = 'PUT';
+                    $roster = $group['external_resource_id'];
+                }
+
+                $team = parent::readPartnerMap('group', $webhook_data['group']['uuid'], $webhook_data['group']['uuid']);
+                if (isset($team['message'])) {
+                    // resource was not found
+                    $team = 'TEAM_WAS_NOT_FOUND';
+                } else {
+                    $team = $team['external_resource_id'];
+                }
 
                 // build role data to send
                 $data = $this->webhook->data;
@@ -247,13 +265,13 @@ class Teamsnap extends Webhook
                 );
                 $this->webhook->data = $send;
 
-                if ($test_method == 'POST') {
+                if ($method == 'POST') {
                     /*
                      * The user does not exist in the TeamSnap system; Create
                      * the user from the given information.
                      */
 
-                    $this->domain .= '/teams/' . $test_team . '/as_roster/' .
+                    $this->domain .= '/teams/' . $team . '/as_roster/' .
                         $this->webhook->subscriber['commissioner_id'] . '/rosters';
 
                     parent::post();
@@ -263,8 +281,8 @@ class Teamsnap extends Webhook
                      * existing user with the given information.
                      */
 
-                    $this->domain .= '/teams/' . $test_team . '/as_roster/' .
-                        $this->webhook->subscriber['commissioner_id'] . '/rosters/' . $test_roster;
+                    $this->domain .= '/teams/' . $team . '/as_roster/' .
+                        $this->webhook->subscriber['commissioner_id'] . '/rosters/' . $roster;
 
                     parent::put();
                 }
@@ -275,8 +293,25 @@ class Teamsnap extends Webhook
                  * INTERNAL BLOCKER:
                  *   Need partner mapping API
                  */
-                $this->domain .= '/teams/' . $test_team . '/as_roster/' .
-                    $this->webhook->subscriber['commissioner_id'] . '/rosters/' . $test_roster;
+                $roster = '';
+                $group = parent::readPartnerMap('user', $webhook_data['member']['uuid'], $webhook_data['member']['uuid']);
+                if (isset($group['message'])) {
+                    // resource was not found
+                    $roster = 'ROSTER_WAS_NOT_FOUND';
+                } else {
+                    $roster = $group['external_resource_id'];
+                }
+
+                $team = parent::readPartnerMap('group', $webhook_data['group']['uuid'], $webhook_data['group']['uuid']);
+                if (isset($team['message'])) {
+                    // resource was not found
+                    $team = 'TEAM_WAS_NOT_FOUND';
+                } else {
+                    $team = $team['external_resource_id'];
+                }
+
+                $this->domain .= '/teams/' . $team . '/as_roster/' .
+                    $this->webhook->subscriber['commissioner_id'] . '/rosters/' . $roster;
 
                 // put data to send
                 $data = $this->webhook->data;
@@ -295,9 +330,26 @@ class Teamsnap extends Webhook
                  * INTERNAL BLOCKER:
                  *   Need partner mapping API
                  */
+                $method = $roster = '';
+                $group = parent::readPartnerMap('user', $webhook_data['member']['uuid'], $webhook_data['member']['uuid']);
+                if (isset($group['message'])) {
+                    // resource was not found
+                    $method = 'POST';
+                } else {
+                    $method = 'PUT';
+                    $roster = $group['external_resource_id'];
+                }
+
+                $team = parent::readPartnerMap('group', $webhook_data['group']['uuid'], $webhook_data['group']['uuid']);
+                if (isset($team['message'])) {
+                    // resource was not found
+                    $team = 'TEAM_WAS_NOT_FOUND';
+                } else {
+                    $team = $team['external_resource_id'];
+                }
 
                 $data = $this->webhook->data['webform_submission']['data'];
-                $partner_response = parent::readPartnerMap($item_type, $data['member']['uuid']);
+                //$partner_response = parent::readPartnerMap($item_type, $data['member']['uuid']);
 
                 /**
                  * Check partner mapping db to determine if user exists; if not,
@@ -309,7 +361,7 @@ class Teamsnap extends Webhook
                  * else
                  *   method = PUT
                  */
-                $test_method = 'PUT';
+                //$test_method = 'PUT';
                 $send = array();
 
                 /**
@@ -320,7 +372,7 @@ class Teamsnap extends Webhook
                  */
                 if (isset($data['profile__field_firstname__profile'])) {
                     $send['first'] = $data['profile__field_firstname__profile']['value'];
-                } elseif ($test_method == 'POST' && !isset($data['profile__field_firstname__profile'])) {
+                } elseif ($method == 'POST' && !isset($data['profile__field_firstname__profile'])) {
                     /*
                      * Element required for roster creation, but not present in
                      * user submission; use information from the users account.
@@ -329,7 +381,7 @@ class Teamsnap extends Webhook
                 }
                 if (isset($data['profile__field_lastname__profile'])) {
                     $send['last'] = $data['profile__field_lastname__profile']['value'];
-                } elseif ($test_method == 'POST' && !isset($data['profile__field_lastname__profile'])) {
+                } elseif ($method == 'POST' && !isset($data['profile__field_lastname__profile'])) {
                     /*
                      * Element required for roster creation, but not present in
                      * user submission; use information from the users account.
@@ -395,13 +447,13 @@ class Teamsnap extends Webhook
 
                 $this->webhook->data = array('roster' => $send);
 
-                if ($test_method == 'POST') {
+                if ($method == 'POST') {
                     /*
                      * The user does not exist in the TeamSnap system; Create
                      * the user from the given information.
                      */
 
-                    $this->domain .= '/teams/' . $test_team . '/as_roster/' .
+                    $this->domain .= '/teams/' . $team . '/as_roster/' .
                         $this->webhook->subscriber['commissioner_id'] . '/rosters';
 
                     parent::post();
@@ -411,8 +463,8 @@ class Teamsnap extends Webhook
                      * existing user with the given information.
                      */
 
-                    $this->domain .= '/teams/' . $test_team . '/as_roster/' .
-                        $this->webhook->subscriber['commissioner_id'] . '/rosters/' . $test_roster;
+                    $this->domain .= '/teams/' . $team . '/as_roster/' .
+                        $this->webhook->subscriber['commissioner_id'] . '/rosters/' . $roster;
 
                     parent::put();
                 }
@@ -428,7 +480,6 @@ class Teamsnap extends Webhook
      *
      * @param $response_data
      *   Response from the webhook being processed/called.
-     *
      * @param array $webhook_data
      *   The webhook data used for the response associations.
      */
@@ -437,29 +488,40 @@ class Teamsnap extends Webhook
         // if test mode, account for extra json wrapper from requestbin
         include 'config/config.php';
         if (isset($config['test_url'])) {
-            $response_data = json_decode(json_decode(substr($response_data->getMessage(), strpos($response_data->getMessage(), '{')))->body);
+            $response_data = json_decode(json_decode(substr($response_data->getMessage(), strpos($response_data->getMessage(), '{')))->body, true);
         } else {
-            $response_data = json_decode(substr($response_data->getMessage(), strpos($response_data->getMessage(), '{')));
+            $response_data = json_decode(substr($response_data->getMessage(), strpos($response_data->getMessage(), '{')), true);
         }
-        $this->domain = 'https://www.allplayers.com/api/v2/externalid';
+
+        echo "dbg:\n", print_r($response_data, true), "\n\n", print_r($webhook_data, true);
 
         switch ($this->webhook_type) {
             case 'user_creates_group':
                 // associate AllPlayers team uid with TeamSnap team id
-                $response = parent::createPartnerMap($external_resource_id, $item_type, $item_uuid, $partner_uuid);
-
-                // $response = $response_data->team->id;
+                parent::createPartnerMap($response_data['team']['id'], 'group', $webhook_data['group']['uuid'], $webhook_data['group']['uuid']);
                 break;
-            case 'user_adds_submission':
-                $this->domain .= "/{$item_type}/{$item_uuid}/{$partner_uuid}";
-
-
-                $response = parent::readPartnerMap($item_type, $item_uuid);
-                // associate AllPlayers user uid with TeamSnap roster id
+            case 'user_deletes_group':
+                // need to add management for connections to all child groups
+                parent::deletePartnerMap('group', $webhook_data['group']['uuid'], $webhook_data['group']['uuid']);
                 break;
             case 'user_adds_role':
                 // associate AllPlayers user uid with TeamSnap roster id
-                // $response = $response_data->roster->id;
+                $response = parent::readPartnerMap('user', $webhook_data['member']['uuid']);
+                // associate AllPlayers user uid with TeamSnap roster id
+
+                if (isset($response['message'])) {
+                    // failed to find a row; create new partner mapping
+                    parent::createPartnerMap($response_data['roster']['id'], 'user', $webhook_data['member']['uuid'], $webhook_data['member']['uuid']);
+                }
+                break;
+            case 'user_adds_submission':
+                // associate AllPlayers user uid with TeamSnap roster id
+                $response = parent::readPartnerMap('user', $webhook_data['member']['uuid'], $webhook_data['member']['uuid']);
+
+                if (isset($response['message'])) {
+                    // failed to find a row; create new partner mapping
+                    parent::createPartnerMap($response_data['roster']['id'], 'user', $webhook_data['member']['uuid'], $webhook_data['member']['uuid']);
+                }
                 break;
         }
     }
