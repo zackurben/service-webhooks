@@ -169,6 +169,42 @@ class Webhook
     }
 
     /**
+     * Set the data in the webhook.
+     *
+     * This function will set the data that is to be transmitted when a send
+     * request is invoked.
+     *
+     * @param array $data
+     *   The data to send.
+     */
+    public function setData(array $data)
+    {
+        $this->webhook->data = $data;
+    }
+
+    /**
+     * Get the data from the original AllPlayers Webhook.
+     *
+     * @return array
+     *   The data from the original AllPlayers Webhook.
+     */
+    public function getOriginalData()
+    {
+        return $this->webhook->original_data;
+    }
+
+    /**
+     * Store the original AllPlayers webhook data.
+     *
+     * @param array $data
+     *   Set the original webhook data, for use in processing.
+     */
+    public function setOriginalData(array $data)
+    {
+        $this->webhook->original_data = $data;
+    }
+
+    /**
      * Get service client.
      *
      * @return \Guzzle\Http\Client
