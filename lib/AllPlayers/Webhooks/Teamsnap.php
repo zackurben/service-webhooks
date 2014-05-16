@@ -68,17 +68,6 @@ class Teamsnap extends Webhook
     public $processing = true;
 
     /**
-     * This variable is used for determining the type of the webhook being sent.
-     *
-     * This is required because, the $data of the webhook is being rewrtten
-     * before it is sent, and we lose the type, which is then needed for
-     * processResponse().
-     *
-     * @var string
-     */
-    public $webhook_type;
-
-    /**
      * Create Teamsnap webhook using no_authentication.
      */
     public function __construct(array $subscriber = array(), array $data = array(), array $preprocess = array())
@@ -101,13 +90,7 @@ class Teamsnap extends Webhook
      */
     public function process()
     {
-        $this->webhook_type = $this->webhook->data['webhook_type'];
-
-        // Consolidate test team/roster variables
-//        $test_team = 515657;
-//        $test_roster = 6144645;
-
-        switch ($this->webhook_type) {
+        switch ($this->webhook->data['webhook_type']) {
             case 'user_creates_group':
                 /*
                  * Note: this is a different approach for user_creates_group,
@@ -152,12 +135,6 @@ class Teamsnap extends Webhook
                 $this->processResponse($response, $webhook_data);
 
                 /*
-                 * change webhook type, so processResponse() will capture the
-                 * owners uid on the next call (in PostWebhooks#perform()).
-                 */
-                $this->webhook_type = 'user_adds_role';
-
-                /*
                  * Use data returned from creating the team, to attach the owner.
                  * (if test mode, account for extra json wrapper from requestbin)
                  */
@@ -194,6 +171,12 @@ class Teamsnap extends Webhook
                  * processResponse call (in PostWebhooks#perform()).
                  */
                 $this->webhook->data = $webhook_data;
+
+                /*
+                 * change webhook type, so processResponse() will capture the
+                 * owners uid on the next call (in PostWebhooks#perform()).
+                 */
+                $this->webhook->data['webhook_type'] = 'user_adds_role';
                 break;
             case 'user_updates_group':
                 /*
@@ -491,9 +474,7 @@ class Teamsnap extends Webhook
             $response_data = json_decode(substr($response_data->getMessage(), strpos($response_data->getMessage(), '{')), true);
         }
 
-        echo "dbg:\n", print_r($response_data, true), "\n\n", print_r($webhook_data, true);
-
-        switch ($this->webhook_type) {
+        switch ($webhook_data['webhook_type']) {
             case 'user_creates_group':
                 // associate AllPlayers team uid with TeamSnap team id
                 parent::createPartnerMap($response_data['team']['id'], 'group', $webhook_data['group']['uuid'], $webhook_data['group']['uuid']);
@@ -504,8 +485,7 @@ class Teamsnap extends Webhook
                 break;
             case 'user_adds_role':
                 // associate AllPlayers user uid with TeamSnap roster id
-                $response = parent::readPartnerMap('user', $webhook_data['member']['uuid']);
-                // associate AllPlayers user uid with TeamSnap roster id
+                $response = parent::readPartnerMap('user', $webhook_data['member']['uuid'], $webhook_data['member']['uuid']);
 
                 if (isset($response['message'])) {
                     // failed to find a row; create new partner mapping
