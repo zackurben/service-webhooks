@@ -163,14 +163,12 @@ class Teamsnap extends Webhook
                  */
                 include 'config/config.php';
                 if (isset($config['test_url'])) {
-                    $response_data = json_decode(json_decode(substr($response->getMessage(), strpos($response->getMessage(), '{')))->body);
-
                     $this->domain .= '/INSERT_TEAM_ID/as_roster/' .
                         $this->webhook->subscriber['commissioner_id'] . '/rosters';
                 } else {
-                    $response_data = json_decode(substr($response->getMessage(), strpos($response->getMessage(), '{')));
+                    $response_data = json_decode(substr($response->getMessage(), strpos($response->getMessage(), '{')), true);
 
-                    $this->domain .= '/' . $response_data->team->id . '/as_roster/' .
+                    $this->domain .= '/' . $response_data['team']['id'] . '/as_roster/' .
                         $this->webhook->subscriber['commissioner_id'] . '/rosters';
                 }
 
