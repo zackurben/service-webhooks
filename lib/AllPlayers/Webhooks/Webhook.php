@@ -31,7 +31,7 @@ class Webhook
     /**
      * The top object of a webhook.
      *
-     * @var webhook
+     * @var array webhook
      *   ['subscriber'] => Webhook information.
      *   ['data']       => Webhook data.
      */
@@ -40,14 +40,14 @@ class Webhook
     /**
      * The service client object.
      *
-     * @var client
+     * @var \Guzzle\Http\Client
      */
     public $client;
 
     /**
      * The request to be sent.
      *
-     * @var /Guzzle/Http/Message/EntityEnclosingRequest
+     * @var \Guzzle\Http\Message\EntityEnclosingRequest
      */
     public $request;
 
@@ -59,7 +59,7 @@ class Webhook
     public $domain;
 
     /**
-     * The URL to send webhook data, if testing.
+     * The URL to redirect webhook data, if testing.
      *
      * @var string
      */
@@ -111,10 +111,8 @@ class Webhook
      *
      * @param array $subscriber
      *   The parameters (subscriber variables) for the request.
-     *
      * @param array $data
      *   The event data from the webhook.
-     *
      * @param array $preprocess
      *   Data that needs to be processed before the REST methods are called.
      */
@@ -171,8 +169,7 @@ class Webhook
     /**
      * Set the data in the webhook.
      *
-     * This function will set the data that is to be transmitted when a send
-     * request is invoked.
+     * This function will set the data that is to be transmitted in the Webhook.
      *
      * @param array $data
      *   The data to send.
@@ -250,7 +247,7 @@ class Webhook
     }
 
     /**
-     * Makes a PUT request to the external service
+     * Makes a PUT request to the external service.
      *
      * @return \Guzzle\Http\Message\Request
      *   Returns the service request object.
@@ -272,10 +269,10 @@ class Webhook
     /**
      * Perform any additional processing on the webhook before sending it.
      *
-     * @param $data
+     * @param array $data
      *   An array of data to be processed before the webhook data is sent.
      */
-    public function preprocess($data)
+    public function preprocess(array $data)
     {
         // set the redirect url, so we can swap domains before sending the data
         if (isset($data['test_url']) && $data['test_url'] != '') {
@@ -287,6 +284,7 @@ class Webhook
      * Return the JSON object from a Guzzle Response.
      *
      * @param \Guzzle\Http\Message\Response $response
+     *   The response from which to parse the JSON object.
      *
      * @return array
      *   The JSON decoded, associative keyed, array.
@@ -320,6 +318,8 @@ class Webhook
      *
      * @return array
      *   The AllPlayers response from creating a resource mapping.
+     *
+     * @todo Remove cURL options (Used for self-signed certificates).
      */
     public function createPartnerMap($external_resource_id, $item_type, $item_uuid, $partner_uuid)
     {
@@ -348,6 +348,9 @@ class Webhook
     /**
      * Read a resource mapping between AllPlayers and a partner.
      *
+     * If the partner_uuid parameter is not included, this function will return
+     * all the elements mapped with the item_uuid.
+     *
      * @param string $item_type
      *   The AllPlayers item type to map. Available options are: user, event,
      *   group, and resource.
@@ -358,6 +361,8 @@ class Webhook
      *
      * @return array
      *   The AllPlayers response from reading a resouce mapping.
+     *
+     * @todo Remove cURL options (Used for self-signed certificates).
      */
     public function readPartnerMap($item_type, $item_uuid, $partner_uuid = null)
     {
@@ -382,9 +387,8 @@ class Webhook
     /**
      * Delete a resource mapping between AllPlayers and a partner.
      *
-     * Note, if the $partner_uuid is not included, the $item_uuid will be used
-     * in its place; this is to satisfy the requirements for a Partner Mapping
-     * API call.
+     * If the partner_uuid parameter is not included, this function will return
+     * all the elements mapped with the item_uuid.
      *
      * @param string $item_type
      *   The AllPlayers item type to map. Available options are: user, event,
@@ -393,6 +397,8 @@ class Webhook
      *   The AllPlayers item uuid to map.
      * @param string $partner_uuid (Optional)
      *   The AllPlayers partner uuid.
+     *
+     * @todo Remove cURL options (Used for self-signed certificates).
      */
     public function deletePartnerMap($item_type, $item_uuid, $partner_uuid = null)
     {
