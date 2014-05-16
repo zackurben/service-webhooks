@@ -248,6 +248,28 @@ class Webhook
     }
 
     /**
+     * Return the JSON object from a Guzzle Response.
+     *
+     * @param \Guzzle\Http\Message\Response $response
+     *
+     * @return array
+     *   The JSON decoded, associative keyed, array.
+     */
+    public function processJsonResponse(\Guzzle\Http\Message\Response $response)
+    {
+        $return = '';
+
+        // JSON array returned
+        if (strpos($response->getMessage(), "\n[{") !== false) {
+            $return = substr($response->getMessage(), strpos($response->getMessage(), "[{"));
+        } else {
+            $return = substr($response->getMessage(), strpos($response->getMessage(), '{'));
+        }
+
+        return json_decode($return, true);
+    }
+
+    /**
      * Create a resource mapping between AllPlayers and a partner.
      *
      * @param string $external_resource_id
@@ -282,7 +304,8 @@ class Webhook
         // send API request and return response
         $request = $client->post($client->getBaseUrl() . '.json?q=1', array('Content-Type' => 'application/json'), json_encode($data));
         $response = $request->send();
-        $response = json_decode(substr($response->getMessage(), strpos($response->getMessage(), '{')), true);
+        $response = $this->processJsonResponse($response);
+
         return $response;
     }
 
@@ -308,21 +331,15 @@ class Webhook
             'curl.CURLOPT_CERTINFO' => false,
         ));
 
-        $data = array(
-            'item_type' => $item_type,
-            'item_uuid' => $item_uuid,
-        );
-
         // read single row
         if (!is_null($partner_uuid)) {
-            $client->domain .= "/{$partner_uuid}";
-            $data['partner_uuid'] = $partner_uuid;
+            $client->setBaseUrl("{$client->getBaseUrl(false)}/{$partner_uuid}");
         }
 
         // send API request and return response
-        $request = $client->get($client->getBaseUrl() . '.json?q=1', array('Content-Type' => 'application/json'), json_encode($data));
+        $request = $client->get($client->getBaseUrl() . '.json?q=1');
         $response = $request->send();
-        $response = json_decode(substr($response->getMessage(), strpos($response->getMessage(), '{')), true);
+        $response = $this->processJsonResponse($response);
         return $response;
     }
 
@@ -363,7 +380,7 @@ class Webhook
         // send API request and return response
         $request = $client->delete($client->getBaseUrl() . '.json?q=1', array('Content-Type' => 'application/json'), json_encode($data));
         $response = $request->send();
-        $response = json_decode(substr($response->getMessage(), strpos($response->getMessage(), '{')), true);
+        $response = $this->processJsonResponse($response);
         return $response;
     }
 

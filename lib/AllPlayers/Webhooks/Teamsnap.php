@@ -143,9 +143,9 @@ class Teamsnap extends Webhook
                     $this->domain .= '/INSERT_TEAM_ID/as_roster/' .
                         $this->webhook->subscriber['commissioner_id'] . '/rosters';
                 } else {
-                    $response_data = json_decode(substr($response->getMessage(), strpos($response->getMessage(), '{')), true);
+                    $response = $this->processJsonResponse($response);
 
-                    $this->domain .= '/' . $response_data['team']['id'] . '/as_roster/' .
+                    $this->domain .= '/' . $response['team']['id'] . '/as_roster/' .
                         $this->webhook->subscriber['commissioner_id'] . '/rosters';
                 }
 
@@ -459,25 +459,25 @@ class Teamsnap extends Webhook
      * This information relationship will be made via the AllPlayers Public
      * PHP API.
      *
-     * @param $response_data
+     * @param \Guzzle\Http\Message\Response $response
      *   Response from the webhook being processed/called.
      * @param array $webhook_data
      *   The webhook data used for the response associations.
      */
-    public function processResponse($response_data, array $webhook_data)
+    public function processResponse(\Guzzle\Http\Message\Response $response, array $webhook_data)
     {
         // if test mode, account for extra json wrapper from requestbin
         include 'config/config.php';
         if (isset($config['test_url'])) {
-            $response_data = json_decode(json_decode(substr($response_data->getMessage(), strpos($response_data->getMessage(), '{')))->body, true);
+            $response = json_decode($this->processJsonResponse($response)->body, true);
         } else {
-            $response_data = json_decode(substr($response_data->getMessage(), strpos($response_data->getMessage(), '{')), true);
+            $response = $this->processJsonResponse($response);
         }
 
         switch ($webhook_data['webhook_type']) {
             case 'user_creates_group':
                 // associate AllPlayers team uid with TeamSnap team id
-                parent::createPartnerMap($response_data['team']['id'], 'group', $webhook_data['group']['uuid'], $webhook_data['group']['uuid']);
+                parent::createPartnerMap($response['team']['id'], 'group', $webhook_data['group']['uuid'], $webhook_data['group']['uuid']);
                 break;
             case 'user_deletes_group':
                 // need to add management for connections to all child groups
@@ -485,20 +485,20 @@ class Teamsnap extends Webhook
                 break;
             case 'user_adds_role':
                 // associate AllPlayers user uid with TeamSnap roster id
-                $response = parent::readPartnerMap('user', $webhook_data['member']['uuid'], $webhook_data['group']['uuid']);
+                $query = parent::readPartnerMap('user', $webhook_data['member']['uuid'], $webhook_data['group']['uuid']);
 
-                if (isset($response['message'])) {
+                if (isset($query['message'])) {
                     // failed to find a row; create new partner mapping
-                    parent::createPartnerMap($response_data['roster']['id'], 'user', $webhook_data['member']['uuid'], $webhook_data['group']['uuid']);
+                    parent::createPartnerMap($response['roster']['id'], 'user', $webhook_data['member']['uuid'], $webhook_data['group']['uuid']);
                 }
                 break;
             case 'user_adds_submission':
                 // associate AllPlayers user uid with TeamSnap roster id
-                $response = parent::readPartnerMap('user', $webhook_data['member']['uuid'], $webhook_data['group']['uuid']);
+                $query = parent::readPartnerMap('user', $webhook_data['member']['uuid'], $webhook_data['group']['uuid']);
 
-                if (isset($response['message'])) {
+                if (isset($query['message'])) {
                     // failed to find a row; create new partner mapping
-                    parent::createPartnerMap($response_data['roster']['id'], 'user', $webhook_data['member']['uuid'], $webhook_data['group']['uuid']);
+                    parent::createPartnerMap($response['roster']['id'], 'user', $webhook_data['member']['uuid'], $webhook_data['group']['uuid']);
                 }
                 break;
         }
