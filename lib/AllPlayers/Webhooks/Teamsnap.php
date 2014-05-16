@@ -163,15 +163,6 @@ class Teamsnap extends Webhook
                 parent::post();
 
                 /*
-                 * Reset webhook data for processResponse call in
-                 * PostWebhooks#perform(); this is able to happen because the
-                 * request data was set in parent::post(), but the webhook data
-                 * must be reset for the final evaluation in the last
-                 * processResponse call (in PostWebhooks#perform()).
-                 */
-//                $this->webhook->data = $webhook_data;
-
-                /*
                  * change webhook type, so processResponse() will capture the
                  * owners uid on the next call (in PostWebhooks#perform()).
                  */
@@ -180,16 +171,11 @@ class Teamsnap extends Webhook
                 $this->setOriginalData($temp);
                 break;
             case 'user_updates_group':
-                /*
-                 * INTERNAL BLOCKER:
-                 *   Need partner mapping API
-                 */
                 $team = parent::readPartnerMap('group', $data['group']['uuid'], $data['group']['uuid']);
                 $team = $team['external_resource_id'];
                 $this->domain .= '/teams/' . $team;
 
-                // team data to update
-//                $data = $this->webhook->data;
+                // team data to send
                 $geographical = $this->getRegion($data['group']['timezone']);
                 $send = array(
                     'team' => array(
@@ -204,7 +190,6 @@ class Teamsnap extends Webhook
                 );
 
                 $this->setData($send);
-//                $this->webhook->data = $send;
                 parent::put();
                 break;
             case 'user_deletes_group':
@@ -214,16 +199,12 @@ class Teamsnap extends Webhook
                  */
                 break;
             case 'user_adds_role':
-                /*
-                 * INTERNAL BLOCKER:
-                 *   Need partner mapping API
-                 */
                 $method = $roster = '';
                 $group = parent::readPartnerMap('user', $data['member']['uuid'], $data['group']['uuid']);
                 if (isset($group['message'])) {
                     // resource was not found
                     $method = 'POST';
-                } else {
+                } elseif (isset($group['external_resource_id'])) {
                     $method = 'PUT';
                     $roster = $group['external_resource_id'];
                 }
@@ -232,11 +213,11 @@ class Teamsnap extends Webhook
                 if (isset($team['message'])) {
                     // resource was not found
                     $team = 'TEAM_WAS_NOT_FOUND';
-                } else {
+                } elseif (isset($team['external_resource_id'])) {
                     $team = $team['external_resource_id'];
                 }
 
-                // build role data to send
+                // role data to send
                 $send = array(
                     'roster' => array(
                         'first' => $data['member']['first_name'],
@@ -271,17 +252,12 @@ class Teamsnap extends Webhook
 
                 break;
             case 'user_removes_role':
-                /*
-                 * INTERNAL BLOCKER:
-                 *   Need partner mapping API
-                 */
-//                $data = $this->webhook->data;
                 $roster = '';
                 $group = parent::readPartnerMap('user', $data['member']['uuid'], $data['group']['uuid']);
                 if (isset($group['message'])) {
                     // resource was not found
                     $roster = 'ROSTER_WAS_NOT_FOUND';
-                } else {
+                } elseif (isset($group['external_resource_id'])) {
                     $roster = $group['external_resource_id'];
                 }
 
@@ -289,14 +265,14 @@ class Teamsnap extends Webhook
                 if (isset($team['message'])) {
                     // resource was not found
                     $team = 'TEAM_WAS_NOT_FOUND';
-                } else {
+                } elseif (isset($team['external_resource_id'])) {
                     $team = $team['external_resource_id'];
                 }
 
                 $this->domain .= '/teams/' . $team . '/as_roster/' .
                     $this->webhook->subscriber['commissioner_id'] . '/rosters/' . $roster;
 
-                // put data to send
+                // roster data to send
                 $send = array(
                     'roster' => array(
                         'non_player' => $data['member']['role_name'] == 'Player' ? 1 : 0,
@@ -305,25 +281,15 @@ class Teamsnap extends Webhook
                 );
 
                 $this->setData($send);
-//                $this->webhook->data = $send;
                 parent::put();
                 break;
             case 'user_adds_submission':
-                /*
-                 * INTERNAL BLOCKER:
-                 *   Need partner mapping API
-                 */
-                /**
-                 * Check partner mapping db to determine if user exists; if not,
-                 * send post to create and add submission information, else
-                 * update existing user information.
-                 */
                 $method = $roster = '';
                 $group = parent::readPartnerMap('user', $data['member']['uuid'], $data['group']['uuid']);
                 if (isset($group['message'])) {
                     // resource was not found
                     $method = 'POST';
-                } else {
+                } elseif (isset($group['external_resource_id'])) {
                     $method = 'PUT';
                     $roster = $group['external_resource_id'];
                 }
@@ -332,15 +298,15 @@ class Teamsnap extends Webhook
                 if (isset($team['message'])) {
                     // resource was not found
                     $team = 'TEAM_WAS_NOT_FOUND';
-                } else {
+                } elseif (isset($team['external_resource_id'])) {
                     $team = $team['external_resource_id'];
                 }
 
                 /**
                  * Gathers all available data to send to TeamSnap. If required
                  * elements are not present in the submission, and the user does
-                 * not previously exist, this will default to using account
-                 * information.
+                 * not previously exist, this will default to using All Players
+                 * account information.
                  */
                 $send = array();
                 $webform = $data['webform_submission']['data'];
@@ -351,6 +317,7 @@ class Teamsnap extends Webhook
                      * Element required for roster creation, but not present in
                      * user submission; use information from the users account.
                      */
+
                     $send['first'] = $data['member']['first_name'];
                 }
                 if (isset($webform['profile__field_lastname__profile'])) {
@@ -360,6 +327,7 @@ class Teamsnap extends Webhook
                      * Element required for roster creation, but not present in
                      * user submission; use information from the users account.
                      */
+
                     $send['last'] = $data['member']['last_name'];
                 }
                 if (isset($webform['profile__field_email__profile'])) {
@@ -468,7 +436,6 @@ class Teamsnap extends Webhook
         // get original data sent from AllPlayers webhook
         $data = $this->getData();
         $original_data = $this->getOriginalData();
-        echo "[DATA DBG] => ", print_r($data, true), "[ORIGINAL DATA DBG] => ", print_r($original_data, true), "[RESPONSE DBG] => ", print_r($response, true);
         switch ($original_data['webhook_type']) {
             case 'user_creates_group':
                 // associate AllPlayers team uid with TeamSnap team id
