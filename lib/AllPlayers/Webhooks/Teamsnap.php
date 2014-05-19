@@ -16,6 +16,206 @@ class Teamsnap extends Webhook implements ProcessInterface
 {
 
     /**
+     * The list of supported Sports from TeamSnap and their ID numbers.
+     *
+     * @var array $sports
+     */
+    static $sports = array(
+        'Archery' => 59,
+        'Australian Football' => 26,
+        'Badminton' => 27,
+        'Bandy' => 28,
+        'Baseball' => 5,
+        'Basketball' => 1,
+        'Bocce' => 29,
+        'Bowling' => 13,
+        'Broomball' => 30,
+        'Cheerleading' => 31,
+        'Chess' => 32,
+        'Cow Tipping' => 54,
+        'Cricket' => 8,
+        'Croquet' => 33,
+        'Curling' => 34,
+        'Cycling' => 35,
+        'Dodgeball' => 14,
+        'Dragon Boat' => 25,
+        'Fencing' => 36,
+        'Field Hockey' => 15,
+        'Floor Hockey' => 60,
+        'Floorball' => 44,
+        'Foosball' => 37,
+        'Football' => 7,
+        'Golf' => 46,
+        'Gymnastics-Men' => 56,
+        'Gymnastics-Women' => 57,
+        'Hurling' => 38,
+        'Ice Hockey' => 16,
+        'Indoor Soccer' => 39,
+        'Inline Hockey' => 17,
+        'Ki-O-Rahi' => 50,
+        'Kickball' => 18,
+        'Lacrosse' => 10,
+        'Netball' => 40,
+        'Non-Sport Group' => 52,
+        'Other Sport' => 24,
+        'Outrigger' => 53,
+        'Paintball' => 19,
+        'Petanque' => 45,
+        'Polo' => 20,
+        'Racquetball' => 55,
+        'Ringette' => 51,
+        'Roller Derby' => 48,
+        'Rowing' => 21,
+        'Rugby' => 9,
+        'Running' => 41,
+        'Sailing' => 47,
+        'Slo-pitch' => 61,
+        'Soccer' => 2,
+        'Softball' => 4,
+        'Street Hockey' => 62,
+        'Swimming' => 42,
+        'Tennis' => 43,
+        'Track And Field' => 58,
+        'Ultimate' => 22,
+        'Volleyball' => 6,
+        'Water Polo' => 23,
+        'Wiffleball' => 11,
+        'Wrestling' => 49,
+    );
+
+    /**
+     * The list of TeamSnap supported locations and timezones.
+     *
+     * @var array $regions
+     */
+    static $regions = array(
+        '13:00' => array(
+            'timezone' => 'Samoa',
+            'location' => 'Samoa',
+        ),
+        '12:00' => array(
+            'timezone' => 'Auckland',
+            'location' => 'New Zealand',
+        ),
+        '11:00' => array(
+            'timezone' => 'Vladivostok',
+            'location' => 'Russia',
+        ),
+        '10:00' => array(
+            'timezone' => 'Sydney',
+            'location' => 'Australia',
+        ),
+        '9:30' => array(
+            'timezone' => 'Adelaide',
+            'location' => 'Australia',
+        ),
+        '9:00' => array(
+            'timezone' => 'Osaka',
+            'location' => 'Japan',
+        ),
+        '8:00' => array(
+            'timezone' => 'Chongqing',
+            'location' => 'China',
+        ),
+        '7:00' => array(
+            'timezone' => 'Jakarta',
+            'location' => 'Indonesia',
+        ),
+        '6:30' => array(
+            'timezone' => 'Rangoon',
+            'location' => 'Myanmar',
+        ),
+        '6:00' => array(
+            'timezone' => 'Dhaka',
+            'location' => 'Bangladesh',
+        ),
+        '5:45' => array(
+            'timezone' => 'Kathmandu',
+            'location' => 'Nepal',
+        ),
+        '5:30' => array(
+            'timezone' => 'Mumbai',
+            'location' => 'India',
+        ),
+        '5:00' => array(
+            'timezone' => 'Karachi',
+            'location' => 'Pakistan',
+        ),
+        '4:30' => array(
+            'timezone' => 'Kabul',
+            'location' => 'Afghanistan',
+        ),
+        '4:00' => array(
+            'timezone' => 'Moscow',
+            'location' => 'Russia',
+        ),
+        '3:30' => array(
+            'timezone' => 'Tehran',
+            'location' => 'Iran',
+        ),
+        '3:00' => array(
+            'timezone' => 'Riyadh',
+            'location' => 'Saudi Arabia',
+        ),
+        '2:00' => array(
+            'timezone' => 'Athens',
+            'location' => 'Greece',
+        ),
+        '1:00' => array(
+            'timezone' => 'Berlin',
+            'location' => 'Germany',
+        ),
+        '-1:00' => array(
+            'timezone' => 'Cape Verde Is.',
+            'location' => 'Republic of Cabo Verde',
+        ),
+        '-2:00' => array(
+            'timezone' => 'Mid-Atlantic',
+            'location' => 'United Kingdom',
+        ),
+        '-3:00' => array(
+            'timezone' => 'Brasilia',
+            'location' => 'Brazil',
+        ),
+        '-3:30' => array(
+            'timezone' => 'Newfoundland',
+            'location' => 'Canada',
+        ),
+        '-4:00' => array(
+            'timezone' => 'Atlantic Time (Canada)',
+            'location' => 'Canada',
+        ),
+        '-5:00' => array(
+            'timezone' => 'Eastern Time (US & Canada)',
+            'location' => 'United States',
+        ),
+        '-6:00' => array(
+            'timezone' => 'Central Time (US & Canada)',
+            'location' => 'United States',
+        ),
+        '-7:00' => array(
+            'timezone' => 'Mountain Time (US & Canada)',
+            'location' => 'United States',
+        ),
+        '-8:00' => array(
+            'timezone' => 'Pacific Time (US & Canada)',
+            'location' => 'United States',
+        ),
+        '-9:00' => array(
+            'timezone' => 'Alaska',
+            'location' => 'United States',
+        ),
+        '-10:00' => array(
+            'timezone' => 'Hawaii',
+            'location' => 'United States',
+        ),
+        '-11:00' => array(
+            'timezone' => 'American Samoa',
+            'location' => 'United States',
+        ),
+    );
+
+    /**
      * The URL to post the webhook.
      *
      * @var string
@@ -457,196 +657,13 @@ class Teamsnap extends Webhook implements ProcessInterface
      */
     public function getSport($data)
     {
-        $id = null;
-
-        // if the sport group was not selected, default to non-sport group.
-        switch ($data) {
-            case 'Archery':
-                $id = 59;
-                break;
-            case 'Australian Football':
-                $id = 26;
-                break;
-            case 'Badminton':
-                $id = 27;
-                break;
-            case 'Bandy':
-                $id = 28;
-                break;
-            case 'Baseball':
-                $id = 5;
-                break;
-            case 'Basketball':
-                $id = 1;
-                break;
-            case 'Bocce':
-                $id = 29;
-                break;
-            case 'Bowling':
-                $id = 13;
-                break;
-            case 'Broomball':
-                $id = 30;
-                break;
-            case 'Cheerleading':
-                $id = 31;
-                break;
-            case 'Chess':
-                $id = 32;
-                break;
-            case 'Cow Tipping':
-                $id = 54;
-                break;
-            case 'Cricket':
-                $id = 8;
-                break;
-            case 'Croquet':
-                $id = 33;
-                break;
-            case 'Curling':
-                $id = 34;
-                break;
-            case 'Cycling':
-                $id = 35;
-                break;
-            case 'Dodgeball':
-                $id = 14;
-                break;
-            case 'Dragon Boat':
-                $id = 25;
-                break;
-            case 'Fencing':
-                $id = 36;
-                break;
-            case 'Field Hockey':
-                $id = 15;
-                break;
-            case 'Floor Hockey':
-                $id = 60;
-                break;
-            case 'Floorball':
-                $id = 44;
-                break;
-            case 'Foosball':
-                $id = 37;
-                break;
-            case 'Football':
-                $id = 7;
-                break;
-            case 'Golf':
-                $id = 46;
-                break;
-            case 'Gymnastics-Men':
-                $id = 56;
-                break;
-            case 'Gymnastics-Women':
-                $id = 57;
-                break;
-            case 'Hurling':
-                $id = 38;
-                break;
-            case 'Ice Hockey':
-                $id = 16;
-                break;
-            case 'Indoor Soccer':
-                $id = 39;
-                break;
-            case 'Inline Hockey':
-                $id = 17;
-                break;
-            case 'Ki-O-Rahi':
-                $id = 50;
-                break;
-            case 'Kickball':
-                $id = 18;
-                break;
-            case 'Lacrosse':
-                $id = 10;
-                break;
-            case 'Netball':
-                $id = 40;
-                break;
-            case 'Non-Sport Group':
-                $id = 52;
-                break;
-            case 'Other Sport':
-                $id = 24;
-                break;
-            case 'Outrigger':
-                $id = 53;
-                break;
-            case 'Paintball':
-                $id = 19;
-                break;
-            case 'Petanque':
-                $id = 45;
-                break;
-            case 'Polo':
-                $id = 20;
-                break;
-            case 'Racquetball':
-                $id = 55;
-                break;
-            case 'Ringette':
-                $id = 51;
-                break;
-            case 'Roller Derby':
-                $id = 48;
-                break;
-            case 'Rowing':
-                $id = 21;
-                break;
-            case 'Rugby':
-                $id = 9;
-                break;
-            case 'Running':
-                $id = 41;
-                break;
-            case 'Sailing':
-                $id = 47;
-                break;
-            case 'Slo-pitch':
-                $id = 61;
-                break;
-            case 'Soccer':
-                $id = 2;
-                break;
-            case 'Softball':
-                $id = 4;
-                break;
-            case 'Street Hockey':
-                $id = 62;
-                break;
-            case 'Swimming':
-                $id = 42;
-                break;
-            case 'Tennis':
-                $id = 43;
-                break;
-            case 'Track And Field':
-                $id = 58;
-                break;
-            case 'Ultimate':
-                $id = 22;
-                break;
-            case 'Volleyball':
-                $id = 6;
-                break;
-            case 'Water Polo':
-                $id = 23;
-                break;
-            case 'Wiffleball':
-                $id = 11;
-                break;
-            case 'Wrestling':
-                $id = 49;
-                break;
-            default:
-                $id = 52; // Non-Sport Group
-                break;
+        // if sport is set in supported list, return its value
+        if (isset(self::$sports[$data])) {
+            return self::$sports[$data];
+        } else {
+            // return Non-Sport Group
+            return 52;
         }
-
-        return $id;
     }
 
     /**
@@ -660,145 +677,16 @@ class Teamsnap extends Webhook implements ProcessInterface
      */
     public function getRegion($offset)
     {
-        $timezone = '';
-        $location = '';
-
-        switch ($offset) {
-            case '13:00':
-                $timezone = 'Samoa';
-                $location = 'Samoa';
-                break;
-            case '12:00':
-                $timezone = 'Auckland';
-                $location = 'New Zealand';
-                break;
-            case '11:00':
-                $timezone = 'Vladivostok';
-                $location = 'Russia';
-                break;
-            case '10:00':
-                $timezone = 'Sydney';
-                $location = 'Australia';
-                break;
-            case '9:30':
-                $timezone = 'Adelaide';
-                $location = 'Australia';
-                break;
-            case '9:00':
-                $timezone = 'Osaka';
-                $location = 'Japan';
-                break;
-            case '8:00':
-                $timezone = 'Chongqing';
-                $location = 'China';
-                break;
-            case '7:00':
-                $timezone = 'Jakarta';
-                $location = 'Indonesia';
-                break;
-            case '6:30':
-                $timezone = 'Rangoon';
-                $location = 'Myanmar';
-                break;
-            case '6:00':
-                $timezone = 'Dhaka';
-                $location = 'Bangladesh';
-                break;
-            case '5:45':
-                $timezone = 'Kathmandu';
-                $location = 'Nepal';
-                break;
-            case '5:30':
-                $timezone = 'Mumbai';
-                $location = 'India';
-                break;
-            case '5:00':
-                $timezone = 'Karachi';
-                $location = 'Pakistan';
-                break;
-            case '4:30':
-                $timezone = 'Kabul';
-                $location = 'Afghanistan';
-                break;
-            case '4:00':
-                $timezone = 'Moscow';
-                $location = 'Russia';
-                break;
-            case '3:30':
-                $timezone = 'Tehran';
-                $location = 'Iran';
-                break;
-            case '3:00':
-                $timezone = 'Riyadh';
-                $location = 'Saudi Arabia';
-                break;
-            case '2:00':
-                $timezone = 'Athens';
-                $location = 'Greece';
-                break;
-            case '1:00':
-                $timezone = 'Berlin';
-                $location = 'Germany';
-                break;
-            case '-1:00':
-                $timezone = 'Cape Verde Is.';
-                $location = 'Republic of Cabo Verde';
-                break;
-            case '-2:00':
-                $timezone = 'Mid-Atlantic';
-                $location = 'United Kingdom';
-                break;
-            case '-3:00':
-                $timezone = 'Brasilia';
-                $location = 'Brazil';
-                break;
-            case '-3:30':
-                $timezone = 'Newfoundland';
-                $location = 'Canada';
-                break;
-            case '-4:00':
-                $timezone = 'Atlantic Time (Canada)';
-                $location = 'Canada';
-                break;
-            case '-4:00':
-                $timezone = 'Caracas';
-                $location = 'Venezuela';
-                break;
-            case '-5:00':
-                $timezone = 'Eastern Time (US & Canada)';
-                $location = 'United States';
-                break;
-            case '-6:00':
-                $timezone = 'Central Time (US & Canada)';
-                $location = 'United States';
-                break;
-            case '-7:00':
-                $timezone = 'Mountain Time (US & Canada)';
-                $location = 'United States';
-                break;
-            case '-8:00':
-                $timezone = 'Pacific Time (US & Canada)';
-                $location = 'United States';
-                break;
-            case '-9:00':
-                $timezone = 'Alaska';
-                $location = 'United States';
-                break;
-            case '-10:00':
-                $timezone = 'Hawaii';
-                $location = 'United States';
-                break;
-            case '-11:00':
-                $timezone = 'American Samoa';
-                $location = 'United States';
-                break;
-            default:
-                $timezone = 'UTC';
-                $location = 'United Kingdom';
-                break;
+        // if region is in supported list, return its value.
+        if (isset(self::$regions[$offset])) {
+            return self::$regions[$offset];
+        } else {
+            // return default UTC region
+            return array(
+                'timezone' => 'UTC',
+                'location' => 'United Kingdom',
+            );
         }
-
-        return array('timezone' => $timezone, 'location' => $location);
     }
 
 }
