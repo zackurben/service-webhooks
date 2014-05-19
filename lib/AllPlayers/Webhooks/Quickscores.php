@@ -26,30 +26,26 @@ class Quickscores extends Webhook
     /**
      * The method used for Client authentication.
      *
-     * Options:
-     *   'no_authentication'
-     *   'basic_auth'
-     *   'oauth'
-     * Default:
-     *   'no_authentication'
+     * @see AUTHENTICATION_NONE
+     * @see AUTHENTICATION_BASIC
+     * @see AUTHENTICATION_OAUTH
      *
-     * If using 'basic_auth', the $subscriber must contain: user and pass.
-     * If using 'oauth', the $subscriber must contain: consumer_key, consumer_secret, token, and secret.
+     * @var integer
      */
-    public $authentication = 'basic_auth';
+    public $authentication = self::AUTHENTICATION_BASIC;
 
     /**
      * The method of data transmission.
      *
-     * Options:
-     *   'form-urlencoded'
-     *   'json'
-     * Default:
-     *   'json'
+     * This establishes the method of transmission between the AllPlayers
+     * webhook and the third-party webhook.
+     *
+     * @see TRANSMISSION_URLENCODED
+     * @see TRANSMISSION_JSON
      *
      * @var string
      */
-    public $method = 'form-urlencoded';
+    public $method = self::TRANSMISSION_URLENCODED;
 
     /**
      * Authenticate using basic auth.

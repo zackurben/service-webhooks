@@ -213,16 +213,6 @@ class Webhook
     public $method = self::TRANSMISSION_JSON;
 
     /**
-     * Determines if the webhook will return data that requires processing.
-     *
-     * If true, the custom webhook definition will need to implement:
-     * public function processResponse(\Guzzle\Http\Message\Response $response)
-     *
-     * @var boolean
-     */
-    public $processing = false;
-
-    /**
      * Initialize the webhook object.
      *
      * @param array $subscriber
