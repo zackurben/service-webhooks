@@ -394,10 +394,11 @@ class Teamsnap extends Webhook implements ProcessInterface
     }
 
     /**
-     * Process the webhook data returned from sending the webhook; The function
-     * should relate a piece of AllPlayers data to a piece of TeamSnap data;
-     * This information relationship will be made via the AllPlayers Public
-     * PHP API.
+     * Process the webhook data returned from sending the webhook.
+     *
+     * This function should relate a piece of AllPlayers data to a piece of
+     * third-party data; This information relationship will be made via the
+     * AllPlayers Public PHP API.
      *
      * @param \Guzzle\Http\Message\Response $response
      *   Response from the webhook being processed/called.
@@ -446,11 +447,10 @@ class Teamsnap extends Webhook implements ProcessInterface
     }
 
     /**
-     * Select the TeamSnap Sport id corresponding to an item from the list of
-     * currently supported Sports.
+     * Get the TeamSnap Sport from the list of supported Sports.
      *
-     * @param array $data
-     *   Array of the Group Category selected in the group creation process on AllPlayers.
+     * @param string $data
+     *   Name of the sport selected on AllPlayers.
      *
      * @return integer
      *   The sport id corresponding to the available sports in the TeamSnap API.
@@ -650,15 +650,13 @@ class Teamsnap extends Webhook implements ProcessInterface
     }
 
     /**
-     * Translate UTC/GMT timezone offset to TeamSnap supported Timezones and
-     * their corresponding estimated locations.
+     * Get the TeamSnap supported location and timezone.
      *
-     * @param integer $offset
+     * @param string $offset
      *   The timezone offset from UTC/GMT.
      *
      * @return array
-     *   [timezone] = TeamSnap Timezone
-     *   [location] = Estimated Geographical Location
+     *   An associative keyed array with the location and timezone information.
      */
     public function getRegion($offset)
     {

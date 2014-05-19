@@ -48,7 +48,7 @@ class PostWebhooks
         $webhook = new $classname($subscriber['variables'], $event_data, array('test_url' => $this->test_url));
         $response = $webhook->request->send();
 
-        if ($webhook instanceof ProcessInterface) {
+        if ($webhook instanceof \AllPlayers\Webhooks\ProcessInterface) {
             // process the response, according to each specific webhook
             // call api here to map allplayers to partner uuids
             $webhook->processResponse($response);
