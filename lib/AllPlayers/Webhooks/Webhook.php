@@ -22,6 +22,75 @@ class Webhook
 {
 
     /**
+     * An enumerated value for using no authentication.
+     *
+     * @var integer
+     */
+    const AUTHENTICATION_NONE = 0;
+
+    /**
+     * An enumerated value for using basic authentication.
+     *
+     * AUTHENTICATION_BASIC requires the $subscriber to contain: username and
+     * password.
+     *
+     * @var integer
+     */
+    const AUTHENTICATION_BASIC = 1;
+
+    /**
+     * An enumerated value for using oAuth authentication.
+     *
+     * AUTHENTICATION_OAUTH requires the $subscriber to contain: consumer_key,
+     * consumer_secret, token, and secret.
+     *
+     * @var integer
+     */
+    const AUTHENTICATION_OAUTH = 2;
+
+    /**
+     * An enumerated value for signifying form-urlencoded data transmission.
+     *
+     * @var integer
+     */
+    const TRANSMISSION_URLENCODED = 3;
+
+    /**
+     * An enumerated value for signifying JSON data transmission.
+     *
+     * @var integer
+     */
+    const TRANSMISSION_JSON = 4;
+
+    /**
+     * A string value for an available partner mapping option.
+     *
+     * @var string
+     */
+    const PARTNER_MAP_USER = 'user';
+
+    /**
+     * A string value for an available partner mapping option.
+     *
+     * @var string
+     */
+    const PARTNER_MAP_EVENT = 'event';
+
+    /**
+     * A string value for an available partner mapping option.
+     *
+     * @var string
+     */
+    const PARTNER_MAP_GROUP = 'group';
+
+    /**
+     * A string value for an available partner mapping option.
+     *
+     * @var string
+     */
+    const PARTNER_MAP_RESOURCE = 'resource';
+
+    /**
      * The list of headers that will be sent with each request.
      *
      * @var array
@@ -31,21 +100,19 @@ class Webhook
     /**
      * The top object of a webhook.
      *
-     * @var array webhook
-     *   ['subscriber'] => Webhook information.
-     *   ['data']       => Webhook data.
+     * @var stdClass
      */
     public $webhook;
 
     /**
-     * The service client object.
+     * The Guzzle client object.
      *
      * @var \Guzzle\Http\Client
      */
     public $client;
 
     /**
-     * The request to be sent.
+     * The Guzzle request to be sent.
      *
      * @var \Guzzle\Http\Message\EntityEnclosingRequest
      */
@@ -68,39 +135,32 @@ class Webhook
     /**
      * The method used for Client authentication.
      *
-     * Options:
-     *   'no_authentication'
-     *   'basic_auth'
-     *   'oauth'
-     * Default:
-     *   'no_authentication'
+     * @see AUTHENTICATION_NONE
+     * @see AUTHENTICATION_BASIC
+     * @see AUTHENTICATION_OAUTH
      *
-     * If using 'basic_auth', the $subscriber must contain: user and pass.
-     * If using 'oauth', the $subscriber must contain: consumer_key, consumer_secret, token, and secret.
+     * @var integer
      */
-    public $authentication = 'no_authentication';
+    public $authentication = self::AUTHENTICATION_NONE;
 
     /**
      * The method of data transmission.
      *
-     * Options:
-     *   'form-urlencoded'
-     *   'json'
-     * Default:
-     *   'json'
+     * This establishes the method of transmission between the AllPlayers
+     * webhook and the third-party webhook.
+     *
+     * @see TRANSMISSION_URLENCODED
+     * @see TRANSMISSION_JSON
      *
      * @var string
      */
-    public $method = 'json';
+    public $method = self::TRANSMISSION_JSON;
 
     /**
      * Determines if the webhook will return data that requires processing.
      *
-     * Options:
-     *   true
-     *   false
-     * Default:
-     *   false
+     * If true, the custom webhook definition will need to implement:
+     * public function processResponse(\Guzzle\Http\Message\Response $response)
      *
      * @var boolean
      */
@@ -122,7 +182,7 @@ class Webhook
         $this->webhook->data = $data;
 
         $this->client = new Client($this->domain);
-        if ($this->authentication != 'no_authentication') {
+        if ($this->authentication != self::AUTHENTICATION_NONE) {
             $this->authenticate();
         }
         $this->preprocess($preprocess);
@@ -138,19 +198,19 @@ class Webhook
     public function authenticate()
     {
         switch ($this->authentication) {
-            case 'basic_auth':
-                $curlauth = new CurlAuthPlugin($this->webhook->subscriber['user'], $this->webhook->subscriber['pass']);
-                $this->client->addSubscriber($curlauth);
+            case self::AUTHENTICATION_BASIC:
+                $curl_auth = new CurlAuthPlugin($this->webhook->subscriber['user'], $this->webhook->subscriber['pass']);
+                $this->client->addSubscriber($curl_auth);
                 break;
-            case 'oauth':
+            case self::AUTHENTICATION_OAUTH:
                 $oauth_config = array(
                     'consumer_key' => $this->webhook->subscriber['consumer_key'],
                     'consumer_secret' => $this->webhook->subscriber['consumer_secret'],
                     'token' => $this->webhook->subscriber['token'],
                     'secret' => $this->webhook->subscriber['secret'],
                 );
-                $auth_plugin = new OauthPlugin($oauth_config);
-                $this->client->addSubscriber($auth_plugin);
+                $oauth_plugin = new OauthPlugin($oauth_config);
+                $this->client->addSubscriber($oauth_plugin);
                 break;
         }
     }
@@ -172,7 +232,7 @@ class Webhook
      * This function will set the data that is to be transmitted in the Webhook.
      *
      * @param array $data
-     *   The data to send.
+     *   The data to send in the Guzzle request.
      */
     public function setData(array $data)
     {
@@ -227,47 +287,47 @@ class Webhook
     }
 
     /**
-     * Makes a POST request to the external service.
+     * Makes a POST request to send to the external service.
      *
      * @return \Guzzle\Http\Message\Request
-     *   Returns the service request object.
+     *   Returns the Guzzle request object, ready to send.
      */
     public function post()
     {
         $this->setDomain();
 
-        // send data in the requested method
-        if ($this->method === 'form-urlencoded') {
+        // encode data in the requested method
+        if ($this->method === self::TRANSMISSION_URLENCODED) {
             $this->request = $this->client->post($this->client->getBaseUrl(), $this->headers);
-            $this->request->addPostFields($this->webhook->data);
+            $this->request->addPostFields($this->getData());
         } else {
             $this->headers['Content-Type'] = 'application/json';
-            $this->request = $this->client->post($this->client->getBaseUrl(), $this->headers, json_encode($this->webhook->data));
+            $this->request = $this->client->post($this->client->getBaseUrl(), $this->headers, json_encode($this->getData()));
         }
     }
 
     /**
-     * Makes a PUT request to the external service.
+     * Makes a PUT request to send to the external service.
      *
      * @return \Guzzle\Http\Message\Request
-     *   Returns the service request object.
+     *   Returns the Guzzle request object, ready to send.
      */
     public function put()
     {
         $this->setDomain();
 
-        // send data in the requested method
-        if ($this->method === 'form-urlencoded') {
+        // encode data in the requested method
+        if ($this->method === self::TRANSMISSION_URLENCODED) {
             $this->request = $this->client->put($this->client->getBaseUrl(), $this->headers);
-            $this->request->addPostFields($this->webhook->data);
+            $this->request->addPostFields($this->getData());
         } else {
             $this->headers['Content-Type'] = 'application/json';
-            $this->request = $this->client->put($this->client->getBaseUrl(), $this->headers, json_encode($this->webhook->data));
+            $this->request = $this->client->put($this->client->getBaseUrl(), $this->headers, json_encode($this->getData()));
         }
     }
 
     /**
-     * Perform any additional processing on the webhook before sending it.
+     * Perform processing on the webhook before preparing to send it.
      *
      * @param array $data
      *   An array of data to be processed before the webhook data is sent.
@@ -281,7 +341,7 @@ class Webhook
     }
 
     /**
-     * Return the JSON object from a Guzzle Response.
+     * Return the JSON object from a Guzzle Response object.
      *
      * @param \Guzzle\Http\Message\Response $response
      *   The response from which to parse the JSON object.
@@ -293,7 +353,7 @@ class Webhook
     {
         $return = '';
 
-        // JSON array returned
+        // Strip JSON string data from response message
         if (strpos($response->getMessage(), "\n[{") !== false) {
             $return = substr($response->getMessage(), strpos($response->getMessage(), "[{"));
         } else {
@@ -305,6 +365,8 @@ class Webhook
 
     /**
      * Create a resource mapping between AllPlayers and a partner.
+     *
+     * @todo Remove cURL options (Used for self-signed certificates).
      *
      * @param string $external_resource_id
      *   The partner resource id to map.
@@ -318,8 +380,6 @@ class Webhook
      *
      * @return array
      *   The AllPlayers response from creating a resource mapping.
-     *
-     * @todo Remove cURL options (Used for self-signed certificates).
      */
     public function createPartnerMap($external_resource_id, $item_type, $item_uuid, $partner_uuid)
     {
@@ -351,6 +411,8 @@ class Webhook
      * If the partner_uuid parameter is not included, this function will return
      * all the elements mapped with the item_uuid.
      *
+     * @todo Remove cURL options (Used for self-signed certificates).
+     *
      * @param string $item_type
      *   The AllPlayers item type to map. Available options are: user, event,
      *   group, and resource.
@@ -361,8 +423,6 @@ class Webhook
      *
      * @return array
      *   The AllPlayers response from reading a resouce mapping.
-     *
-     * @todo Remove cURL options (Used for self-signed certificates).
      */
     public function readPartnerMap($item_type, $item_uuid, $partner_uuid = null)
     {
@@ -390,6 +450,8 @@ class Webhook
      * If the partner_uuid parameter is not included, this function will return
      * all the elements mapped with the item_uuid.
      *
+     * @todo Remove cURL options (Used for self-signed certificates).
+     *
      * @param string $item_type
      *   The AllPlayers item type to map. Available options are: user, event,
      *   group, and resource.
@@ -397,8 +459,6 @@ class Webhook
      *   The AllPlayers item uuid to map.
      * @param string $partner_uuid (Optional)
      *   The AllPlayers partner uuid.
-     *
-     * @todo Remove cURL options (Used for self-signed certificates).
      */
     public function deletePartnerMap($item_type, $item_uuid, $partner_uuid = null)
     {
@@ -409,8 +469,8 @@ class Webhook
         ));
 
         $data = array(
-            'item_type' => "{$item_type}",
-            'item_uuid' => "{$item_uuid}",
+            'item_type' => $item_type,
+            'item_uuid' => $item_uuid,
         );
 
         // delete single row
