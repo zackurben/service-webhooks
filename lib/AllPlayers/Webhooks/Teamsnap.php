@@ -12,7 +12,7 @@ namespace AllPlayers\Webhooks;
 /**
  * Base TeamSnap Webhook definition.
  */
-class Teamsnap extends Webhook
+class Teamsnap extends Webhook implements ProcessInterface
 {
 
     /**
