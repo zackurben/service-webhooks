@@ -63,6 +63,62 @@ class Webhook
     const TRANSMISSION_JSON = 4;
 
     /**
+     * An enumerated value for a HTTP request method.
+     *
+     * @var integer
+     */
+    const HTTP_POST = 5;
+
+    /**
+     * An enumerated value for a HTTP request method.
+     *
+     * @var integer
+     */
+    const HTTP_PUT = 6;
+
+    /**
+     * A string value for an available webhook type.
+     *
+     * @var string
+     */
+    const WEBHOOK_CREATE_GROUP = 'user_creates_group';
+
+    /**
+     * A string value for an available webhook type.
+     *
+     * @var string
+     */
+    const WEBHOOK_UPDATE_GROUP = 'user_updates_group';
+
+    /**
+     * A string value for an available webhook type.
+     *
+     * @var string
+     */
+    const WEBHOOK_DELETE_GROUP = 'user_deletes_group';
+
+    /**
+     * A string value for an available webhook type.
+     *
+     * @var string
+     */
+    const WEBHOOK_ADD_ROLE = 'user_adds_role';
+
+    /**
+     * A string value for an available webhook type.
+     *
+     * @var string
+     */
+    const WEBHOOK_REMOVE_ROLE = 'user_removes_role';
+
+    /**
+     * A string value for an available webhook type.
+     *
+     * @var string
+     */
+    const WEBHOOK_ADD_SUBMISSION = 'user_adds_submission';
+
+    /**
      * A string value for an available partner mapping option.
      *
      * @var string
@@ -355,7 +411,7 @@ class Webhook
 
         // Strip JSON string data from response message
         if (strpos($response->getMessage(), "\n[{") !== false) {
-            $return = substr($response->getMessage(), strpos($response->getMessage(), "[{"));
+            $return = substr($response->getMessage(), strpos($response->getMessage(), '[{'));
         } else {
             $return = substr($response->getMessage(), strpos($response->getMessage(), '{'));
         }
