@@ -280,13 +280,15 @@ class Teamsnap extends Webhook implements ProcessInterface
             case self::WEBHOOK_CREATE_GROUP :
                 /*
                  * Note: this is a different approach for user_creates_group,
-                 * because we need to send two seperate calls to the TeamSnap
+                 * because we need to send multiple calls to the TeamSnap
                  * API, since they do not allow for a roster to be added to a
                  * Team at creation time (we care about this to preserve the
                  * unique property of the group creator).
                  *
-                 * This will first make a Team in the TeamSnap system, and will
-                 * use the response data to add a creator to the Team.
+                 * This will first make a Team in the TeamSnap system, add our
+                 * custom data field for uuids, use the response data to add a
+                 * creator to the Team, and send them an invite to finish their
+                 * account on the TeamSnap system.
                  */
                 $this->domain .= '/teams';
 
@@ -332,6 +334,12 @@ class Teamsnap extends Webhook implements ProcessInterface
                     'roster' => array(
                         'first' => $data['member']['first_name'],
                         'last' => $data['member']['last_name'],
+                        'roster_email_addresses_attributes' => array(
+                            array(
+                                'label' => 'Profile',
+                                'email' => $data['member']['email'],
+                            ),
+                        ),
                         'non_player' => 1,
                         'is_manager' => 1,
                         'is_commissioner' => 0,
@@ -403,6 +411,10 @@ class Teamsnap extends Webhook implements ProcessInterface
                     'roster' => array(
                         'first' => $data['member']['first_name'],
                         'last' => $data['member']['last_name'],
+                        'roster_email_addresses_attributes' => array(
+                            'label' => 'Profile',
+                            'email' => $data['member']['email'],
+                        ),
                         'non_player' => $data['member']['role_name'] == 'Player' ? 0 : 1,
                         'is_manager' => $data['member']['is_admin'] ? 1 : 0,
                     ),
@@ -513,8 +525,18 @@ class Teamsnap extends Webhook implements ProcessInterface
                 }
                 if (isset($webform['profile__field_email__profile'])) {
                     $send['roster_email_addresses_attributes'][] = array(
-                        'label' => 'Profile',
+                        'label' => 'Webform',
                         'email' => $webform['profile__field_email__profile']['value'],
+                    );
+                } elseif ($method == self::HTTP_POST && !isset($webform['profile__field_email__profile'])) {
+                    /*
+                     * Element required for roster invitation, but not present in
+                     * user submission; use information from the users account.
+                     */
+
+                    $send['roster_email_addresses_attributes'][] = array(
+                        'label' => 'Profile',
+                        'email' => $data['member']['email'],
                     );
                 }
                 if (isset($webform['profile__field_birth_date__profile'])) {
@@ -634,6 +656,19 @@ class Teamsnap extends Webhook implements ProcessInterface
                 if (isset($query['message'])) {
                     // failed to find a row; create new partner mapping
                     parent::createPartnerMap($response['roster']['id'], self::PARTNER_MAP_USER, $original_data['member']['uuid'], $original_data['group']['uuid']);
+
+                    // invite the user to complete their TeamSnap account
+                    $query = parent::readPartnerMap(self::PARTNER_MAP_GROUP, $original_data['group']['uuid'], $original_data['group']['uuid']);
+                    $this->domain = "https://api.teamsnap.com/v2/teams/{$query['external_resource_id']}/as_roster/{$this->webhook->subscriber['commissioner_id']}/invitations";
+                    $send = array(
+                        'rosters' => array(
+                            $response['roster']['id'],
+                        )
+                    );
+
+                    $this->setData($send);
+                    parent::post();
+                    $response = $this->send();
                 }
                 break;
             case self::WEBHOOK_ADD_SUBMISSION:
