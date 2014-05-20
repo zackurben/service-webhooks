@@ -336,7 +336,7 @@ class Webhook
     /**
      * Makes a POST request to send to the external service.
      *
-     * @return \Guzzle\Http\Message\Request
+     * @return Request
      *   Returns the Guzzle request object, ready to send.
      */
     protected function post()
@@ -349,14 +349,18 @@ class Webhook
             $this->request->addPostFields($this->getData());
         } else {
             $this->headers['Content-Type'] = 'application/json';
-            $this->request = $this->client->post($this->client->getBaseUrl(), $this->headers, json_encode($this->getData()));
+            $this->request = $this->client->post(
+                $this->client->getBaseUrl(),
+                $this->headers,
+                json_encode($this->getData())
+            );
         }
     }
 
     /**
      * Makes a PUT request to send to the external service.
      *
-     * @return \Guzzle\Http\Message\Request
+     * @return Request
      *   Returns the Guzzle request object, ready to send.
      */
     protected function put()
@@ -369,7 +373,11 @@ class Webhook
             $this->request->addPostFields($this->getData());
         } else {
             $this->headers['Content-Type'] = 'application/json';
-            $this->request = $this->client->put($this->client->getBaseUrl(), $this->headers, json_encode($this->getData()));
+            $this->request = $this->client->put(
+                $this->client->getBaseUrl(),
+                $this->headers,
+                json_encode($this->getData())
+            );
         }
     }
 
@@ -456,7 +464,11 @@ class Webhook
         );
 
         // send API request and return response
-        $request = $client->post($client->getBaseUrl() . '.json?q=1', array('Content-Type' => 'application/json'), json_encode($data));
+        $request = $client->post(
+            $client->getBaseUrl() . '.json?q=1',
+            array('Content-Type' => 'application/json'),
+            json_encode($data)
+        );
         $response = $request->send();
         $response = $this->processJsonResponse($response);
 
@@ -499,6 +511,7 @@ class Webhook
         $request = $client->get($client->getBaseUrl() . '.json?q=1');
         $response = $request->send();
         $response = $this->processJsonResponse($response);
+
         return $response;
     }
 
@@ -538,10 +551,14 @@ class Webhook
         }
 
         // send API request and return response
-        $request = $client->delete($client->getBaseUrl() . '.json?q=1', array('Content-Type' => 'application/json'), json_encode($data));
+        $request = $client->delete(
+            $client->getBaseUrl() . '.json?q=1',
+            array('Content-Type' => 'application/json'),
+            json_encode($data)
+        );
         $response = $request->send();
         $response = $this->processJsonResponse($response);
+
         return $response;
     }
-
 }

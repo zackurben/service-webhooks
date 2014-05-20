@@ -54,5 +54,4 @@ class PostWebhooks
             $webhook->processResponse($response);
         }
     }
-
 }

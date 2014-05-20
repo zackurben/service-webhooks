@@ -67,5 +67,4 @@ class Quickscores extends Webhook
          */
         parent::post();
     }
-
 }
