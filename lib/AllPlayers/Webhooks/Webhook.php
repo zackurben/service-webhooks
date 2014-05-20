@@ -12,6 +12,7 @@
 namespace AllPlayers\Webhooks;
 
 use Guzzle\Http\Client;
+use Guzzle\Http\Message\Response;
 use Guzzle\Http\Plugin\CurlAuthPlugin;
 use Guzzle\Plugin\Oauth\OauthPlugin;
 
@@ -158,35 +159,35 @@ class Webhook
      *
      * @var stdClass
      */
-    public $webhook;
+    protected $webhook;
 
     /**
      * The Guzzle client object.
      *
      * @var \Guzzle\Http\Client
      */
-    public $client;
+    protected $client;
 
     /**
      * The Guzzle request to be sent.
      *
      * @var \Guzzle\Http\Message\EntityEnclosingRequest
      */
-    public $request;
+    protected $request;
 
     /**
      * The URL to post the webhook.
      *
      * @var string
      */
-    public $domain;
+    protected $domain;
 
     /**
      * The URL to redirect webhook data, if testing.
      *
      * @var string
      */
-    public $test_domain;
+    protected $test_domain;
 
     /**
      * The method used for Client authentication.
@@ -197,7 +198,7 @@ class Webhook
      *
      * @var integer
      */
-    public $authentication = self::AUTHENTICATION_NONE;
+    protected $authentication = self::AUTHENTICATION_NONE;
 
     /**
      * The method of data transmission.
@@ -210,7 +211,7 @@ class Webhook
      *
      * @var string
      */
-    public $method = self::TRANSMISSION_JSON;
+    protected $method = self::TRANSMISSION_JSON;
 
     /**
      * Initialize the webhook object.
@@ -225,7 +226,7 @@ class Webhook
     public function __construct(array $subscriber = array(), array $data = array(), array $preprocess = array())
     {
         $this->webhook->subscriber = $subscriber;
-        $this->webhook->data = $data;
+        $this->setData($data);
 
         $this->client = new Client($this->domain);
         if ($this->authentication != self::AUTHENTICATION_NONE) {
@@ -280,7 +281,7 @@ class Webhook
      * @param array $data
      *   The data to send in the Guzzle request.
      */
-    public function setData(array $data)
+    protected function setData(array $data)
     {
         $this->webhook->data = $data;
     }
@@ -302,16 +303,16 @@ class Webhook
      * @param array $data
      *   Set the original webhook data, for use in processing.
      */
-    public function setOriginalData(array $data)
+    protected function setOriginalData(array $data)
     {
         $this->webhook->original_data = $data;
     }
 
     /**
-     * Get service client.
+     * Get Guzzle HTTP Client.
      *
-     * @return \Guzzle\Http\Client
-     *   Returns the http service client.
+     * @return Client
+     *   Returns the Guzzle HTTP Client.
      */
     public function getClient()
     {
@@ -321,7 +322,7 @@ class Webhook
     /**
      * Set the Clients' domain, based on the URL in the webhook definition and test url.
      */
-    public function setDomain()
+    protected function setDomain()
     {
         // swap domain and redirect domain
         if (isset($this->test_domain) && $this->test_domain != '') {
@@ -338,7 +339,7 @@ class Webhook
      * @return \Guzzle\Http\Message\Request
      *   Returns the Guzzle request object, ready to send.
      */
-    public function post()
+    protected function post()
     {
         $this->setDomain();
 
@@ -358,7 +359,7 @@ class Webhook
      * @return \Guzzle\Http\Message\Request
      *   Returns the Guzzle request object, ready to send.
      */
-    public function put()
+    protected function put()
     {
         $this->setDomain();
 
@@ -373,12 +374,23 @@ class Webhook
     }
 
     /**
+     * Send the prepared Guzzle request to the external service.
+     *
+     * @return Resonse
+     *   The Guzzle response object with data about the request.
+     */
+    public function send()
+    {
+        return $this->request->send();
+    }
+
+    /**
      * Perform processing on the webhook before preparing to send it.
      *
      * @param array $data
      *   An array of data to be processed before the webhook data is sent.
      */
-    public function preprocess(array $data)
+    protected function preprocess(array $data)
     {
         // set the redirect url, so we can swap domains before sending the data
         if (isset($data['test_url']) && $data['test_url'] != '') {
@@ -389,13 +401,13 @@ class Webhook
     /**
      * Return the JSON object from a Guzzle Response object.
      *
-     * @param \Guzzle\Http\Message\Response $response
-     *   The response from which to parse the JSON object.
+     * @param Response $response
+     *   The Guzzle Response from which to parse the JSON object.
      *
      * @return array
      *   The JSON decoded, associative keyed, array.
      */
-    public function processJsonResponse(\Guzzle\Http\Message\Response $response)
+    protected function processJsonResponse(Response $response)
     {
         $return = '';
 
@@ -427,7 +439,7 @@ class Webhook
      * @return array
      *   The AllPlayers response from creating a resource mapping.
      */
-    public function createPartnerMap($external_resource_id, $item_type, $item_uuid, $partner_uuid)
+    protected function createPartnerMap($external_resource_id, $item_type, $item_uuid, $partner_uuid)
     {
         $url = 'https://api.zurben.apci.ws/api/v2/externalid';
         $client = new Client($url, array(
@@ -470,7 +482,7 @@ class Webhook
      * @return array
      *   The AllPlayers response from reading a resouce mapping.
      */
-    public function readPartnerMap($item_type, $item_uuid, $partner_uuid = null)
+    protected function readPartnerMap($item_type, $item_uuid, $partner_uuid = null)
     {
         $url = "https://api.zurben.apci.ws/api/v2/externalid/{$item_type}/{$item_uuid}";
         $client = new Client($url, array(
@@ -506,7 +518,7 @@ class Webhook
      * @param string $partner_uuid (Optional)
      *   The AllPlayers partner uuid.
      */
-    public function deletePartnerMap($item_type, $item_uuid, $partner_uuid = null)
+    protected function deletePartnerMap($item_type, $item_uuid, $partner_uuid = null)
     {
         $url = "https://api.zurben.apci.ws/api/v2/externalid/{$item_type}/{$item_uuid}";
         $client = new Client($url, array(

@@ -20,7 +20,7 @@ class Custom extends Webhook
      *
      * @var string
      */
-    public $domain;
+    protected $domain;
 
     /**
      * The method used for Client authentication.
@@ -31,7 +31,7 @@ class Custom extends Webhook
      *
      * @var integer
      */
-    public $authentication = self::AUTHENTICATION_NONE;
+    protected $authentication = self::AUTHENTICATION_NONE;
 
     /**
      * The method of data transmission.
@@ -44,7 +44,7 @@ class Custom extends Webhook
      *
      * @var string
      */
-    public $method = self::TRANSMISSION_JSON;
+    protected $method = self::TRANSMISSION_JSON;
 
     /**
      * Use custom url as domain.
@@ -59,7 +59,7 @@ class Custom extends Webhook
     /**
      * Process the webhook data and set the domain to the appropriate URL
      */
-    public function process()
+    protected function process()
     {
         /**
          * Do no processing here, because this is a simplex webhook that dumps

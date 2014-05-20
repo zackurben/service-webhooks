@@ -46,7 +46,7 @@ class PostWebhooks
         $classname = 'AllPlayers\\Webhooks\\' . $hook['name'];
 
         $webhook = new $classname($subscriber['variables'], $event_data, array('test_url' => $this->test_url));
-        $response = $webhook->request->send();
+        $response = $webhook->send();
 
         if ($webhook instanceof \AllPlayers\Webhooks\ProcessInterface) {
             // process the response, according to each specific webhook

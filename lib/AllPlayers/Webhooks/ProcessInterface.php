@@ -9,6 +9,8 @@
 
 namespace AllPlayers\Webhooks;
 
+use Guzzle\Http\Message\Response;
+
 /**
  * Interface definition.
  */
@@ -25,5 +27,5 @@ interface ProcessInterface
      * @param \Guzzle\Http\Message\Response $response
      *   Response from the webhook being processed/called.
      */
-    public function processResponse(\Guzzle\Http\Message\Response $response);
+    public function processResponse(Response $response);
 }

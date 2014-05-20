@@ -21,7 +21,7 @@ class Quickscores extends Webhook
      *
      * @var string
      */
-    public $domain = 'http://www.quickscores.com/API/SynchEvents.php';
+    protected $domain = 'http://www.quickscores.com/API/SynchEvents.php';
 
     /**
      * The method used for Client authentication.
@@ -32,7 +32,7 @@ class Quickscores extends Webhook
      *
      * @var integer
      */
-    public $authentication = self::AUTHENTICATION_BASIC;
+    protected $authentication = self::AUTHENTICATION_BASIC;
 
     /**
      * The method of data transmission.
@@ -45,7 +45,7 @@ class Quickscores extends Webhook
      *
      * @var string
      */
-    public $method = self::TRANSMISSION_URLENCODED;
+    protected $method = self::TRANSMISSION_URLENCODED;
 
     /**
      * Authenticate using basic auth.
@@ -59,7 +59,7 @@ class Quickscores extends Webhook
     /**
      * Process the webhook and set the domain to the appropriate URL
      */
-    public function process()
+    protected function process()
     {
         /**
          * Do nothing here because, QuickScores has a single API endpoint for

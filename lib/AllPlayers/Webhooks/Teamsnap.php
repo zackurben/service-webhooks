@@ -9,6 +9,8 @@
 
 namespace AllPlayers\Webhooks;
 
+use Guzzle\Http\Message\Response;
+
 /**
  * Base TeamSnap Webhook definition.
  */
@@ -220,7 +222,7 @@ class Teamsnap extends Webhook implements ProcessInterface
      *
      * @var string
      */
-    public $domain = 'https://api.teamsnap.com/v2';
+    protected $domain = 'https://api.teamsnap.com/v2';
 
     /**
      * The method used for Client authentication.
@@ -231,7 +233,7 @@ class Teamsnap extends Webhook implements ProcessInterface
      *
      * @var integer
      */
-    public $authentication = self::AUTHENTICATION_NONE;
+    protected $authentication = self::AUTHENTICATION_NONE;
 
     /**
      * The method of data transmission.
@@ -244,7 +246,7 @@ class Teamsnap extends Webhook implements ProcessInterface
      *
      * @var string
      */
-    public $method = self::TRANSMISSION_JSON;
+    protected $method = self::TRANSMISSION_JSON;
 
     /**
      * Create Teamsnap webhook using no_authentication.
@@ -267,7 +269,7 @@ class Teamsnap extends Webhook implements ProcessInterface
      *
      * @todo Fix case blockers.
      */
-    public function process()
+    protected function process()
     {
         $data = $this->getData();
 
@@ -305,7 +307,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                 // update request body and make the team
                 $this->setData($send);
                 parent::post();
-                $response = $this->request->send();
+                $response = $this->send();
 
                 // process response from team creation (using original data)
                 $this->processResponse($response, $data);
@@ -342,7 +344,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                 parent::post();
 
                 /*
-                 * change webhook type, so processResponse() will capture the
+                 * Update webhook type, so processResponse() will capture the
                  * owners uid on the next call (in PostWebhooks#perform()).
                  */
                 $temp = $this->getOriginalData();
@@ -600,10 +602,10 @@ class Teamsnap extends Webhook implements ProcessInterface
      * third-party data; This information relationship will be made via the
      * AllPlayers Public PHP API.
      *
-     * @param \Guzzle\Http\Message\Response $response
-     *   Response from the webhook being processed/called.
+     * @param Response $response
+     *   The Guzzle Response from the webhook being processed/called.
      */
-    public function processResponse(\Guzzle\Http\Message\Response $response)
+    public function processResponse(Response $response)
     {
         // if test mode, account for extra json wrapper from requestbin
         include 'config/config.php';
