@@ -432,15 +432,16 @@ class Teamsnap extends Webhook implements ProcessInterface
                      */
 
                     // add first/last name required for user creation
-                    $send['first'] = $data['member']['first_name'];
-                    $send['last'] = $data['member']['last_name'];
+                    $send['roster']['first'] = $data['member']['first_name'];
+                    $send['roster']['last'] = $data['member']['last_name'];
 
                     // add email address for TeamSnap invite
-                    $send['roster']['roster_email_addresses_attributes'] = array(
+                    $send['roster']['roster_email_addresses_attributes'][] = array(
                         'label' => 'Profile',
                         'email' => $data['member']['email'],
                     );
 
+                    $this->setData($send);
                     $this->domain .= '/teams/' . $team . '/as_roster/' .
                         $this->webhook->subscriber['commissioner_id'] . '/rosters';
 
@@ -450,7 +451,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                      * The user does exist in the TeamSnap system; Update the
                      * existing user with the given information.
                      */
-
+                    $this->setData($send);
                     $this->domain .= '/teams/' . $team . '/as_roster/' .
                         $this->webhook->subscriber['commissioner_id'] . '/rosters/' . $roster;
 
