@@ -419,12 +419,6 @@ class Teamsnap extends Webhook implements ProcessInterface
                 // role data to send
                 $send = array(
                     'roster' => array(
-                        'first' => $data['member']['first_name'],
-                        'last' => $data['member']['last_name'],
-                        'roster_email_addresses_attributes' => array(
-                            'label' => 'Profile',
-                            'email' => $data['member']['email'],
-                        ),
                         'non_player' => $data['member']['role_name'] == 'Player' ? 0 : 1,
                         'is_manager' => $data['member']['is_admin'] ? 1 : 0,
                     ),
@@ -434,8 +428,18 @@ class Teamsnap extends Webhook implements ProcessInterface
                 if ($method == self::HTTP_POST) {
                     /*
                      * The user does not exist in the TeamSnap system; Create
-                     * the user from the given information.
+                     * the user from the profile information.
                      */
+
+                    // add first/last name required for user creation
+                    $send['first'] = $data['member']['first_name'];
+                    $send['last'] = $data['member']['last_name'];
+
+                    // add email address for TeamSnap invite
+                    $send['roster']['roster_email_addresses_attributes'] = array(
+                        'label' => 'Profile',
+                        'email' => $data['member']['email'],
+                    );
 
                     $this->domain .= '/teams/' . $team . '/as_roster/' .
                         $this->webhook->subscriber['commissioner_id'] . '/rosters';
