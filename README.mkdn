@@ -29,7 +29,7 @@ namespace AllPlayers\Webhooks;
 /**
  * Every class must have a code block detailing what the class does.
  */
-class MyService extends Webhook
+class YourService extends Webhook
 {
     /**
      * Every property must have a codeblock detailing the reason for it.
@@ -97,7 +97,7 @@ class MyService extends Webhook
 Any webhook that requires processing of an API response, may implement the interface: ProcessInterface.php
 
 ```php
-class MyService extends Webhook implements ProcessInterface
+class YourService extends Webhook implements ProcessInterface
 {
     ...
 }
@@ -106,21 +106,23 @@ class MyService extends Webhook implements ProcessInterface
 By implementing the ProcessInterface, you must also include its function inside your custom webhook:
 
 ```php
-    /**
-     * Process the webhook data returned from sending the webhook.
-     *
-     * This function should relate a piece of AllPlayers data to a piece of
-     * third-party data; This information relationship will be made via the
-     * AllPlayers Public PHP API.
-     *
-     * @param \Guzzle\Http\Message\Response $response
-     *   Response from the webhook being processed/called.
-     */
-    public function processResponse(Response $response)
-    {
-        // Do some action because some response was returned
-    }
+/**
+ * Process the webhook data returned from sending the webhook.
+ *
+ * This function should relate a piece of AllPlayers data to a piece of
+ * third-party data; This information relationship will be made via the
+ * AllPlayers Public PHP API.
+ *
+ * @param \Guzzle\Http\Message\Response $response
+ *   Response from the webhook being processed/called.
+ */
+public function processResponse(Response $response)
+{
+    // Do some action because some API response was returned
+}
 ```
+Note that the processResponse function is automatically called at the end of each webhook, if your webhook implements ProcessInterface.
+
 
 *Tests are required for all patches*
 
