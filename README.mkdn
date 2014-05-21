@@ -14,12 +14,12 @@ AllPlayers will accept service hooks for production web applications. We would l
 
 1. Fork the project
 2. Create a new file in `lib/AllPlayers/Webhooks/` called `YourService.php`, using the template given below.
-3. Send a pull request form your fork to [allplayers/service-webhooks](https://github.com/AllPlayers/service-webhooks)
+3. Send a pull request from your fork to [allplayers/service-webhooks](https://github.com/AllPlayers/service-webhooks)
 4. Once accepted, we'll add any necessary data fields to the AllPlayers front-end so people can start using your application.
 
 ```php
 /**
- * @file MyService.php
+ * @file YourService.php
  *
  * Every file must have a code block explaining what the file does.
  */
@@ -34,102 +34,92 @@ class MyService extends Webhook
     /**
      * Every property must have a codeblock detailing the reason for it.
      */ 
- 
-    /**
-     * The url to send the Webhook data.
-     */
-    public $domain = 'http://your-service-domain.com';
 
     /**
-     * The url of the logo (Optional but desired for optimal user experience).
-     */
-    public $service_logo = 'http://your-service-domain.com/logo.png';
-	
-    /**
-     * The method used for Client authentication.
-     *
-     * Options:
-     *   'no_authentication'
-     *   'basic_auth'
-     *   'oauth'
-     * Default:
-     *   'no_authentication'
-     *
-     * If using 'basic_auth', the $subscriber must contain: user and pass.
-     * If using 'oauth', the $subscriber must contain: consumer_key, consumer_secret,
-     * token, and secret.
-     */
-    public $authentication = 'no_authentication';
-	
-    /**
-     * The method of data transmission.
-     *
-     * Options:
-     *   'form-urlencoded'
-     *   'json'
-     * Default:
-     *   'json'
+     * The URL to post the webhook.
      *
      * @var string
      */
-    public $method = 'json';
+    protected $domain = 'http://your-service-domain.com';
 
     /**
-     * Determines if the webhook will return data that requires processing.
+     * The URL of the logo (Optional but desired for optimal user experience).
      *
-     * Options:
-     *   true
-     *   false
-     * Default:
-     *   false
-     *
-     * @var boolean
+     * @var string
      */
-    public $processing = false;
+    protected $service_logo = 'http://your-service-domain.com/logo.png';
+
+    /**
+     * The method used for Client authentication.
+     *
+     * @see AUTHENTICATION_NONE
+     * @see AUTHENTICATION_BASIC
+     * @see AUTHENTICATION_OAUTH
+     *
+     * @var integer
+     */
+    protected $authentication = self::AUTHENTICATION_BASIC;
+
+    /**
+     * The method of data transmission.
+     *
+     * This establishes the method of transmission between the AllPlayers
+     * webhook and the third-party webhook.
+     *
+     * @see TRANSMISSION_URLENCODED
+     * @see TRANSMISSION_JSON
+     *
+     * @var string
+     */
+    protected $method = self::TRANSMISSION_URLENCODED;
 	
     /**
      * Configure the authentication credentials, and other Webhook specifics here.
      */
-    public function __construct(array $subscriber = array(), array $data = array(),
-        array $preprocess = array())
+    public function __construct(array $subscriber = array(), array $data = array(), array $preprocess = array())
     {
         parent::__construct($subscriber, $data, $preprocess);
         $this->process();
     }
 	
     /**
-     * Process the webhook data and set the domain to the appropriate URL.
-     * (This is required, all webhook processing should be completed here)
+     * Process the webhook data and set the domain to the appropriate URL
      */
-    public function process()
+    protected function process()
     {
         // do webhook processing here, such as, changing the URL and data being sent.
-    }
-
-    /**
-     * Process the webhook data returned from sending the webhook; The value
-     * returned is used to map a AllPlayers internal resource to a partners
-     * resource.
-     * 
-     * @param array $data
-     *   Response from the webhook being processed/called.
-     * 
-     * @return
-     *   The partner resource to be correlated with the AllPlayers resource.
-     */
-    public function processResponse($data)
-    {
-        /**
-         * This function is only required for webhooks with: $processing = true;
-         */
-            
-        $response = "";
-
-        // set response based on $data manipulation here
-
-        return $response;
+        parent::post();
     }
 }
+```
+
+### Additional Processing
+Any webhook that requires processing of an API response, may implement the interface: ProcessInterface.php
+
+```php
+class MyService extends Webhook implements ProcessInterface
+{
+    ...
+}
+```
+
+By implementing the ProcessInterface, you must also include its function inside your custom webhook:
+
+```php
+    /**
+     * Process the webhook data returned from sending the webhook.
+     *
+     * This function should relate a piece of AllPlayers data to a piece of
+     * third-party data; This information relationship will be made via the
+     * AllPlayers Public PHP API.
+     *
+     * @param \Guzzle\Http\Message\Response $response
+     *   Response from the webhook being processed/called.
+     */
+    public function processResponse(Response $response)
+    {
+        // Do some action because some response was returned
+    }
 ```
 
 *Tests are required for all patches*
