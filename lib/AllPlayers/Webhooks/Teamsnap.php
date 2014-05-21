@@ -254,9 +254,15 @@ class Teamsnap extends Webhook implements ProcessInterface
     {
         include 'config/config.php';
         if (isset($config['teamsnap'])) {
-            parent::__construct(array('token' => $config['teamsnap']['token'],
-                'commissioner_id' => $config['teamsnap']['commissioner_id'],
-                'division_id' => $config['teamsnap']['division_id']), $data, $preprocess);
+            parent::__construct(
+                array(
+                    'token' => $config['teamsnap']['token'],
+                    'commissioner_id' => $config['teamsnap']['commissioner_id'],
+                    'division_id' => $config['teamsnap']['division_id'],
+                ),
+                $data,
+                $preprocess
+            );
 
             $this->headers['X-Teamsnap-Token'] = $this->webhook->subscriber['token'];
             $this->process();
@@ -638,7 +644,7 @@ class Teamsnap extends Webhook implements ProcessInterface
      * third-party data; This information relationship will be made via the
      * AllPlayers Public PHP API.
      *
-     * @param Response $response
+     * @param \Guzzle\Http\Message\Response $response
      *   The Guzzle Response from the webhook being processed/called.
      */
     public function processResponse(Response $response)
@@ -695,7 +701,8 @@ class Teamsnap extends Webhook implements ProcessInterface
                         $original_data['group']['uuid'],
                         $original_data['group']['uuid']
                     );
-                    $this->domain = "https://api.teamsnap.com/v2/teams/{$query['external_resource_id']}/as_roster/{$this->webhook->subscriber['commissioner_id']}/invitations";
+                    $this->domain = 'https://api.teamsnap.com/v2/teams/' . $query['external_resource_id'] .
+                        '/as_roster/' . $this->webhook->subscriber['commissioner_id']. '/invitations';
                     $send = array(
                         'rosters' => array(
                             $response['roster']['id'],

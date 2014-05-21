@@ -311,7 +311,7 @@ class Webhook
     /**
      * Get Guzzle HTTP Client.
      *
-     * @return Client
+     * @return \Guzzle\Http\Client
      *   Returns the Guzzle HTTP Client.
      */
     public function getClient()
@@ -360,7 +360,7 @@ class Webhook
     /**
      * Makes a PUT request to send to the external service.
      *
-     * @return Request
+     * @return \Guzzle\Http\Message\Request
      *   Returns the Guzzle request object, ready to send.
      */
     protected function put()
@@ -384,7 +384,7 @@ class Webhook
     /**
      * Send the prepared Guzzle request to the external service.
      *
-     * @return Resonse
+     * @return \Guzzle\Http\Message\Resonse
      *   The Guzzle response object with data about the request.
      */
     public function send()
@@ -409,7 +409,7 @@ class Webhook
     /**
      * Return the JSON object from a Guzzle Response object.
      *
-     * @param Response $response
+     * @param \Guzzle\Http\Message\Response $response
      *   The Guzzle Response from which to parse the JSON object.
      *
      * @return array
@@ -437,8 +437,11 @@ class Webhook
      * @param string $external_resource_id
      *   The partner resource id to map.
      * @param string $item_type
-     *   The AllPlayers item type to map. Available options are: user, event,
-     *   group, and resource.
+     *   The AllPlayers item type to map.
+     *   @see PARTNER_MAP_USER
+     *   @see PARTNER_MAP_EVENT
+     *   @see PARTNER_MAP_GROUP
+     *   @see PARTNER_MAP_RESOURCE
      * @param string $item_uuid
      *   The AllPlayers item uuid to map.
      * @param string $partner_uuid
@@ -450,10 +453,13 @@ class Webhook
     protected function createPartnerMap($external_resource_id, $item_type, $item_uuid, $partner_uuid)
     {
         $url = 'https://api.zurben.apci.ws/api/v2/externalid';
-        $client = new Client($url, array(
-            'curl.CURLOPT_SSL_VERIFYPEER' => false,
-            'curl.CURLOPT_CERTINFO' => false,
-        ));
+        $client = new Client(
+            $url,
+            array(
+                'curl.CURLOPT_SSL_VERIFYPEER' => false,
+                'curl.CURLOPT_CERTINFO' => false,
+            )
+        );
 
         // set required data fields
         $data = array(
@@ -484,8 +490,11 @@ class Webhook
      * @todo Remove cURL options (Used for self-signed certificates).
      *
      * @param string $item_type
-     *   The AllPlayers item type to map. Available options are: user, event,
-     *   group, and resource.
+     *   The AllPlayers item type to map.
+     *   @see PARTNER_MAP_USER
+     *   @see PARTNER_MAP_EVENT
+     *   @see PARTNER_MAP_GROUP
+     *   @see PARTNER_MAP_RESOURCE
      * @param string $item_uuid
      *   The AllPlayers item uuid to map.
      * @param string $partner_uuid (Optional)
@@ -497,10 +506,13 @@ class Webhook
     protected function readPartnerMap($item_type, $item_uuid, $partner_uuid = null)
     {
         $url = "https://api.zurben.apci.ws/api/v2/externalid/{$item_type}/{$item_uuid}";
-        $client = new Client($url, array(
-            'curl.CURLOPT_SSL_VERIFYPEER' => false,
-            'curl.CURLOPT_CERTINFO' => false,
-        ));
+        $client = new Client(
+            $url,
+            array(
+                'curl.CURLOPT_SSL_VERIFYPEER' => false,
+                'curl.CURLOPT_CERTINFO' => false,
+            )
+        );
 
         // read single row
         if (!is_null($partner_uuid)) {
@@ -524,8 +536,11 @@ class Webhook
      * @todo Remove cURL options (Used for self-signed certificates).
      *
      * @param string $item_type
-     *   The AllPlayers item type to map. Available options are: user, event,
-     *   group, and resource.
+     *   The AllPlayers item type to map.
+     *   @see PARTNER_MAP_USER
+     *   @see PARTNER_MAP_EVENT
+     *   @see PARTNER_MAP_GROUP
+     *   @see PARTNER_MAP_RESOURCE
      * @param string $item_uuid
      *   The AllPlayers item uuid to map.
      * @param string $partner_uuid (Optional)
@@ -534,10 +549,13 @@ class Webhook
     protected function deletePartnerMap($item_type, $item_uuid, $partner_uuid = null)
     {
         $url = "https://api.zurben.apci.ws/api/v2/externalid/{$item_type}/{$item_uuid}";
-        $client = new Client($url, array(
-            'curl.CURLOPT_SSL_VERIFYPEER' => false,
-            'curl.CURLOPT_CERTINFO' => false,
-        ));
+        $client = new Client(
+            $url,
+            array(
+                'curl.CURLOPT_SSL_VERIFYPEER' => false,
+                'curl.CURLOPT_CERTINFO' => false,
+            )
+        );
 
         $data = array(
             'item_type' => $item_type,
