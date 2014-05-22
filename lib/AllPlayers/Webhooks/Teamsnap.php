@@ -378,8 +378,6 @@ class Teamsnap extends Webhook implements ProcessInterface
                         'timezone' => $geographical['timezone'],
                         'country' => $geographical['location'],
                         'zipcode' => $data['group']['postalcode'],
-                        'logo_url' => $data['group']['logo'],
-                        'cname' => $data['group']['url'],
                     ),
                 );
 
