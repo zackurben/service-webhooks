@@ -471,7 +471,7 @@ class Webhook
 
         // send API request and return response
         $request = $client->post(
-            $client->getBaseUrl() . '.json?q=1',
+            $client->getBaseUrl() . '.json',
             array('Content-Type' => 'application/json'),
             json_encode($data)
         );
@@ -520,7 +520,7 @@ class Webhook
         }
 
         // send API request and return response
-        $request = $client->get($client->getBaseUrl() . '.json?q=1');
+        $request = $client->get($client->getBaseUrl() . '.json');
         $response = $request->send();
         $response = $this->processJsonResponse($response);
 
@@ -570,7 +570,7 @@ class Webhook
 
         // send API request and return response
         $request = $client->delete(
-            $client->getBaseUrl() . '.json?q=1',
+            $client->getBaseUrl() . '.json',
             array('Content-Type' => 'application/json'),
             json_encode($data)
         );
