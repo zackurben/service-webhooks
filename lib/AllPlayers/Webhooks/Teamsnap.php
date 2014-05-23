@@ -525,9 +525,9 @@ class Teamsnap extends Webhook implements ProcessInterface
                  * account information.
                  */
                 $send = array();
-                $webform = $data['webform_submission']['data'];
+                $webform = $data['webform']['data'];
                 if (isset($webform['profile__field_firstname__profile'])) {
-                    $send['first'] = $webform['profile__field_firstname__profile']['value'];
+                    $send['first'] = $webform['profile__field_firstname__profile'];
                 } elseif ($method == self::HTTP_POST && !isset($webform['profile__field_firstname__profile'])) {
                     /*
                      * Element required for roster creation, but not present in
@@ -537,7 +537,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                     $send['first'] = $data['member']['first_name'];
                 }
                 if (isset($webform['profile__field_lastname__profile'])) {
-                    $send['last'] = $webform['profile__field_lastname__profile']['value'];
+                    $send['last'] = $webform['profile__field_lastname__profile'];
                 } elseif ($method == self::HTTP_POST && !isset($webform['profile__field_lastname__profile'])) {
                     /*
                      * Element required for roster creation, but not present in
@@ -549,7 +549,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                 if (isset($webform['profile__field_email__profile'])) {
                     $send['roster_email_addresses_attributes'][] = array(
                         'label' => 'Webform',
-                        'email' => $webform['profile__field_email__profile']['value'],
+                        'email' => $webform['profile__field_email__profile'],
                     );
                 } elseif ($method == self::HTTP_POST && !isset($webform['profile__field_email__profile'])) {
                     /*
@@ -563,10 +563,10 @@ class Teamsnap extends Webhook implements ProcessInterface
                     );
                 }
                 if (isset($webform['profile__field_birth_date__profile'])) {
-                    $send['birthdate'] = $webform['profile__field_birth_date__profile']['value'];
+                    $send['birthdate'] = $webform['profile__field_birth_date__profile'];
                 }
                 if (isset($webform['profile__field_user_gender__profile'])) {
-                    $send['gender'] = $webform['profile__field_user_gender__profile']['value'] == 1 ? 'Male' : 'Female';
+                    $send['gender'] = $webform['profile__field_user_gender__profile'] == 1 ? 'Male' : 'Female';
                 }
 
                 // add roster phone numbers if any were set
@@ -574,19 +574,19 @@ class Teamsnap extends Webhook implements ProcessInterface
                 if (isset($webform['profile__field_phone__profile'])) {
                     $roster_telephones_attributes[] = array(
                         'label' => 'Home',
-                        'phone_number' => $webform['profile__field_phone__profile']['value'],
+                        'phone_number' => $webform['profile__field_phone__profile'],
                     );
                 }
                 if (isset($webform['profile__field_phone_cell__profile'])) {
                     $roster_telephones_attributes[] = array(
                         'label' => 'Cell',
-                        'phone_number' => $webform['profile__field_phone_cell__profile']['value'],
+                        'phone_number' => $webform['profile__field_phone_cell__profile'],
                     );
                 }
                 if (isset($webform['profile__field_work_number__profile'])) {
                     $roster_telephones_attributes[] = array(
                         'label' => 'Work',
-                        'phone_number' => $webform['profile__field_work_number__profile']['value'],
+                        'phone_number' => $webform['profile__field_work_number__profile'],
                     );
                 }
                 if (count($roster_telephones_attributes) > 0) {
@@ -595,22 +595,22 @@ class Teamsnap extends Webhook implements ProcessInterface
 
                 // add address fields if they were set
                 if (isset($webform['profile__field_home_address_street__profile'])) {
-                    $send['address'] = $webform['profile__field_home_address_street__profile']['value'];
+                    $send['address'] = $webform['profile__field_home_address_street__profile'];
                 }
                 if (isset($webform['profile__field_home_address_additional__profile'])) {
-                    $send['address2'] = $webform['profile__field_home_address_additional__profile']['value'];
+                    $send['address2'] = $webform['profile__field_home_address_additional__profile'];
                 }
                 if (isset($webform['profile__field_home_address_city__profile'])) {
-                    $send['city'] = $webform['profile__field_home_address_city__profile']['value'];
+                    $send['city'] = $webform['profile__field_home_address_city__profile'];
                 }
                 if (isset($webform['profile__field_home_address_province__profile'])) {
-                    $send['state'] = $webform['profile__field_home_address_province__profile']['value'];
+                    $send['state'] = $webform['profile__field_home_address_province__profile'];
                 }
                 if (isset($webform['profile__field_home_address_postal_code__profile'])) {
-                    $send['zip'] = $webform['profile__field_home_address_postal_code__profile']['value'];
+                    $send['zip'] = $webform['profile__field_home_address_postal_code__profile'];
                 }
                 if (isset($webform['profile__field_home_address_country__profile'])) {
-                    $send['country'] = $webform['profile__field_home_address_country__profile']['value'];
+                    $send['country'] = $webform['profile__field_home_address_country__profile'];
                 }
 
                 $this->setData(array('roster' => $send));
