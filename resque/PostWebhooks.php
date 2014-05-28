@@ -45,11 +45,14 @@ class PostWebhooks
 
         $classname = 'AllPlayers\\Webhooks\\' . $hook['name'];
         $webhook = new $classname($subscriber['variables'], $event_data, array('test_url' => $this->test_url));
-        $response = $webhook->send();
 
-        if ($webhook instanceof \AllPlayers\Webhooks\ProcessInterface) {
-            // process the response, according to each specific webhook
-            $webhook->processResponse($response);
+        if($webhook->send == \AllPlayers\Webhooks\Webhook::WEBHOOK_SEND) {
+            $response = $webhook->send();
+
+            if ($webhook instanceof \AllPlayers\Webhooks\ProcessInterface) {
+                // process the response, according to each specific webhook
+                $webhook->processResponse($response);
+            }
         }
     }
 }
