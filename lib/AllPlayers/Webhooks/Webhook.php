@@ -358,6 +358,28 @@ class Webhook
     }
 
     /**
+     * Get the webhook send flag.
+     *
+     * @see WEBHOOK_SEND
+     * @see WEBHOOK_CANCEL
+     *
+     * @return integer
+     */
+    public function getSent() {
+        return $this->send;
+    }
+
+    /**
+     * Set the webhook send flag.
+     *
+     * @see WEBHOOK_SEND
+     * @see WEBHOOK_CANCEL
+     */
+    protected function setSend($send) {
+        $this->send = $send;
+    }
+
+    /**
      * Makes a POST request to send to the external service.
      *
      * @return Request
