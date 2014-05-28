@@ -78,6 +78,20 @@ class Webhook
     const HTTP_PUT = 6;
 
     /**
+     * An enumerated value to confirm sending the webhook.
+     *
+     * @var integer
+     */
+    const WEBHOOK_SEND = 7;
+
+    /**
+     * An enumerated value to cancel sending the webhook.
+     *
+     * @var integer
+     */
+    const WEBHOOK_CANCEL = 8;
+
+    /**
      * A string value for an available webhook type.
      *
      * @var string
@@ -212,6 +226,16 @@ class Webhook
      * @var string
      */
     protected $method = self::TRANSMISSION_JSON;
+
+    /**
+     * Determines if the webhook should be sent or not.
+     *
+     * @see WEBHOOK_SEND
+     * @see WEBHOOK_CANCEL
+     *
+     * @var integer
+     */
+    protected $send = self::WEBHOOK_SEND;
 
     /**
      * Initialize the webhook object.
