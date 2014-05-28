@@ -284,6 +284,14 @@ class Teamsnap extends Webhook implements ProcessInterface
         switch ($data['webhook_type']) {
             case self::WEBHOOK_CREATE_GROUP:
                 /*
+                 * Cancel the webhook if this is not a team being registered
+                 */
+                if($data['group']['group_type'] != 'Team') {
+                    $this->send = self::WEBHOOK_CANCEL;
+                    break;
+                }
+
+                /*
                  * Note: this is a different approach for user_creates_group,
                  * because we need to send multiple calls to the TeamSnap
                  * API, since they do not allow for a roster to be added to a
