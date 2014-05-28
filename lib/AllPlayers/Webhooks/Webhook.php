@@ -365,7 +365,7 @@ class Webhook
      *
      * @return integer
      */
-    public function getSent() {
+    public function getSend() {
         return $this->send;
     }
 

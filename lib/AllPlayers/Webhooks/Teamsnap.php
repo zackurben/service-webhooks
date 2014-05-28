@@ -287,7 +287,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                  * Cancel the webhook if this is not a team being registered
                  */
                 if($data['group']['group_type'] != 'Team') {
-                    $this->send = self::WEBHOOK_CANCEL;
+                    $this->setSend(self::WEBHOOK_CANCEL);
                     break;
                 }
 
