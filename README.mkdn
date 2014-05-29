@@ -13,7 +13,7 @@ AllPlayers will accept service hooks for production web applications. We would l
    - A URL to a logo for the service
 
 1. Fork the project
-2. Create a new file in `lib/AllPlayers/Webhooks/` called `YourService.php`, using the template given below.
+2. Create a new file in `lib/AllPlayers/Webhooks/` called `YourService.php`, using the template given below and following the [PSR-2 Codding Standards](http://www.php-fig.org/psr/psr-2/).
 3. Send a pull request from your fork to [allplayers/service-webhooks](https://github.com/AllPlayers/service-webhooks)
 4. Once accepted, we'll add any necessary data fields to the AllPlayers front-end so people can start using your application.
 
@@ -51,6 +51,8 @@ class YourService extends Webhook
 
     /**
      * The method used for Client authentication.
+     *
+     * Note: These authentication methods are defined in the Webhook class.
      *
      * @see AUTHENTICATION_NONE
      * @see AUTHENTICATION_BASIC
