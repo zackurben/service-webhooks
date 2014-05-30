@@ -319,13 +319,18 @@ class Teamsnap extends Webhook implements ProcessInterface
                     ),
                 );
 
+                // add team logo if present
+                if(isset($data['group']['logo'])) {
+                    $send['team']['logo_url'] = $data['group']['logo'];
+                }
+
                 // update request body and make the team
                 $this->setData($send);
                 parent::post();
                 $response = $this->send();
 
                 // process response from team creation (using original data)
-                $this->processResponse($response, $data);
+                $this->processResponse($response);
 
                 /*
                  * Use data returned from creating the team, to attach the owner.
@@ -389,6 +394,11 @@ class Teamsnap extends Webhook implements ProcessInterface
                     ),
                 );
 
+                // add team logo if present
+                if(isset($data['group']['logo'])) {
+                    $send['team']['logo_url'] = $data['group']['logo'];
+                }
+
                 $this->setData($send);
                 parent::put();
                 break;
@@ -397,6 +407,9 @@ class Teamsnap extends Webhook implements ProcessInterface
                  * EXTERNAL BLOCKER:
                  *   NYI by TeamSnap.
                  */
+                parent::deletePartnerMap(self::PARTNER_MAP_GROUP, $data['group']['uuid']);
+                // hack to stop errors until deletion endpoint is set by TS
+                $this->setSend(self::WEBHOOK_CANCEL);
                 break;
             case self::WEBHOOK_ADD_ROLE:
                 $method = $roster = '';
@@ -663,7 +676,9 @@ class Teamsnap extends Webhook implements ProcessInterface
         // if test mode, account for extra json wrapper from requestbin
         include 'config/config.php';
         if (isset($config['test_url'])) {
-            $response = json_decode($this->processJsonResponse($response)->body, true);
+
+            $response = $this->processJsonResponse($response);
+            $response = json_decode($response['body'], true);
         } else {
             $response = $this->processJsonResponse($response);
         }
@@ -685,7 +700,6 @@ class Teamsnap extends Webhook implements ProcessInterface
                 // need to add management for connections to all child groups
                 parent::deletePartnerMap(
                     self::PARTNER_MAP_GROUP,
-                    $original_data['group']['uuid'],
                     $original_data['group']['uuid']
                 );
                 break;
