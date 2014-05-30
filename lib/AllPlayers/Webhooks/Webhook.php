@@ -615,12 +615,11 @@ class Webhook
         }
 
         // send API request and return response
-        $request = $client->delete(
+        $response = $client->delete(
             $client->getBaseUrl() . '.json',
             array('Content-Type' => 'application/json'),
             json_encode($data)
-        );
-        $response = $request->send();
+        )->send();
         $response = $this->processJsonResponse($response);
 
         return $response;
