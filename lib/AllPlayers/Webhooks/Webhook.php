@@ -134,6 +134,13 @@ class Webhook
     const WEBHOOK_ADD_SUBMISSION = 'user_adds_submission';
 
     /**
+     * A string value for an available webhook type.
+     *
+     * @var string
+     */
+    const WEBHOOK_CREATE_EVENT = 'user_creates_event';
+
+    /**
      * A string value for an available partner mapping option.
      *
      * @var string
