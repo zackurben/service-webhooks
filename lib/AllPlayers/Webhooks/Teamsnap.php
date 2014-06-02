@@ -658,6 +658,9 @@ class Teamsnap extends Webhook implements ProcessInterface
                     parent::put();
                 }
                 break;
+            default:
+                $this->setSend(self::WEBHOOK_CANCEL);
+                break;
         }
     }
 
