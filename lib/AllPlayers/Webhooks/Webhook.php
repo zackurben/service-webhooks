@@ -141,6 +141,13 @@ class Webhook
     const WEBHOOK_CREATE_EVENT = 'user_creates_event';
 
     /**
+     * A string value for an available webhook type.
+     *
+     * @var string
+     */
+    const WEBHOOK_UPDATE_EVENT = 'user_updates_event';
+
+    /**
      * A string value for an available partner mapping option.
      *
      * @var string
