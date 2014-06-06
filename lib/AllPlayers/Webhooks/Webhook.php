@@ -449,6 +449,30 @@ class Webhook
     }
 
     /**
+     * Makes a DELETE request to send to the external service.
+     *
+     * @return \Guzzle\Http\Message\Request
+     *   Returns the Guzzle request object, ready to send.
+     */
+    protected function delete()
+    {
+        $this->setDomain();
+
+        // encode data in the requested method
+        if ($this->method === self::TRANSMISSION_URLENCODED) {
+            $this->request = $this->client->delete($this->client->getBaseUrl(), $this->headers);
+            $this->request->addPostFields($this->getData());
+        } else {
+            $this->headers['Content-Type'] = 'application/json';
+            $this->request = $this->client->delete(
+                $this->client->getBaseUrl(),
+                $this->headers,
+                json_encode($this->getData())
+            );
+        }
+    }
+
+    /**
      * Send the prepared Guzzle request to the external service.
      *
      * @return \Guzzle\Http\Message\Resonse
