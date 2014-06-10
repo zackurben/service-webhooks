@@ -658,6 +658,63 @@ class Teamsnap extends Webhook implements ProcessInterface
                     parent::put();
                 }
                 break;
+            case self::WEBHOOK_CREATE_EVENT:
+                // get team id
+                $team = parent::readPartnerMap(self::PARTNER_MAP_GROUP, $data['group']['uuid'], $data['group']['uuid']);
+                $team = $team['external_resource_id'];
+
+                // check if location exists
+                $location = parent::readPartnerMap(self::PARTNER_MAP_RESOURCE, $data['group']['uuid'], $data['group']['uuid']);
+                if(isset($location['external_resource_id'])) {
+                    $location = $location['external_resource_id'];
+                } else {
+                    // make api call to make teamsnap location
+                    $original_domain = $this->domain; // store older db
+                    $this->domain .= '/teams/' . $team . '/as_roster/' . $this->webhook->subscriber['commissioner_id'] . '/locations';
+
+                    // build location data for teamsnap
+                    $send = array(
+                        'location' => array(
+                            'location_name' => $data['event']['location']['name'],
+                            'address' => $data['event']['location']['street'],
+                        ),
+                    );
+
+                    if(!is_null($data['event']['location']['additional'])) {
+                        $send['location']['address'] .= ', ' . $data['event']['location']['additional'];
+                    }
+
+                    // update request body and make the location
+                    $this->setData($send);
+                    parent::post();
+                    $response = $this->send();
+
+                    // make partner mapping with response data
+                    $response = $this->processJsonResponse($response);
+                    parent::createPartnerMap($response['location']['id'], parent::PARTNER_MAP_RESOURCE,
+                        $data['group']['uuid'], $data['event']['location']['uuid']);
+
+                    // reset domain and set location id
+                    $this->domain = $original_domain;
+                    $location = $response['location']['id'];
+                }
+
+                // update request payload to make an event
+                $this->domain = '/teams/' . $team . '/as_roster/' . $this->webhook->subscriber['commissioner_id'] . '/practices';
+                $send = array(
+                    'practice' => array(
+                        'eventname' => $data['event']['title'],
+                        'division_id' => $this->webhook->subscriber['division_id'],
+                        'event_date_start' => $data['event']['start'],
+                        'location_attributes' => array(
+                            'location_id' => 3278940,
+                        ),
+                    ),
+                );
+
+                $this->setData($send);
+                parent::post();
+                break;
             default:
                 $this->setSend(self::WEBHOOK_CANCEL);
                 break;
