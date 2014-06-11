@@ -666,10 +666,10 @@ class Teamsnap extends Webhook implements ProcessInterface
                 $location = '';
                 if(isset($data['event']['location']) && !is_null($data['event']['location'])) {
                     // check if location partnermapping exists
-                    $location = parent::readPartnerMap(self::PARTNER_MAP_RESOURCE, $data['group']['uuid'], $data['event']['location']['uuid']);
+                    $location = parent::readPartnerMap(self::PARTNER_MAP_RESOURCE, $data['event']['location']['uuid'], $data['group']['uuid']);
                 } else {
                     // set default data for teamsnap display
-                    $data['event']['location']['name'] = '(TBD)';
+                    $data['event']['location']['title'] = '(TBD)';
                     $data['event']['location']['street'] = '(TBD)';
                 }
 
@@ -683,7 +683,7 @@ class Teamsnap extends Webhook implements ProcessInterface
 
                     $send = array(
                         'location' => array(
-                            'location_name' => $data['event']['location']['name'],
+                            'location_name' => $data['event']['location']['title'],
                             'address' => $data['event']['location']['street'],
                         ),
                     );
@@ -698,11 +698,11 @@ class Teamsnap extends Webhook implements ProcessInterface
                     if(isset($data['event']['location']['province']) && !is_null($data['event']['location']['province'])) {
                         $send['location']['address'] .= ', ' . $data['event']['location']['province'];
                     }
-                    if(isset($data['event']['location']['country']) && !is_null($data['event']['location']['country'])) {
-                        $send['location']['address'] .= '. ' . $data['event']['location']['country'];
-                    }
                     if(isset($data['event']['location']['postal_code']) && !is_null($data['event']['location']['postal_code'])) {
-                        $send['location']['address'] .= ', ' . $data['event']['location']['postal_code'] . '.';
+                        $send['location']['address'] .= '. ' . $data['event']['location']['postal_code'];
+                    }
+                    if(isset($data['event']['location']['country']) && !is_null($data['event']['location']['country'])) {
+                        $send['location']['address'] .= '. ' . $data['event']['location']['country'] . '.';
                     }
 
                     // update request body and make the location
@@ -713,8 +713,8 @@ class Teamsnap extends Webhook implements ProcessInterface
 
                     // make partner mapping with location creation response data
                     if(isset($data['event']['location']['uuid']) && !is_null($data['event']['location']['uuid'])) {
-                        parent::createPartnerMap($response['location']['id'], parent::PARTNER_MAP_RESOURCE,
-                            $data['group']['uuid'], $data['event']['location']['uuid']);
+                        $dbg = parent::createPartnerMap($response['location']['id'], parent::PARTNER_MAP_RESOURCE,
+                            $data['event']['location']['uuid'], $data['group']['uuid']);
                     }
 
                     // restore old domain and update location id
@@ -837,6 +837,11 @@ class Teamsnap extends Webhook implements ProcessInterface
                         $original_data['group']['uuid']
                     );
                 }
+                break;
+            case self::WEBHOOK_CREATE_EVENT:
+                // associate AllPlayers event UUID with TeamSnap event ID
+                parent::createPartnerMap($response['practice']['id'], self::PARTNER_MAP_EVENT, $original_data['event']['uuid'],
+                    $original_data['group']['uuid']);
                 break;
         }
     }
