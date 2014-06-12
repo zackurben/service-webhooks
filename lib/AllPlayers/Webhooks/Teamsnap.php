@@ -664,7 +664,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                 $team = $team['external_resource_id'];
 
                 $location = '';
-                if(isset($data['event']['location']) && !is_null($data['event']['location'])) {
+                if(isset($data['event']['location']) && !empty($data['event']['location'])) {
                     // check if location partnermapping exists
                     $location = parent::readPartnerMap(self::PARTNER_MAP_RESOURCE, $data['event']['location']['uuid'], $data['group']['uuid']);
                 } else {
@@ -689,19 +689,19 @@ class Teamsnap extends Webhook implements ProcessInterface
                     );
 
                     // add additional location information, if present
-                    if(isset($data['event']['location']['additional']) && !is_null($data['event']['location']['additional'])) {
+                    if(isset($data['event']['location']['additional']) && !empty($data['event']['location']['additional'])) {
                         $send['location']['address'] .= ', ' . $data['event']['location']['additional'];
                     }
-                    if(isset($data['event']['location']['city']) && !is_null($data['event']['location']['city'])) {
+                    if(isset($data['event']['location']['city']) && !empty($data['event']['location']['city'])) {
                         $send['location']['address'] .= '. ' . $data['event']['location']['city'];
                     }
-                    if(isset($data['event']['location']['province']) && !is_null($data['event']['location']['province'])) {
+                    if(isset($data['event']['location']['province']) && !empty($data['event']['location']['province'])) {
                         $send['location']['address'] .= ', ' . $data['event']['location']['province'];
                     }
-                    if(isset($data['event']['location']['postal_code']) && !is_null($data['event']['location']['postal_code'])) {
+                    if(isset($data['event']['location']['postal_code']) && !empty($data['event']['location']['postal_code'])) {
                         $send['location']['address'] .= '. ' . $data['event']['location']['postal_code'];
                     }
-                    if(isset($data['event']['location']['country']) && !is_null($data['event']['location']['country'])) {
+                    if(isset($data['event']['location']['country']) && !empty($data['event']['location']['country'])) {
                         $send['location']['address'] .= '. ' . $data['event']['location']['country'] . '.';
                     }
 
@@ -712,7 +712,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                     $response = $this->processJsonResponse($response);
 
                     // make partner mapping with location creation response data
-                    if(isset($data['event']['location']['uuid']) && !is_null($data['event']['location']['uuid'])) {
+                    if(isset($data['event']['location']['uuid']) && !empty($data['event']['location']['uuid'])) {
                         $dbg = parent::createPartnerMap($response['location']['id'], parent::PARTNER_MAP_RESOURCE,
                             $data['event']['location']['uuid'], $data['group']['uuid']);
                     }
@@ -729,12 +729,194 @@ class Teamsnap extends Webhook implements ProcessInterface
                         'eventname' => $data['event']['title'],
                         'division_id' => $this->webhook->subscriber['division_id'],
                         'event_date_start' => $data['event']['start'],
+                        'event_date_end' => $data['event']['end'],
                         'location_id' => $location,
                     ),
                 );
 
+                if(isset($send['event']['description']) && !empty($send['event']['description'])) {
+                    $send['practice']['notes'] = $send['event']['description'];
+                }
+
                 $this->setData($send);
                 parent::post();
+                break;
+            case self::WEBHOOK_UPDATE_EVENT:
+                // get partner mapped resources
+                $team = parent::readPartnerMap(self::PARTNER_MAP_GROUP, $data['group']['uuid'], $data['group']['uuid']);
+                $team = $team['external_resource_id'];
+                $event = parent::readPartnerMap(self::PARTNER_MAP_EVENT, $data['event']['uuid'], $data['group']['uuid']);
+
+                if(isset($event['external_resource_id']) && !empty($event['external_resource_id'])) {
+                    $location = '';
+                    if(isset($data['event']['location']) && !empty($data['event']['location'])) {
+                        // check if location partnermapping exists
+                        $location = parent::readPartnerMap(self::PARTNER_MAP_RESOURCE, $data['event']['location']['uuid'],
+                            $data['group']['uuid']);
+                    } else {
+                        // set default data for teamsnap display
+                        $data['event']['location']['title'] = '(TBD)';
+                        $data['event']['location']['street'] = '(TBD)';
+                    }
+
+                    if(isset($location['external_resource_id'])) {
+                        // location partner mapping was found
+                        $location = $location['external_resource_id'];
+
+                        // update location information
+                        $original_domain = $this->domain; // store old domain
+                        $this->domain .= '/teams/' . $team . '/as_roster/' . $this->webhook->subscriber['commissioner_id'] .
+                            '/locations/' . $location;
+
+                        $send = array(
+                            'location' => array(
+                                'location_name' => $data['event']['location']['title'],
+                                'address' => $data['event']['location']['street'],
+                            ),
+                        );
+
+                        // add additional location information, if present
+                        if(isset($data['event']['location']['additional']) && !empty($data['event']['location']['additional'])) {
+                            if(!empty($send['location']['address'])) {
+                                $send['location']['address'] .= ', ';
+                            }
+
+                            $send['location']['address'] .= $data['event']['location']['additional'];
+                        }
+                        if(isset($data['event']['location']['city']) && !empty($data['event']['location']['city'])) {
+                            if(!empty($send['location']['address'])) {
+                                $send['location']['address'] .= '. ';
+                            }
+
+                            $send['location']['address'] .= $data['event']['location']['city'];
+                        }
+                        if(isset($data['event']['location']['province']) && !empty($data['event']['location']['province'])) {
+                            if(!empty($send['location']['address'])) {
+                                $send['location']['address'] .= ', ';
+                            }
+
+                            $send['location']['address'] .= $data['event']['location']['province'];
+                        }
+                        if(isset($data['event']['location']['postal_code']) && !empty($data['event']['location']['postal_code'])) {
+                            if(!empty($send['location']['address'])) {
+                                $send['location']['address'] .= '. ';
+                            }
+
+                            $send['location']['address'] .= $data['event']['location']['postal_code'];
+                        }
+                        if(isset($data['event']['location']['country']) && !empty($data['event']['location']['country'])) {
+                            if(!empty($send['location']['address'])) {
+                                $send['location']['address'] .= '. ';
+                            }
+
+                            $send['location']['address'] .= $data['event']['location']['country'] . '.';
+                        }
+
+                        // update request body and make the location
+                        $this->setData($send);
+                        parent::put();
+                        $response = $this->send();
+                        $response = $this->processJsonResponse($response);
+
+                        // make partner mapping with location creation response data
+                        if(isset($data['event']['location']['uuid']) && !empty($data['event']['location']['uuid'])) {
+                            $dbg = parent::createPartnerMap($response['location']['id'], parent::PARTNER_MAP_RESOURCE,
+                                $data['event']['location']['uuid'], $data['group']['uuid']);
+                        }
+
+                        // restore old domain and update location id
+                        $this->domain = $original_domain;
+                        $location = $response['location']['id'];
+                    } else {
+                        // create partner resource and add it to the partner mapping
+                        $original_domain = $this->domain; // store old domain
+                        $this->domain .= '/teams/' . $team . '/as_roster/' . $this->webhook->subscriber['commissioner_id'] . '/locations';
+
+                        $send = array(
+                            'location' => array(
+                                'location_name' => $data['event']['location']['title'],
+                                'address' => $data['event']['location']['street'],
+                            ),
+                        );
+
+                        // add additional location information, if present
+                        if(isset($data['event']['location']['additional']) && !empty($data['event']['location']['additional'])) {
+                            if(!empty($send['location']['address'])) {
+                                $send['location']['address'] .= ', ';
+                            }
+
+                            $send['location']['address'] .= $data['event']['location']['additional'];
+                        }
+                        if(isset($data['event']['location']['city']) && !empty($data['event']['location']['city'])) {
+                            if(!empty($send['location']['address'])) {
+                                $send['location']['address'] .= '. ';
+                            }
+
+                            $send['location']['address'] .= $data['event']['location']['city'];
+                        }
+                        if(isset($data['event']['location']['province']) && !empty($data['event']['location']['province'])) {
+                            if(!empty($send['location']['address'])) {
+                                $send['location']['address'] .= ', ';
+                            }
+
+                            $send['location']['address'] .= $data['event']['location']['province'];
+                        }
+                        if(isset($data['event']['location']['postal_code']) && !empty($data['event']['location']['postal_code'])) {
+                            if(!empty($send['location']['address'])) {
+                                $send['location']['address'] .= '. ';
+                            }
+
+                            $send['location']['address'] .= $data['event']['location']['postal_code'];
+                        }
+                        if(isset($data['event']['location']['country']) && !empty($data['event']['location']['country'])) {
+                            if(!empty($send['location']['address'])) {
+                                $send['location']['address'] .= '. ';
+                            }
+
+                            $send['location']['address'] .= $data['event']['location']['country'] . '.';
+                        }
+
+                        // update request body and make the location
+                        $this->setData($send);
+                        parent::post();
+                        $response = $this->send();
+                        $response = $this->processJsonResponse($response);
+
+                        // make partner mapping with location creation response data
+                        if(isset($data['event']['location']['uuid']) && !empty($data['event']['location']['uuid'])) {
+                            $dbg = parent::createPartnerMap($response['location']['id'], parent::PARTNER_MAP_RESOURCE,
+                                $data['event']['location']['uuid'], $data['group']['uuid']);
+                        }
+
+                        // restore old domain and update location id
+                        $this->domain = $original_domain;
+                        $location = $response['location']['id'];
+                    }
+
+                    // update request payload to update an event
+                    $this->domain .= '/teams/' . $team . '/as_roster/' . $this->webhook->subscriber['commissioner_id'] .
+                        '/practices/' . $event['external_resource_id'];
+                    $send = array(
+                        'practice' => array(
+                            'eventname' => $data['event']['title'],
+                            'division_id' => $this->webhook->subscriber['division_id'],
+                            'event_date_start' => $data['event']['start'],
+                            'event_date_end' => $data['event']['end'],
+                            'location_id' => $location,
+                        ),
+                    );
+
+                    if(isset($send['event']['description']) && !empty($send['event']['description'])) {
+                        $send['practice']['notes'] = $send['event']['description'];
+                    }
+
+                    $this->setData($send);
+                    parent::put();
+                } else {
+                    // resource doesnt exist for some reason
+                    $this->setSend(self::WEBHOOK_CANCEL);
+                }
+
                 break;
             default:
                 $this->setSend(self::WEBHOOK_CANCEL);
