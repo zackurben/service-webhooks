@@ -1022,8 +1022,31 @@ class Teamsnap extends Webhook implements ProcessInterface
                 break;
             case self::WEBHOOK_CREATE_EVENT:
                 // associate AllPlayers event UUID with TeamSnap event ID
-                parent::createPartnerMap($response['practice']['id'], self::PARTNER_MAP_EVENT, $original_data['event']['uuid'],
-                    $original_data['group']['uuid']);
+                parent::createPartnerMap(
+                    $response['practice']['id'],
+                    self::PARTNER_MAP_EVENT,
+                    $original_data['event']['uuid'],
+                    $original_data['group']['uuid']
+                );
+                break;
+            case self::WEBHOOK_UPDATE_EVENT:
+                // associate AllPlayers location uuid with TeamSnap location id
+                // if a location was just created
+                $query = parent::readPartnerMap(
+                    self::PARTNER_MAP_RESOURCE,
+                    $original_data['event']['location']['uuid'],
+                    $original_data['group']['uuid']
+                );
+
+                if(!isset($query['external_resource_id'])) {
+                    // create partner mapping for the new resource
+                    parent::createPartnerMap(
+                        $response['location']['id'],
+                        self::PARTNER_MAP_RESOURCE,
+                        $original_data['event']['location']['uuid'],
+                        $original_data['group']['uuid']
+                    );
+                }
                 break;
         }
     }
