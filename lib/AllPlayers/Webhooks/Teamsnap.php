@@ -666,7 +666,11 @@ class Teamsnap extends Webhook implements ProcessInterface
                 $location = '';
                 if(isset($data['event']['location']) && !empty($data['event']['location'])) {
                     // check if location partnermapping exists
-                    $location = parent::readPartnerMap(self::PARTNER_MAP_RESOURCE, $data['event']['location']['uuid'], $data['group']['uuid']);
+                    $location = parent::readPartnerMap(
+                        self::PARTNER_MAP_RESOURCE,
+                        $data['event']['location']['uuid'],
+                        $data['group']['uuid']
+                    );
                 } else {
                     // set default data for teamsnap display
                     $data['event']['location']['title'] = '(TBD)';
@@ -679,7 +683,8 @@ class Teamsnap extends Webhook implements ProcessInterface
                 } else {
                     // create partner resource and add it to the partner mapping
                     $original_domain = $this->domain; // store old domain
-                    $this->domain .= '/teams/' . $team . '/as_roster/' . $this->webhook->subscriber['commissioner_id'] . '/locations';
+                    $this->domain .= '/teams/' . $team . '/as_roster/' .
+                        $this->webhook->subscriber['commissioner_id'] . '/locations';
 
                     $send = array(
                         'location' => array(
@@ -713,8 +718,12 @@ class Teamsnap extends Webhook implements ProcessInterface
 
                     // make partner mapping with location creation response data
                     if(isset($data['event']['location']['uuid']) && !empty($data['event']['location']['uuid'])) {
-                        $dbg = parent::createPartnerMap($response['location']['id'], parent::PARTNER_MAP_RESOURCE,
-                            $data['event']['location']['uuid'], $data['group']['uuid']);
+                        $dbg = parent::createPartnerMap(
+                            $response['location']['id'],
+                            parent::PARTNER_MAP_RESOURCE,
+                            $data['event']['location']['uuid'],
+                            $data['group']['uuid']
+                        );
                     }
 
                     // restore old domain and update location id
@@ -751,8 +760,11 @@ class Teamsnap extends Webhook implements ProcessInterface
                     $location = '';
                     if(isset($data['event']['location']) && !empty($data['event']['location'])) {
                         // check if location partnermapping exists
-                        $location = parent::readPartnerMap(self::PARTNER_MAP_RESOURCE, $data['event']['location']['uuid'],
-                            $data['group']['uuid']);
+                        $location = parent::readPartnerMap(
+                            self::PARTNER_MAP_RESOURCE,
+                            $data['event']['location']['uuid'],
+                            $data['group']['uuid']
+                        );
                     } else {
                         // set default data for teamsnap display
                         $data['event']['location']['title'] = '(TBD)';
@@ -884,8 +896,12 @@ class Teamsnap extends Webhook implements ProcessInterface
 
                         // make partner mapping with location creation response data
                         if(isset($data['event']['location']['uuid']) && !empty($data['event']['location']['uuid'])) {
-                            $dbg = parent::createPartnerMap($response['location']['id'], parent::PARTNER_MAP_RESOURCE,
-                                $data['event']['location']['uuid'], $data['group']['uuid']);
+                            $dbg = parent::createPartnerMap(
+                                $response['location']['id'],
+                                parent::PARTNER_MAP_RESOURCE,
+                                $data['event']['location']['uuid'],
+                                $data['group']['uuid']
+                            );
                         }
 
                         // restore old domain and update location id
@@ -917,6 +933,17 @@ class Teamsnap extends Webhook implements ProcessInterface
                     $this->setSend(self::WEBHOOK_CANCEL);
                 }
 
+                break;
+            case self::WEBHOOK_DELETE_EVENT:
+                // get partner mapped resources
+                $team = parent::readPartnerMap(self::PARTNER_MAP_GROUP, $data['group']['uuid'], $data['group']['uuid']);
+                $team = $team['external_resource_id'];
+                $event = parent::readPartnerMap(self::PARTNER_MAP_EVENT, $data['event']['uuid'], $data['group']['uuid']);
+
+                $this->domain .= '/teams/' . $team . '/as_roster/' . $this->webhook->subscriber['commissioner_id'] .
+                    '/practices/' . $event['external_resource_id'];
+
+                parent::delete();
                 break;
             default:
                 $this->setSend(self::WEBHOOK_CANCEL);
@@ -1047,6 +1074,14 @@ class Teamsnap extends Webhook implements ProcessInterface
                         $original_data['group']['uuid']
                     );
                 }
+                break;
+            case self::WEBHOOK_DELETE_EVENT:
+                parent::deletePartnerMap(
+                    self::PARTNER_MAP_EVENT,
+                    $original_data['event']['uuid'],
+                    $original_data['group']['uuid']
+                );
+
                 break;
         }
     }
