@@ -1109,17 +1109,25 @@ class Teamsnap extends Webhook implements ProcessInterface
     /**
      * Get the TeamSnap supported location and timezone.
      *
-     * @param string $offset
-     *   The timezone offset from UTC/GMT.
+     * @param string $timezone
+     *   A PHP supported timezone: http://php.net/manual/en/timezones.php
      *
      * @return array
      *   An associative keyed array with the location and timezone information.
      */
-    public function getRegion($offset)
+    public function getRegion($timezone)
     {
+        $user_timezone = (timezone_offset_get(new \DateTimeZone($timezone), new \DateTime(null, new \DateTimeZone('UTC')))/(3600));
+        if(date_format(new \DateTime($timezone), 'I') == 1) {
+            $user_timezone += -1; //adjust for dst
+        }
+
+        // convert to utc (non-DST) format
+        $user_timezone = str_replace('.', ':', number_format((floor($user_timezone) + ($user_timezone - floor($user_timezone)) * 60), 2));
+
         // if region is in supported list, return its value.
-        if (isset(self::$regions[$offset])) {
-            return self::$regions[$offset];
+        if (isset(self::$regions[$user_timezone])) {
+            return self::$regions[$user_timezone];
         } else {
             // return default UTC region
             return array(
