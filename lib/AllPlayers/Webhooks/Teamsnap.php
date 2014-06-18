@@ -271,8 +271,6 @@ class Teamsnap extends Webhook implements ProcessInterface
 
     /**
      * Process the webhook data and set the domain to the appropriate URL.
-     *
-     * @todo Fix case blockers.
      */
     protected function process()
     {
@@ -659,92 +657,76 @@ class Teamsnap extends Webhook implements ProcessInterface
                 }
                 break;
             case self::WEBHOOK_CREATE_EVENT:
-                // get team id
-                $team = parent::readPartnerMap(self::PARTNER_MAP_GROUP, $data['group']['uuid'], $data['group']['uuid']);
-                $team = $team['external_resource_id'];
+                // determine if game or event
+                if(isset($data['event']['competitor']) && !empty($data['event']['competitor'])) {
+                    $original_domain = $this->domain;
 
-                $location = '';
-                if(isset($data['event']['location']) && !empty($data['event']['location'])) {
-                    // check if location partnermapping exists
-                    $location = parent::readPartnerMap(
-                        self::PARTNER_MAP_RESOURCE,
-                        $data['event']['location']['uuid'],
-                        $data['group']['uuid']
-                    );
-                } else {
-                    // set default data for teamsnap display
-                    $data['event']['location']['title'] = '(TBD)';
-                    $data['event']['location']['street'] = '(TBD)';
-                }
+                    foreach($data['event']['competitor'] as $group) {
+                        $this->domain = $original_domain;
+                        $team = parent::readPartnerMap(self::PARTNER_MAP_GROUP, $group['uuid'], $group['uuid']);
+                        $team = $team['external_resource_id'];
 
-                if(isset($location['external_resource_id'])) {
-                    // partner mapping was found
-                    $location = $location['external_resource_id'];
-                } else {
-                    // create partner resource and add it to the partner mapping
-                    $original_domain = $this->domain; // store old domain
-                    $this->domain .= '/teams/' . $team . '/as_roster/' .
-                        $this->webhook->subscriber['commissioner_id'] . '/locations';
+                        $location = $this->getLocationResource($group['uuid'], $data['event']['location']);
+                        $opponent = $this->getOpponentResource($group['uuid'], $team, $data['event']['uuid'], $data['event']['competitor']);
 
-                    $send = array(
-                        'location' => array(
-                            'location_name' => $data['event']['location']['title'],
-                            'address' => $data['event']['location']['street'],
-                        ),
-                    );
+                        $this->domain = $original_domain . '/teams/' . $team . '/as_roster/' . $this->webhook->subscriber['commissioner_id'] . '/games';
 
-                    // add additional location information, if present
-                    if(isset($data['event']['location']['additional']) && !empty($data['event']['location']['additional'])) {
-                        $send['location']['address'] .= ', ' . $data['event']['location']['additional'];
-                    }
-                    if(isset($data['event']['location']['city']) && !empty($data['event']['location']['city'])) {
-                        $send['location']['address'] .= '. ' . $data['event']['location']['city'];
-                    }
-                    if(isset($data['event']['location']['province']) && !empty($data['event']['location']['province'])) {
-                        $send['location']['address'] .= ', ' . $data['event']['location']['province'];
-                    }
-                    if(isset($data['event']['location']['postal_code']) && !empty($data['event']['location']['postal_code'])) {
-                        $send['location']['address'] .= '. ' . $data['event']['location']['postal_code'];
-                    }
-                    if(isset($data['event']['location']['country']) && !empty($data['event']['location']['country'])) {
-                        $send['location']['address'] .= '. ' . $data['event']['location']['country'] . '.';
-                    }
+                        // update request payload to make an event
+                        $send = array(
+                            'game' => array(
+                                'eventname' => $data['event']['title'],
+                                'division_id' => $this->webhook->subscriber['division_id'],
+                                'event_date_start' => $data['event']['start'],
+                                'event_date_end' => $data['event']['end'],
+                                'location_id' => $location,
+                                'opponent_id' => $opponent,
+                            ),
+                        );
 
-                    // update request body and make the location
-                    $this->setData($send);
-                    parent::post();
-                    $response = $this->send();
-                    $response = $this->processJsonResponse($response);
+                        if(isset($data['event']['description']) && !empty($data['event']['description'])) {
+                            $send['game']['notes'] = $data['event']['description'];
+                        }
 
-                    // make partner mapping with location creation response data
-                    if(isset($data['event']['location']['uuid']) && !empty($data['event']['location']['uuid'])) {
-                        $dbg = parent::createPartnerMap(
-                            $response['location']['id'],
-                            parent::PARTNER_MAP_RESOURCE,
-                            $data['event']['location']['uuid'],
-                            $data['group']['uuid']
+                        // set request payload and process the response for each
+                        $this->setData($send);
+                        parent::post();
+                        $response = $this->send();
+
+                        // process response from game creation
+                        $response = $this->processJsonResponse($response);
+
+                        parent::createPartnerMap(
+                            $response['game']['id'],
+                            self::PARTNER_MAP_EVENT,
+                            $data['event']['uuid'],
+                            $group['uuid']
                         );
                     }
 
-                    // restore old domain and update location id
-                    $this->domain = $original_domain;
-                    $location = $response['location']['id'];
-                }
+                    // cancel webhook from sending since we handled it above
+                    // (only cancel for game events)
+                    parent::setSend(parent::WEBHOOK_CANCEL);
+                } else {
+                    $team = parent::readPartnerMap(self::PARTNER_MAP_GROUP, $data['group']['uuid'], $data['group']['uuid']);
+                    $team = $team['external_resource_id'];
 
-                // update request payload to make an event
-                $this->domain .= '/teams/' . $team . '/as_roster/' . $this->webhook->subscriber['commissioner_id'] . '/practices';
-                $send = array(
-                    'practice' => array(
-                        'eventname' => $data['event']['title'],
-                        'division_id' => $this->webhook->subscriber['division_id'],
-                        'event_date_start' => $data['event']['start'],
-                        'event_date_end' => $data['event']['end'],
-                        'location_id' => $location,
-                    ),
-                );
+                    $location = $this->getLocationResource($data['group']['uuid'], $data['event']['location']);
+                    $this->domain .= '/teams/' . $team . '/as_roster/' . $this->webhook->subscriber['commissioner_id'] . '/practices';
 
-                if(isset($send['event']['description']) && !empty($send['event']['description'])) {
-                    $send['practice']['notes'] = $send['event']['description'];
+                    // update request payload to make an event
+                    $send = array(
+                        'practice' => array(
+                            'eventname' => $data['event']['title'],
+                            'division_id' => $this->webhook->subscriber['division_id'],
+                            'event_date_start' => $data['event']['start'],
+                            'event_date_end' => $data['event']['end'],
+                            'location_id' => $location,
+                        ),
+                    );
+
+                    if(isset($data['event']['description']) && !empty($data['event']['description'])) {
+                        $send['practice']['notes'] = $data['event']['description'];
+                    }
                 }
 
                 $this->setData($send);
@@ -1048,7 +1030,8 @@ class Teamsnap extends Webhook implements ProcessInterface
                 }
                 break;
             case self::WEBHOOK_CREATE_EVENT:
-                // associate AllPlayers event UUID with TeamSnap event ID
+                // associate an AllPlayers event UUID with TeamSnap event ID
+                // this will only occur if a practice event is scheduled
                 parent::createPartnerMap(
                     $response['practice']['id'],
                     self::PARTNER_MAP_EVENT,
@@ -1135,5 +1118,153 @@ class Teamsnap extends Webhook implements ProcessInterface
                 'location' => 'United Kingdom',
             );
         }
+    }
+
+    /**
+     * Get the partner-mapped location resource ID for TeamSnap.
+     *
+     * @param string $group_uuid
+     *   The Group UUID to make the location mapping with.
+     * @param array $event_location
+     *   The Event location information from the AllPlayers Webhook.
+     *
+     * @return string
+     *   The resource ID for TeamSnap API calls.
+     */
+    public function getLocationResource($group_uuid, array $event_location = null)
+    {
+        $location = '';
+
+        // check team partner mapping for the given uuid
+        $team = parent::readPartnerMap(self::PARTNER_MAP_GROUP, $group_uuid, $group_uuid);
+        $team = $team['external_resource_id'];
+
+        // check if location partner mapping exists
+        if(isset($event_location) && !empty($event_location)) {
+            $location = parent::readPartnerMap(self::PARTNER_MAP_RESOURCE, $event_location['uuid'], $group_uuid);
+        }
+
+        // use existing partner mapping data, or create a new mapping
+        if(isset($location['external_resource_id'])) {
+            $location = $location['external_resource_id'];
+        } else {
+            $original_domain = $this->domain; // store old domain
+            $this->domain .= '/teams/' . $team . '/as_roster/' . $this->webhook->subscriber['commissioner_id'] . '/locations';
+
+            // set default data if something is missing
+            if(!isset($event_location['title']) || empty($event_location['title'])) {
+                $event_location['title'] = '(TBD)';
+            }
+            if(!isset($data['event']['location']['street']) || empty($event_location['street'])) {
+                $event_location['street'] = '(TBD)';
+            }
+
+            // make a basic location resource
+            $send = array(
+                'location' => array(
+                    'location_name' => $event_location['title'],
+                    'address' => $event_location['street'],
+                ),
+            );
+
+            // add additional location information, if present
+            if(isset($event_location['additional']) && !empty($event_location['additional'])) {
+                $send['location']['address'] .= ', ' . $event_location['additional'];
+            }
+            if(isset($event_location['city']) && !empty($event_location['city'])) {
+                $send['location']['address'] .= '. ' . $event_location['city'];
+            }
+            if(isset($event_location['province']) && !empty($event_location['province'])) {
+                $send['location']['address'] .= ', ' . $event_location['province'];
+            }
+            if(isset($event_location['postal_code']) && !empty($event_location['postal_code'])) {
+                $send['location']['address'] .= '. ' . $event_location['postal_code'];
+            }
+            if(isset($event_location['country']) && !empty($event_location['country'])) {
+                $send['location']['address'] .= '. ' . $event_location['country'] . '.';
+            }
+
+            // update request body and make the location
+            $this->setData($send);
+            parent::post();
+            $response = $this->send();
+            $response = $this->processJsonResponse($response);
+
+            // make partner mapping with location creation response data
+            if(isset($event_location['uuid']) && !empty($event_location['uuid'])) {
+                parent::createPartnerMap($response['location']['id'], parent::PARTNER_MAP_RESOURCE, $event_location['uuid'], $group_uuid);
+            }
+
+            // restore the old domain and update location id
+            $this->domain = $original_domain;
+            $location = $response['location']['id'];
+        }
+
+        return $location;
+    }
+
+    /**
+     * Get the partner-mapped opponent resource ID for TeamSnap.
+     *
+     * @param string $group_uuid
+     *   The group recieving an event update from the webhook.
+     * @param string $group_partner_id
+     *   The Team ID for the corresponding TeamSnap team.
+     * @param string $event_uuid
+     *   The UUID for the AllPlayers Event.
+     * @param array $competitors
+     *   The list of competitors from the AllPlayers Webhook.
+     *
+     * @return string
+     *   The resource ID for TeamSnap API calls.
+     */
+    public function getOpponentResource($group_uuid, $group_partner_id, $event_uuid, array $competitors)
+    {
+        $opponent = '';
+
+        // return the opponent resource mapping
+        foreach($competitors as $competitor) {
+            if($competitor['uuid'] != $group_uuid) {
+                $opponent = parent::readPartnerMap(self::PARTNER_MAP_GROUP, $competitor['uuid'], $group_uuid);
+
+                // use existing partner mapping data, or create a new mapping
+                if(isset($opponent['external_resource_id'])) {
+                    $opponent = $opponent['external_resource_id'];
+                } else {
+                    $original_domain = $this->domain; // store old domain
+                    $this->domain .= '/teams/' . $group_partner_id . '/as_roster/' . $this->webhook->subscriber['commissioner_id'] . '/opponents';
+
+                    // set default data if something is missing
+                    if(!isset($competitor['name']) || empty($competitor['name'])) {
+                        $competitor['name'] = '(TBD)';
+                    }
+
+                    // make basic opponent resource
+                    $send = array(
+                        'opponent' => array(
+                            'opponent_name' => $competitor['name'],
+                            'opponent_contact_name' => '(TBD)',
+                        ),
+                    );
+
+                    // update request body and make the opponent
+                    $this->setData($send);
+                    parent::post();
+                    $response = $this->send();
+                    $response = $this->processJsonResponse($response);
+
+                    // make partner opponent mapping (opponent to group)
+                    if(isset($competitor['uuid']) && !empty($competitor['uuid'])) {
+                        parent::createPartnerMap($response['opponent']['id'], parent::PARTNER_MAP_GROUP, $competitor['uuid'], $group_uuid);
+                    }
+
+                    // restore old domain and update opponent id
+                    $this->domain = $original_domain;
+                    $opponent = $response['opponent']['id'];
+                }
+            }
+        }
+
+        return $opponent;
     }
 }

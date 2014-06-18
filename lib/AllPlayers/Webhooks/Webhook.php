@@ -386,7 +386,8 @@ class Webhook
      *
      * @return integer
      */
-    public function getSend() {
+    public function getSend()
+    {
         return $this->send;
     }
 
@@ -396,7 +397,8 @@ class Webhook
      * @see WEBHOOK_SEND
      * @see WEBHOOK_CANCEL
      */
-    protected function setSend($send) {
+    protected function setSend($send)
+    {
         $this->send = $send;
     }
 
