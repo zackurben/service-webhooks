@@ -684,22 +684,26 @@ class Teamsnap extends Webhook implements ProcessInterface
                     $original_send = $send;
 
                     foreach ($data['event']['competitor'] as $group) {
-                        $team = parent::readPartnerMap(self::PARTNER_MAP_GROUP, $group['uuid'], $group['uuid']);
+                        // retrieve group specific data to complete the request
+                        $team = parent::readPartnerMap(
+                            self::PARTNER_MAP_GROUP,
+                            $group['uuid'],
+                            $group['uuid']
+                        );
                         $team = $team['external_resource_id'];
+
                         $opponent = $this->getOpponentResource(
                             $group['uuid'],
                             $team,
-                            $data['event']['uuid'],
                             $data['event']['competitor']
                         );
 
-                        // reset copied variables for each iteration
-                        $send = $original_send;
-                        $this->domain = $original_domain . '/teams/' . $team . '/as_roster/' .
-                            $this->webhook->subscriber['commissioner_id'] . '/games';
-
                         // update request payload to make a game event
+                        $send = $original_send;
                         $send['opponent_id'] = $opponent;
+                        $this->domain = $original_domain . '/teams/' . $team
+                            . '/as_roster/' . $this->webhook->subscriber['commissioner_id']
+                            . '/games';
 
                         // set request payload and process the response for each
                         $this->setData(array('game' => $send));
@@ -713,6 +717,9 @@ class Teamsnap extends Webhook implements ProcessInterface
                             $data['event']['uuid'],
                             $group['uuid']
                         );
+
+                        // reset temp variables for next iteration
+                        $this->domain = $original_domain;
                     }
 
                     // cancel webhook from sending since we handled it above
@@ -733,25 +740,12 @@ class Teamsnap extends Webhook implements ProcessInterface
                 parent::post();
                 break;
             case self::WEBHOOK_UPDATE_EVENT:
-                // get partner mapped resources
-                $team = parent::readPartnerMap(self::PARTNER_MAP_GROUP, $data['group']['uuid'], $data['group']['uuid']);
-                $team = $team['external_resource_id'];
-                $event = parent::readPartnerMap(
-                    self::PARTNER_MAP_EVENT,
-                    $data['event']['uuid'],
-                    $data['group']['uuid']
-                );
-                $location = $this->getLocationResource(
-                    $data['group']['uuid'],
-                    isset($data['event']['location']) ? $data['event']['location'] : null
-                );
-
+                // make request payload for event
                 $send = array(
                     'eventname' => $data['event']['title'],
                     'division_id' => $this->webhook->subscriber['division_id'],
                     'event_date_start' => $data['event']['start'],
                     'event_date_end' => $data['event']['end'],
-                    'location_id' => $location,
                 );
 
                 // add additional information to event payload
@@ -761,23 +755,85 @@ class Teamsnap extends Webhook implements ProcessInterface
 
                 // determine if game or event
                 if (isset($data['event']['competitor']) && !empty($data['event']['competitor'])) {
-                    $opponent = $this->getOpponentResource(
-                        $group['uuid'],
-                        $team,
-                        $data['event']['uuid'],
-                        $data['event']['competitor']
-                    );
-                    $send['opponent_id'] = $opponent;
-                    $this->domain .= '/teams/' . $team . '/as_roster/' . $this->webhook->subscriber['commissioner_id']
-                        . '/games/' . $event['external_resource_id'];
-                    $this->setData(array('game' => $send));
-                } else {
-                    $this->domain .= '/teams/' . $team . '/as_roster/' . $this->webhook->subscriber['commissioner_id']
-                        . '/practices/' . $event['external_resource_id'];
-                    $this->setData(array('practice' => $send));
-                }
+                    $original_domain = $this->domain;
+                    $original_send = $send;
 
-                parent::put();
+                    foreach($data['event']['competitor'] as $group) {
+                        // retrieve group specific data to complete the request
+                        $team = parent::readPartnerMap(
+                            self::PARTNER_MAP_GROUP,
+                            $group['uuid'],
+                            $group['uuid']
+                        );
+                        $team = $team['external_resource_id'];
+
+                        $event = parent::readPartnerMap(
+                            self::PARTNER_MAP_EVENT,
+                            $data['event']['uuid'],
+                            $group['uuid']
+                        );
+                        $event = $event['external_resource_id'];
+
+                        $event_location = isset($data['event']['location']) ? $data['event']['location'] : null;
+                        $location = $this->getLocationResource(
+                            $group['uuid'],
+                            $event_location
+                        );
+
+                        $opponent = $this->getOpponentResource(
+                            $group['uuid'],
+                            $team,
+                            $data['event']['competitor']
+                        );
+
+                        // set request payload and send for each
+                        $send = $original_send;
+                        $send['location_id'] = $location;
+                        $send['opponent_id'] = $opponent;
+                        $this->domain = $original_domain . '/teams/' . $team
+                            . '/as_roster/' . $this->webhook->subscriber['commissioner_id']
+                            . '/games/' . $event;
+                        $this->setData(array('game' => $send));
+                        parent::put();
+                        $this->send();
+
+                        // reset temp variables for next iteration
+                        $this->domain = $original_domain;
+                    }
+
+                    // cancel webhook from sending since we handled it above
+                    // (only cancel for game events)
+                    parent::setSend(parent::WEBHOOK_CANCEL);
+                } else {
+                    // retrieve group specific data to complete the request
+                    $team = parent::readPartnerMap(
+                        self::PARTNER_MAP_GROUP,
+                        $data['group']['uuid'],
+                        $data['group']['uuid']
+                    );
+                    $team = $team['external_resource_id'];
+
+                    $event = parent::readPartnerMap(
+                        self::PARTNER_MAP_EVENT,
+                        $data['event']['uuid'],
+                        $data['group']['uuid']
+                    );
+                    $event = $event['external_resource_id'];
+
+                    $event_location = isset($data['event']['location']) ? $data['event']['location'] : null;
+                    $location = $this->getLocationResource(
+                        $data['group']['uuid'],
+                        $event_location
+                    );
+
+                    // set request payload and send
+                    $send['location_id'] = $location;
+                    $this->domain .= '/teams/' . $team . '/as_roster/'
+                        . $this->webhook->subscriber['commissioner_id']
+                        . '/practices/' . $event;
+                    $this->setData(array('practice' => $send));
+                    parent::put();
+                }
                 break;
             case self::WEBHOOK_DELETE_EVENT:
                 // get partner mapped resources
@@ -1085,15 +1141,13 @@ class Teamsnap extends Webhook implements ProcessInterface
      *   The group recieving an event update from the webhook.
      * @param string $group_partner_id
      *   The Team ID for the corresponding TeamSnap team.
-     * @param string $event_uuid
-     *   The UUID for the AllPlayers Event.
      * @param array $competitors
      *   The list of competitors from the AllPlayers Webhook.
      *
      * @return string
      *   The resource ID for TeamSnap API calls.
      */
-    public function getOpponentResource($group_uuid, $group_partner_id, $event_uuid, array $competitors)
+    public function getOpponentResource($group_uuid, $group_partner_id, array $competitors)
     {
         $original_domain = $this->domain; // store old domain
         $opponent = '';
@@ -1153,6 +1207,9 @@ class Teamsnap extends Webhook implements ProcessInterface
                     $opponent = $response['opponent']['id'];
                 }
             }
+
+            // reset temp variables for next iteration
+            $this->domain = $original_domain;
         }
 
         // restore old domain
