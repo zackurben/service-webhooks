@@ -836,19 +836,63 @@ class Teamsnap extends Webhook implements ProcessInterface
                 }
                 break;
             case self::WEBHOOK_DELETE_EVENT:
-                // get partner mapped resources
-                $team = parent::readPartnerMap(self::PARTNER_MAP_GROUP, $data['group']['uuid'], $data['group']['uuid']);
-                $team = $team['external_resource_id'];
-                $event = parent::readPartnerMap(
-                    self::PARTNER_MAP_EVENT,
-                    $data['event']['uuid'],
-                    $data['group']['uuid']
-                );
+                // determine if game or event
+                if (isset($data['event']['competitor']) && !empty($data['event']['competitor'])) {
+                    $original_domain = $this->domain;
 
-                $this->domain .= '/teams/' . $team . '/as_roster/' . $this->webhook->subscriber['commissioner_id']
-                    . '/practices/' . $event['external_resource_id'];
+                    foreach($data['event']['competitor'] as $group) {
+                        // retrieve group specific data to complete the request
+                        $team = parent::readPartnerMap(
+                            self::PARTNER_MAP_GROUP,
+                            $group['uuid'],
+                            $group['uuid']
+                        );
+                        $team = $team['external_resource_id'];
 
-                parent::delete();
+                        $event = parent::readPartnerMap(
+                            self::PARTNER_MAP_EVENT,
+                            $data['event']['uuid'],
+                            $group['uuid']
+                        );
+                        $event = $event['external_resource_id'];
+
+                        // set request payload and send
+                        $this->domain = $original_domain . '/teams/' . $team
+                            . '/as_roster/' . $this->webhook->subscriber['commissioner_id']
+                            . '/games/' . $event;
+                        parent::delete();
+                        $this->send();
+
+                        // reset temp variables for next iteration
+                        $this->domain = $original_domain;
+                    }
+
+                    // cancel webhook from sending since we handled it above
+                    // (only cancel for game events)
+                    parent::setSend(parent::WEBHOOK_CANCEL);
+                } else {
+                    // retrieve group specific data to complete the request
+                    $team = parent::readPartnerMap(
+                        self::PARTNER_MAP_GROUP,
+                        $data['group']['uuid'],
+                        $data['group']['uuid']
+                    );
+                    $team = $team['external_resource_id'];
+
+                    $event = parent::readPartnerMap(
+                        self::PARTNER_MAP_EVENT,
+                        $data['event']['uuid'],
+                        $data['group']['uuid']
+                    );
+                    $event = $event['external_resource_id'];
+
+                    // set request payload and send
+                    $this->domain .= '/teams/' . $team . '/as_roster/'
+                        . $this->webhook->subscriber['commissioner_id']
+                        . '/practices/' . $event;
+                    parent::delete();
+                }
+
                 break;
             default:
                 $this->setSend(self::WEBHOOK_CANCEL);
