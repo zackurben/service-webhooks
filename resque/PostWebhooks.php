@@ -27,7 +27,9 @@ class PostWebhooks
         include __DIR__ . '/config/config.php';
 
         if (isset($config['redis_password']) && !$config['redis_password'] == '') {
-            Resque::setBackend('redis://redis:' . $config['redis_password'] . '@' . $config['redis_host']);
+            Resque::setBackend(
+                'redis://redis:' . $config['redis_password'] . '@' . $config['redis_host']
+            );
         }
         if (isset($config['test_url'])) {
             $this->test_url = $config['test_url'];
@@ -44,7 +46,11 @@ class PostWebhooks
         $event_data = $this->args['event_data'];
 
         $classname = 'AllPlayers\\Webhooks\\' . $hook['name'];
-        $webhook = new $classname($subscriber['variables'], $event_data, array('test_url' => $this->test_url));
+        $webhook = new $classname(
+            $subscriber['variables'],
+            $event_data,
+            array('test_url' => $this->test_url)
+        );
 
         if($webhook->getSend() == \AllPlayers\Webhooks\Webhook::WEBHOOK_SEND) {
             $response = $webhook->send();
