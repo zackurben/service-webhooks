@@ -250,8 +250,11 @@ class Teamsnap extends Webhook implements ProcessInterface
     /**
      * Create Teamsnap webhook using no_authentication.
      */
-    public function __construct(array $subscriber = array(), array $data = array(), array $preprocess = array())
-    {
+    public function __construct(
+        array $subscriber = array(),
+        array $data = array(),
+        array $preprocess = array()
+    ) {
         include 'config/config.php';
         if (isset($config['teamsnap'])) {
             parent::__construct(
@@ -306,24 +309,22 @@ class Teamsnap extends Webhook implements ProcessInterface
                 // team data to send
                 $geographical = $this->getRegion($data['group']['timezone']);
                 $send = array(
-                    'team' => array(
-                        'team_name' => $data['group']['name'],
-                        'team_league' => 'All Players',
-                        'division_id' => intval($this->webhook->subscriber['division_id']),
-                        'sport_id' => $this->getSport($data['group']['group_category']),
-                        'timezone' => $geographical['timezone'],
-                        'country' => $geographical['location'],
-                        'zipcode' => $data['group']['postalcode'],
-                    ),
+                    'team_name' => $data['group']['name'],
+                    'team_league' => 'All Players',
+                    'division_id' => intval($this->webhook->subscriber['division_id']),
+                    'sport_id' => $this->getSport($data['group']['group_category']),
+                    'timezone' => $geographical['timezone'],
+                    'country' => $geographical['location'],
+                    'zipcode' => $data['group']['postalcode'],
                 );
 
                 // add team logo if present
                 if (isset($data['group']['logo'])) {
-                    $send['team']['logo_url'] = $data['group']['logo'];
+                    $send['logo_url'] = $data['group']['logo'];
                 }
 
                 // update request body and make the team
-                $this->setData($send);
+                $this->setData(array('team' => $send));
                 parent::post();
                 $response = $this->send();
 
@@ -341,30 +342,30 @@ class Teamsnap extends Webhook implements ProcessInterface
                 } else {
                     $response = $this->processJsonResponse($response);
 
-                    $this->domain .= '/' . $response['team']['id'] . '/as_roster/' .
-                        $this->webhook->subscriber['commissioner_id'] . '/rosters';
+                    $this->domain .= '/' . $response['team']['id']
+                        . '/as_roster/'
+                        . $this->webhook->subscriber['commissioner_id']
+                        . '/rosters';
                 }
 
                 // add the owner to the team
                 $send = array(
-                    'roster' => array(
-                        'first' => $data['member']['first_name'],
-                        'last' => $data['member']['last_name'],
-                        'roster_email_addresses_attributes' => array(
-                            array(
-                                'label' => 'Profile',
-                                'email' => $data['member']['email'],
-                            ),
+                    'first' => $data['member']['first_name'],
+                    'last' => $data['member']['last_name'],
+                    'roster_email_addresses_attributes' => array(
+                        array(
+                            'label' => 'Profile',
+                            'email' => $data['member']['email'],
                         ),
-                        'non_player' => 1,
-                        'is_manager' => 1,
-                        'is_commissioner' => 0,
-                        'is_owner' => 1,
                     ),
+                    'non_player' => 1,
+                    'is_manager' => 1,
+                    'is_commissioner' => 0,
+                    'is_owner' => 1,
                 );
 
                 // update request body and allow PostWebhooks to complete the call
-                $this->setData($send);
+                $this->setData(array('roster' => $send));
                 parent::post();
 
                 /*
@@ -380,28 +381,26 @@ class Teamsnap extends Webhook implements ProcessInterface
                     self::PARTNER_MAP_GROUP,
                     $data['group']['uuid'],
                     $data['group']['uuid']
-                    );
+                );
                 $team = $team['external_resource_id'];
                 $this->domain .= '/teams/' . $team;
 
                 // team data to send
                 $geographical = $this->getRegion($data['group']['timezone']);
                 $send = array(
-                    'team' => array(
-                        'team_name' => $data['group']['name'],
-                        'sport_id' => $this->getSport($data['group']['group_category']),
-                        'timezone' => $geographical['timezone'],
-                        'country' => $geographical['location'],
-                        'zipcode' => $data['group']['postalcode'],
-                    ),
+                    'team_name' => $data['group']['name'],
+                    'sport_id' => $this->getSport($data['group']['group_category']),
+                    'timezone' => $geographical['timezone'],
+                    'country' => $geographical['location'],
+                    'zipcode' => $data['group']['postalcode'],
                 );
 
                 // add team logo if present
                 if (isset($data['group']['logo'])) {
-                    $send['team']['logo_url'] = $data['group']['logo'];
+                    $send['logo_url'] = $data['group']['logo'];
                 }
 
-                $this->setData($send);
+                $this->setData(array('team' =>$send));
                 parent::put();
                 break;
             case self::WEBHOOK_DELETE_GROUP:
@@ -409,7 +408,14 @@ class Teamsnap extends Webhook implements ProcessInterface
                  * EXTERNAL BLOCKER:
                  *   NYI by TeamSnap.
                  */
-                parent::deletePartnerMap(self::PARTNER_MAP_GROUP, $data['group']['uuid']);
+                parent::deletePartnerMap(
+                    self::PARTNER_MAP_GROUP,
+                    $data['group']['uuid']
+                );
+
+                $this->headers['X-Teamsnap-Features'] = '{"partner.delete_team": 1}';
+                parent::delete();
+
                 // hack to stop errors until deletion endpoint is set by TS
                 $this->setSend(self::WEBHOOK_CANCEL);
                 break;
@@ -443,12 +449,9 @@ class Teamsnap extends Webhook implements ProcessInterface
 
                 // role data to send
                 $send = array(
-                    'roster' => array(
-                        'non_player' => $data['member']['role_name'] == 'Player' ? 0 : 1,
-                        'is_manager' => $data['member']['is_admin'] ? 1 : 0,
-                    ),
+                    'non_player' => $data['member']['role_name'] == 'Player' ? 0 : 1,
+                    'is_manager' => $data['member']['is_admin'] ? 1 : 0,
                 );
-                $this->setData($send);
 
                 if ($method == self::HTTP_POST) {
                     /*
@@ -457,23 +460,27 @@ class Teamsnap extends Webhook implements ProcessInterface
                      */
 
                     // add first/last name required for user creation
-                    $send['roster']['first'] = $data['member']['first_name'];
-                    $send['roster']['last'] = $data['member']['last_name'];
+                    $send['first'] = $data['member']['first_name'];
+                    $send['last'] = $data['member']['last_name'];
 
                     // add email address for TeamSnap invite
                     if (isset($data['member']['guardian'])) {
-                        $send['roster']['roster_email_addresses_attributes'][] = array(
-                            'label' => 'Guardian Profile',
-                            'email' => $data['member']['guardian']['email'],
+                        $send['roster_email_addresses_attributes'] = array(
+                            array(
+                                'label' => 'Guardian Profile',
+                                'email' => $data['member']['guardian']['email'],
+                            ),
                         );
                     } else {
-                        $send['roster']['roster_email_addresses_attributes'][] = array(
-                            'label' => 'Profile',
-                            'email' => $data['member']['email'],
+                        $send['roster_email_addresses_attributes'] = array(
+                            array(
+                                'label' => 'Profile',
+                                'email' => $data['member']['email'],
+                            ),
                         );
                     }
 
-                    $this->setData($send);
+                    $this->setData(array('roster' => $send));
                     $this->domain .= '/teams/' . $team . '/as_roster/'
                         . $this->webhook->subscriber['commissioner_id']
                         . '/rosters';
@@ -484,14 +491,13 @@ class Teamsnap extends Webhook implements ProcessInterface
                      * The user does exist in the TeamSnap system; Update the
                      * existing user with the given information.
                      */
-                    $this->setData($send);
+                    $this->setData(array('roster' => $send));
                     $this->domain .= '/teams/' . $team . '/as_roster/'
                         . $this->webhook->subscriber['commissioner_id']
                         . '/rosters/' . $roster;
 
                     parent::put();
                 }
-
                 break;
             case self::WEBHOOK_REMOVE_ROLE:
                 $roster = '';
@@ -521,18 +527,16 @@ class Teamsnap extends Webhook implements ProcessInterface
                 }
 
                 $this->domain .= '/teams/' . $team . '/as_roster/'
-                    . $this->webhook->subscriber['commissioner_id'] . '/rosters/'
-                    . $roster;
+                    . $this->webhook->subscriber['commissioner_id']
+                    . '/rosters/' . $roster;
 
                 // roster data to send
                 $send = array(
-                    'roster' => array(
-                        'non_player' => $data['member']['role_name'] == 'Player' ? 1 : 0,
-                        'is_manager' => $data['member']['is_admin'] ? 1 : 0,
-                    ),
+                    'non_player' => $data['member']['role_name'] == 'Player' ? 1 : 0,
+                    'is_manager' => $data['member']['is_admin'] ? 1 : 0,
                 );
 
-                $this->setData($send);
+                $this->setData(array('roster' => $send));
                 parent::put();
                 break;
             case self::WEBHOOK_ADD_SUBMISSION:
@@ -592,9 +596,11 @@ class Teamsnap extends Webhook implements ProcessInterface
                     $send['last'] = $data['member']['last_name'];
                 }
                 if (isset($webform['profile__field_email__profile'])) {
-                    $send['roster_email_addresses_attributes'][] = array(
-                        'label' => 'Webform',
-                        'email' => $webform['profile__field_email__profile'],
+                    $send['roster_email_addresses_attributes'] = array(
+                        array(
+                            'label' => 'Webform',
+                            'email' => $webform['profile__field_email__profile'],
+                        ),
                     );
                 } elseif ($method == self::HTTP_POST && !isset($webform['profile__field_email__profile'])) {
                     /*
@@ -602,9 +608,11 @@ class Teamsnap extends Webhook implements ProcessInterface
                      * user submission; use information from the users account.
                      */
 
-                    $send['roster_email_addresses_attributes'][] = array(
-                        'label' => 'Profile',
-                        'email' => $data['member']['email'],
+                    $send['roster_email_addresses_attributes'] = array(
+                        array(
+                            'label' => 'Profile',
+                            'email' => $data['member']['email'],
+                        ),
                     );
                 }
                 if (isset($webform['profile__field_birth_date__profile'])) {
@@ -666,8 +674,9 @@ class Teamsnap extends Webhook implements ProcessInterface
                      * the user from the given information.
                      */
 
-                    $this->domain .= '/teams/' . $team . '/as_roster/' .
-                        $this->webhook->subscriber['commissioner_id'] . '/rosters';
+                    $this->domain .= '/teams/' . $team . '/as_roster/'
+                        . $this->webhook->subscriber['commissioner_id']
+                        . '/rosters';
 
                     parent::post();
                 } else {
@@ -677,8 +686,8 @@ class Teamsnap extends Webhook implements ProcessInterface
                      */
 
                     $this->domain .= '/teams/' . $team . '/as_roster/'
-                        . $this->webhook->subscriber['commissioner_id'] . '/rosters/'
-                        . $roster;
+                        . $this->webhook->subscriber['commissioner_id']
+                        . '/rosters/' . $roster;
 
                     parent::put();
                 }
@@ -729,7 +738,8 @@ class Teamsnap extends Webhook implements ProcessInterface
                         $send = $original_send;
                         $send['opponent_id'] = $opponent;
                         $this->domain = $original_domain . '/teams/' . $team
-                            . '/as_roster/' . $this->webhook->subscriber['commissioner_id']
+                            . '/as_roster/'
+                            . $this->webhook->subscriber['commissioner_id']
                             . '/games';
 
                         // set request payload and process the response for each
@@ -819,7 +829,8 @@ class Teamsnap extends Webhook implements ProcessInterface
                         $send['location_id'] = $location;
                         $send['opponent_id'] = $opponent;
                         $this->domain = $original_domain . '/teams/' . $team
-                            . '/as_roster/' . $this->webhook->subscriber['commissioner_id']
+                            . '/as_roster/'
+                            . $this->webhook->subscriber['commissioner_id']
                             . '/games/' . $event;
                         $this->setData(array('game' => $send));
                         parent::put();
@@ -886,7 +897,8 @@ class Teamsnap extends Webhook implements ProcessInterface
 
                         // set request payload and send
                         $this->domain = $original_domain . '/teams/' . $team
-                            . '/as_roster/' . $this->webhook->subscriber['commissioner_id']
+                            . '/as_roster/'
+                            . $this->webhook->subscriber['commissioner_id']
                             . '/games/' . $event;
                         parent::delete();
                         $this->send();
@@ -987,7 +999,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                     );
 
                     // add guardian if present and does not exist
-                    if(isset($original_data['member']['guardian'])) {
+                    if (isset($original_data['member']['guardian'])) {
                         $this->domain = 'https://api.teamsnap.com/v2';
                         $this->getContactResource(
                             $original_data['group']['uuid'],
@@ -1007,12 +1019,10 @@ class Teamsnap extends Webhook implements ProcessInterface
                         . $this->webhook->subscriber['commissioner_id']
                         . '/invitations';
                     $send = array(
-                        'rosters' => array(
-                            $response['roster']['id'],
-                        )
+                        $response['roster']['id'],
                     );
 
-                    $this->setData($send);
+                    $this->setData(array('rosters' => $send));
                     parent::post();
                     $this->send();
                 }
@@ -1158,31 +1168,29 @@ class Teamsnap extends Webhook implements ProcessInterface
 
         // make a basic location resource
         $send = array(
-            'location' => array(
-                'location_name' => $event_location['title'],
-                'address' => $event_location['street'],
-            ),
+            'location_name' => $event_location['title'],
+            'address' => $event_location['street'],
         );
 
         // add additional location information, if present
         if (isset($event_location['additional']) && !empty($event_location['additional'])) {
-            $send['location']['address'] .= ', ' . $event_location['additional'];
+            $send['address'] .= ', ' . $event_location['additional'];
         }
         if (isset($event_location['city']) && !empty($event_location['city'])) {
-            $send['location']['address'] .= '. ' . $event_location['city'];
+            $send['address'] .= '. ' . $event_location['city'];
         }
         if (isset($event_location['province']) && !empty($event_location['province'])) {
-            $send['location']['address'] .= ', ' . $event_location['province'];
+            $send['address'] .= ', ' . $event_location['province'];
         }
         if (isset($event_location['postal_code']) && !empty($event_location['postal_code'])) {
-            $send['location']['address'] .= '. ' . $event_location['postal_code'];
+            $send['address'] .= '. ' . $event_location['postal_code'];
         }
         if (isset($event_location['country']) && !empty($event_location['country'])) {
-            $send['location']['address'] .= '. ' . strtoupper($event_location['country']) . '.';
+            $send['address'] .= '. ' . strtoupper($event_location['country']) . '.';
         }
 
         // update request body
-        $this->setData($send);
+        $this->setData(array('location' => $send));
 
         // update existing partner-mapping, or create a new mapping
         if (isset($location['external_resource_id'])) {
@@ -1259,28 +1267,28 @@ class Teamsnap extends Webhook implements ProcessInterface
 
                 // make basic opponent resource
                 $send = array(
-                    'opponent' => array(
-                        'opponent_name' => $competitor['name'],
-                        'opponent_contact_name' => '(TBD)',
-                    ),
+                    'opponent_name' => $competitor['name'],
+                    'opponent_contact_name' => '(TBD)',
                 );
 
                 // update request body and make the opponent
-                $this->setData($send);
+                $this->setData(array('opponent' => $send));
 
                 // use existing partner mapping data, or create a new mapping
                 if (isset($opponent['external_resource_id'])) {
                     $opponent = $opponent['external_resource_id'];
-                    $this->domain = $original_domain . '/teams/' . $group_partner_id
-                        . '/as_roster/' . $this->webhook->subscriber['commissioner_id']
+                    $this->domain = $original_domain . '/teams/'
+                        . $group_partner_id . '/as_roster/'
+                        . $this->webhook->subscriber['commissioner_id']
                         . '/opponents/' . $opponent;
 
                     // update existing opponent data
                     parent::put();
                     $this->send();
                 } else {
-                    $this->domain = $original_domain . '/teams/' . $group_partner_id
-                        . '/as_roster/' . $this->webhook->subscriber['commissioner_id']
+                    $this->domain = $original_domain . '/teams/'
+                        . $group_partner_id . '/as_roster/'
+                        . $this->webhook->subscriber['commissioner_id']
                         . '/opponents';
 
                     // create new opponent

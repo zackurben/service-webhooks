@@ -268,8 +268,11 @@ class Webhook
      * @param array $preprocess
      *   Data that needs to be processed before the REST methods are called.
      */
-    public function __construct(array $subscriber = array(), array $data = array(), array $preprocess = array())
-    {
+    public function __construct(
+        array $subscriber = array(),
+        array $data = array(),
+        array $preprocess = array()
+    ) {
         $this->webhook->subscriber = $subscriber;
         $this->setData($data);
 
@@ -291,7 +294,10 @@ class Webhook
     {
         switch ($this->authentication) {
             case self::AUTHENTICATION_BASIC:
-                $curl_auth = new CurlAuthPlugin($this->webhook->subscriber['user'], $this->webhook->subscriber['pass']);
+                $curl_auth = new CurlAuthPlugin(
+                    $this->webhook->subscriber['user'],
+                    $this->webhook->subscriber['pass']
+                );
                 $this->client->addSubscriber($curl_auth);
                 break;
             case self::AUTHENTICATION_OAUTH:
@@ -414,7 +420,10 @@ class Webhook
 
         // encode data in the requested method
         if ($this->method === self::TRANSMISSION_URLENCODED) {
-            $this->request = $this->client->post($this->client->getBaseUrl(), $this->headers);
+            $this->request = $this->client->post(
+                $this->client->getBaseUrl(),
+                $this->headers
+            );
             $this->request->addPostFields($this->getData());
         } else {
             $this->headers['Content-Type'] = 'application/json';
@@ -438,7 +447,10 @@ class Webhook
 
         // encode data in the requested method
         if ($this->method === self::TRANSMISSION_URLENCODED) {
-            $this->request = $this->client->put($this->client->getBaseUrl(), $this->headers);
+            $this->request = $this->client->put(
+                $this->client->getBaseUrl(),
+                $this->headers
+            );
             $this->request->addPostFields($this->getData());
         } else {
             $this->headers['Content-Type'] = 'application/json';
@@ -462,7 +474,10 @@ class Webhook
 
         // encode data in the requested method
         if ($this->method === self::TRANSMISSION_URLENCODED) {
-            $this->request = $this->client->delete($this->client->getBaseUrl(), $this->headers);
+            $this->request = $this->client->delete(
+                $this->client->getBaseUrl(),
+                $this->headers
+            );
             $this->request->addPostFields($this->getData());
         } else {
             $this->headers['Content-Type'] = 'application/json';
@@ -514,9 +529,15 @@ class Webhook
 
         // Strip JSON string data from response message
         if (strpos($response->getMessage(), "\n[{") !== false) {
-            $return = substr($response->getMessage(), strpos($response->getMessage(), '[{'));
+            $return = substr(
+                $response->getMessage(),
+                strpos($response->getMessage(), '[{')
+            );
         } else {
-            $return = substr($response->getMessage(), strpos($response->getMessage(), '{'));
+            $return = substr(
+                $response->getMessage(),
+                strpos($response->getMessage(), '{')
+            );
         }
 
         return json_decode($return, true);
@@ -543,8 +564,12 @@ class Webhook
      * @return array
      *   The AllPlayers response from creating a resource mapping.
      */
-    protected function createPartnerMap($external_resource_id, $item_type, $item_uuid, $partner_uuid)
-    {
+    protected function createPartnerMap(
+        $external_resource_id,
+        $item_type,
+        $item_uuid,
+        $partner_uuid
+    ) {
         $url = 'https://api.zurben.apci.ws/api/v2/externalid';
         $client = new Client(
             $url,

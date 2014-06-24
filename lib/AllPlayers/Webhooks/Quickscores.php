@@ -50,9 +50,19 @@ class Quickscores extends Webhook
     /**
      * Authenticate using basic auth.
      */
-    public function __construct(array $subscriber = array(), array $data = array(), array $preprocess = array())
-    {
-        parent::__construct(array('user' => $subscriber['user'], 'pass' => $subscriber['token']), $data, $preprocess);
+    public function __construct(
+        array $subscriber = array(),
+        array $data = array(),
+        array $preprocess = array()
+    ) {
+        parent::__construct(
+            array(
+                'user' => $subscriber['user'],
+                'pass' => $subscriber['token']
+            ),
+            $data,
+            $preprocess
+        );
         $this->process();
     }
 

@@ -49,8 +49,11 @@ class Custom extends Webhook
     /**
      * Use custom url as domain.
      */
-    public function __construct(array $subscriber = array(), array $data = array(), array $preprocess = array())
-    {
+    public function __construct(
+        array $subscriber = array(),
+        array $data = array(),
+        array $preprocess = array()
+    ) {
         $this->domain = $subscriber['url'];
         parent::__construct($subscriber, $data, $preprocess);
         $this->process();
