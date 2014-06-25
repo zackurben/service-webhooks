@@ -536,19 +536,19 @@ class Teamsnap extends Webhook implements ProcessInterface
                 parent::put();
                 break;
             case self::WEBHOOK_ADD_SUBMISSION:
-                $method = $roster = '';
-                $group = parent::readPartnerMap(
+                $roster = $method = '';
+                $roster = parent::readPartnerMap(
                     self::PARTNER_MAP_USER,
                     $data['member']['uuid'],
                     $data['group']['uuid']
                 );
 
-                if (isset($group['message'])) {
+                if (isset($roster['message'])) {
                     // resource was not found
                     $method = self::HTTP_POST;
-                } elseif (isset($group['external_resource_id'])) {
+                } elseif (isset($roster['external_resource_id'])) {
                     $method = self::HTTP_PUT;
-                    $roster = $group['external_resource_id'];
+                    $roster = $roster['external_resource_id'];
                 }
 
                 $team = parent::readPartnerMap(
@@ -591,26 +591,38 @@ class Teamsnap extends Webhook implements ProcessInterface
 
                     $send['last'] = $data['member']['last_name'];
                 }
-                if (isset($webform['profile__field_email__profile'])) {
-                    $send['roster_email_addresses_attributes'] = array(
-                        array(
-                            'label' => 'Webform',
-                            'email' => $webform['profile__field_email__profile'],
-                        ),
-                    );
-                } elseif ($method == self::HTTP_POST && !isset($webform['profile__field_email__profile'])) {
-                    /*
-                     * Element required for roster invitation, but not present in
-                     * user submission; use information from the users account.
-                     */
 
+                // override email with guardian email, if present
+                if (isset($data['member']['guardian'])) {
                     $send['roster_email_addresses_attributes'] = array(
                         array(
-                            'label' => 'Profile',
-                            'email' => $data['member']['email'],
+                            'label' => 'Guardian Profile',
+                            'email' => $data['member']['guardian']['email'],
                         ),
                     );
+                } else {
+                    if (isset($webform['profile__field_email__profile'])) {
+                        $send['roster_email_addresses_attributes'] = array(
+                            array(
+                                'label' => 'Webform',
+                                'email' => $webform['profile__field_email__profile'],
+                            ),
+                        );
+                    } elseif ($method == self::HTTP_POST && !isset($webform['profile__field_email__profile'])) {
+                        /*
+                         * Element required for roster invitation, but not present in
+                         * user submission; use information from the users account.
+                         */
+
+                        $send['roster_email_addresses_attributes'] = array(
+                            array(
+                                'label' => 'Profile',
+                                'email' => $data['member']['email'],
+                            ),
+                        );
+                    }
                 }
+
                 if (isset($webform['profile__field_birth_date__profile'])) {
                     $send['birthdate'] = $webform['profile__field_birth_date__profile'];
                 }
