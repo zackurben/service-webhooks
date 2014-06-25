@@ -436,12 +436,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                     $data['group']['uuid'],
                     $data['group']['uuid']
                 );
-                if (isset($team['message'])) {
-                    // resource was not found
-                    $this->setSend(self::WEBHOOK_CANCEL);
-                } elseif (isset($team['external_resource_id'])) {
-                    $team = $team['external_resource_id'];
-                }
+                $team = $team['external_resource_id'];
 
                 // role data to send
                 $send = array(
@@ -496,31 +491,19 @@ class Teamsnap extends Webhook implements ProcessInterface
                 }
                 break;
             case self::WEBHOOK_REMOVE_ROLE:
-                $roster = '';
-                $group = parent::readPartnerMap(
+                $roster = parent::readPartnerMap(
                     self::PARTNER_MAP_USER,
                     $data['member']['uuid'],
                     $data['group']['uuid']
                 );
-
-                if (isset($group['message'])) {
-                    // resource was not found
-                    $this->setSend(self::WEBHOOK_CANCEL);
-                } elseif (isset($group['external_resource_id'])) {
-                    $roster = $group['external_resource_id'];
-                }
+                $roster = $roster['external_resource_id'];
 
                 $team = parent::readPartnerMap(
                     self::PARTNER_MAP_GROUP,
                     $data['group']['uuid'],
                     $data['group']['uuid']
                 );
-                if (isset($team['message'])) {
-                    // resource was not found
-                    $this->setSend(self::WEBHOOK_CANCEL);
-                } elseif (isset($team['external_resource_id'])) {
-                    $team = $team['external_resource_id'];
-                }
+                $team = $team['external_resource_id'];
 
                 $this->domain .= '/teams/' . $team . '/as_roster/'
                     . $this->webhook->subscriber['commissioner_id']
@@ -556,12 +539,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                     $data['group']['uuid'],
                     $data['group']['uuid']
                 );
-                if (isset($team['message'])) {
-                    // resource was not found
-                    $this->setSend(self::WEBHOOK_CANCEL);
-                } elseif (isset($team['external_resource_id'])) {
-                    $team = $team['external_resource_id'];
-                }
+                $team = $team['external_resource_id'];
 
                 /**
                  * Gathers all available data to send to TeamSnap. If required
