@@ -404,20 +404,16 @@ class Teamsnap extends Webhook implements ProcessInterface
                 parent::put();
                 break;
             case self::WEBHOOK_DELETE_GROUP:
-                /*
-                 * EXTERNAL BLOCKER:
-                 *   NYI by TeamSnap.
-                 */
-                parent::deletePartnerMap(
+                $team = parent::readPartnerMap(
                     self::PARTNER_MAP_GROUP,
+                    $data['group']['uuid'],
                     $data['group']['uuid']
                 );
+                $team = $team['external_resource_id'];
+                $this->domain .= '/teams/' . $team;
 
                 $this->headers['X-Teamsnap-Features'] = '{"partner.delete_team": 1}';
                 parent::delete();
-
-                // hack to stop errors until deletion endpoint is set by TS
-                $this->setSend(self::WEBHOOK_CANCEL);
                 break;
             case self::WEBHOOK_ADD_ROLE:
                 $method = $roster = '';
