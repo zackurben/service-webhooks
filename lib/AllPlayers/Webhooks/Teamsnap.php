@@ -968,6 +968,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                 );
                 break;
             case self::WEBHOOK_ADD_ROLE:
+            case self::WEBHOOK_ADD_SUBMISSION:
                 // associate AllPlayers user uid with TeamSnap roster id
                 $query = parent::readPartnerMap(
                     self::PARTNER_MAP_USER,
@@ -1011,24 +1012,6 @@ class Teamsnap extends Webhook implements ProcessInterface
                     $this->setData(array('rosters' => $send));
                     parent::post();
                     $this->send();
-                }
-                break;
-            case self::WEBHOOK_ADD_SUBMISSION:
-                // associate AllPlayers user uid with TeamSnap roster id
-                $query = parent::readPartnerMap(
-                    self::PARTNER_MAP_USER,
-                    $original_data['member']['uuid'],
-                    $original_data['group']['uuid']
-                );
-
-                if (isset($query['message'])) {
-                    // failed to find a row; create new partner mapping
-                    parent::createPartnerMap(
-                        $response['roster']['id'],
-                        self::PARTNER_MAP_USER,
-                        $original_data['member']['uuid'],
-                        $original_data['group']['uuid']
-                    );
                 }
                 break;
             case self::WEBHOOK_CREATE_EVENT:
