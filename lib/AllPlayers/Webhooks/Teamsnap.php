@@ -462,6 +462,12 @@ class Teamsnap extends Webhook implements ProcessInterface
                     $this->setData(array('roster' => $send));
                     parent::post();
                 } else {
+                    // cancel if roles were not changed
+                    if (empty($send)) {
+                        $this->setSend(self::WEBHOOK_CANCEL);
+                        break;
+                    }
+
                     // update existing partner-mapping
                     $this->domain .= '/teams/' . $team . '/as_roster/'
                         . $this->webhook->subscriber['commissioner_id']
