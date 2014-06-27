@@ -248,7 +248,7 @@ class Teamsnap extends Webhook implements ProcessInterface
     protected $method = self::TRANSMISSION_JSON;
 
     /**
-     * Create Teamsnap webhook using no_authentication.
+     * Create Teamsnap webhook
      */
     public function __construct(
         array $subscriber = array(),
@@ -277,36 +277,21 @@ class Teamsnap extends Webhook implements ProcessInterface
      */
     protected function process()
     {
+        // set original webhook data
         $data = $this->getData();
-
-        // set original data hook data
         $this->setOriginalData($data);
 
         switch ($data['webhook_type']) {
             case self::WEBHOOK_CREATE_GROUP:
-                /*
-                 * Cancel the webhook if this is not a team being registered
-                 */
+                // Cancel the webhook if this is not a team being registered
                 if ($data['group']['group_type'] != 'Team') {
                     $this->setSend(self::WEBHOOK_CANCEL);
                     break;
                 }
 
-                /*
-                 * Note: this is a different approach for user_creates_group,
-                 * because we need to send multiple calls to the TeamSnap
-                 * API, since they do not allow for a roster to be added to a
-                 * Team at creation time (we care about this to preserve the
-                 * unique property of the group creator).
-                 *
-                 * This will first make a Team in the TeamSnap system, add our
-                 * custom data field for uuids, use the response data to add a
-                 * creator to the Team, and send them an invite to finish their
-                 * account on the TeamSnap system.
-                 */
                 $this->domain .= '/teams';
 
-                // team data to send
+                // build payload
                 $geographical = $this->getRegion($data['group']['timezone']);
                 $send = array(
                     'team_name' => $data['group']['name'],
@@ -318,26 +303,23 @@ class Teamsnap extends Webhook implements ProcessInterface
                     'zipcode' => $data['group']['postalcode'],
                 );
 
-                // add team logo if present
+                // add additional information to payload
                 if (isset($data['group']['logo'])) {
                     $send['logo_url'] = $data['group']['logo'];
                 }
 
-                // update request body and make the team
+                // create team on TeamSnap
                 $this->setData(array('team' => $send));
                 parent::post();
                 $response = $this->send();
 
-                // process response from team creation (using original data)
+                // Manually invoke the partner-mapping
                 $this->processResponse($response);
 
-                /*
-                 * Use data returned from creating the team, to attach the owner.
-                 * (if test mode, account for extra json wrapper from requestbin)
-                 */
+                // add creator to TeamSnap team
                 include 'config/config.php';
                 if (isset($config['test_url'])) {
-                    // cancel sending the webhook for testing
+                    // cancel webhook if testing
                     $this->setSend(self::WEBHOOK_CANCEL);
                 } else {
                     $response = $this->processJsonResponse($response);
@@ -348,7 +330,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                         . '/rosters';
                 }
 
-                // add the owner to the team
+                // build payload
                 $send = array(
                     'first' => $data['member']['first_name'],
                     'last' => $data['member']['last_name'],
@@ -364,19 +346,17 @@ class Teamsnap extends Webhook implements ProcessInterface
                     'is_owner' => 1,
                 );
 
-                // update request body and allow PostWebhooks to complete the call
+                // update request and let PostWebhooks complete
                 $this->setData(array('roster' => $send));
                 parent::post();
 
-                /*
-                 * Update webhook type, so processResponse() will capture the
-                 * owners uid on the next call (in PostWebhooks#perform()).
-                 */
+                // manipulate the webhook for PostWebhooks#perform()
                 $temp = $this->getOriginalData();
                 $temp['webhook_type'] = self::WEBHOOK_ADD_ROLE;
                 $this->setOriginalData($temp);
                 break;
             case self::WEBHOOK_UPDATE_GROUP:
+                // get TeamID from partner-mapping
                 $team = parent::readPartnerMap(
                     self::PARTNER_MAP_GROUP,
                     $data['group']['uuid'],
@@ -385,7 +365,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                 $team = $team['external_resource_id'];
                 $this->domain .= '/teams/' . $team;
 
-                // team data to send
+                // build payload
                 $geographical = $this->getRegion($data['group']['timezone']);
                 $send = array(
                     'team_name' => $data['group']['name'],
@@ -395,15 +375,17 @@ class Teamsnap extends Webhook implements ProcessInterface
                     'zipcode' => $data['group']['postalcode'],
                 );
 
-                // add team logo if present
+                // add additional information to payload
                 if (isset($data['group']['logo'])) {
                     $send['logo_url'] = $data['group']['logo'];
                 }
 
+                // update request and let PostWebhooks complete
                 $this->setData(array('team' =>$send));
                 parent::put();
                 break;
             case self::WEBHOOK_DELETE_GROUP:
+                // get TeamID from partner-mapping
                 $team = parent::readPartnerMap(
                     self::PARTNER_MAP_GROUP,
                     $data['group']['uuid'],
@@ -412,25 +394,28 @@ class Teamsnap extends Webhook implements ProcessInterface
                 $team = $team['external_resource_id'];
                 $this->domain .= '/teams/' . $team;
 
+                // update request and let PostWebhooks complete
                 $this->headers['X-Teamsnap-Features'] = '{"partner.delete_team": 1}';
                 parent::delete();
                 break;
             case self::WEBHOOK_ADD_ROLE:
+                // get UserID from partner-mapping
                 $method = $roster = '';
-                $group = parent::readPartnerMap(
+                $roster = parent::readPartnerMap(
                     self::PARTNER_MAP_USER,
                     $data['member']['uuid'],
                     $data['group']['uuid']
                 );
 
-                if (isset($group['message'])) {
-                    // resource was not found
+                // create new user on TeamSnap, if resource was not found
+                if (isset($roster['message'])) {
                     $method = self::HTTP_POST;
-                } elseif (isset($group['external_resource_id'])) {
+                } elseif (isset($roster['external_resource_id'])) {
                     $method = self::HTTP_PUT;
-                    $roster = $group['external_resource_id'];
+                    $roster = $roster['external_resource_id'];
                 }
 
+                // get TeamID from partner-mapping
                 $team = parent::readPartnerMap(
                     self::PARTNER_MAP_GROUP,
                     $data['group']['uuid'],
@@ -438,7 +423,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                 );
                 $team = $team['external_resource_id'];
 
-                // role data to send if present
+                // build payload
                 $send = array();
                 if ($data['member']['role_name'] == 'Player') {
                     $send['non_player'] = 0;
@@ -448,16 +433,15 @@ class Teamsnap extends Webhook implements ProcessInterface
                 }
 
                 if ($method == self::HTTP_POST) {
-                    /*
-                     * The user does not exist in the TeamSnap system; Create
-                     * the user from the profile information.
-                     */
+                    // create new partner-mapping
+                    $this->domain .= '/teams/' . $team . '/as_roster/'
+                        . $this->webhook->subscriber['commissioner_id']
+                        . '/rosters';
 
-                    // add first/last name required for user creation
+                    // add additional information to payload
                     $send['first'] = $data['member']['first_name'];
                     $send['last'] = $data['member']['last_name'];
 
-                    // add email address for TeamSnap invite
                     if (isset($data['member']['guardian'])) {
                         $send['roster_email_addresses_attributes'] = array(
                             array(
@@ -474,26 +458,22 @@ class Teamsnap extends Webhook implements ProcessInterface
                         );
                     }
 
+                    // update request and let PostWebhooks complete
                     $this->setData(array('roster' => $send));
-                    $this->domain .= '/teams/' . $team . '/as_roster/'
-                        . $this->webhook->subscriber['commissioner_id']
-                        . '/rosters';
-
                     parent::post();
                 } else {
-                    /*
-                     * The user does exist in the TeamSnap system; Update the
-                     * existing user with the given information.
-                     */
-                    $this->setData(array('roster' => $send));
+                    // update existing partner-mapping
                     $this->domain .= '/teams/' . $team . '/as_roster/'
                         . $this->webhook->subscriber['commissioner_id']
                         . '/rosters/' . $roster;
 
+                    // update request and let PostWebhooks complete
+                    $this->setData(array('roster' => $send));
                     parent::put();
                 }
                 break;
             case self::WEBHOOK_REMOVE_ROLE:
+                // get RosterID from partner-mapping
                 $roster = parent::readPartnerMap(
                     self::PARTNER_MAP_USER,
                     $data['member']['uuid'],
@@ -501,6 +481,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                 );
                 $roster = $roster['external_resource_id'];
 
+                // get TeamID from partner-mapping
                 $team = parent::readPartnerMap(
                     self::PARTNER_MAP_GROUP,
                     $data['group']['uuid'],
@@ -512,16 +493,18 @@ class Teamsnap extends Webhook implements ProcessInterface
                     . $this->webhook->subscriber['commissioner_id']
                     . '/rosters/' . $roster;
 
-                // roster data to send
+                // build payload
                 $send = array(
                     'non_player' => $data['member']['role_name'] == 'Player' ? 1 : 0,
                     'is_manager' => $data['member']['is_admin'] ? 1 : 0,
                 );
 
+                // update request and let PostWebhooks complete
                 $this->setData(array('roster' => $send));
                 parent::put();
                 break;
             case self::WEBHOOK_ADD_SUBMISSION:
+                // get RosterID from partner-mapping
                 $roster = $method = '';
                 $roster = parent::readPartnerMap(
                     self::PARTNER_MAP_USER,
@@ -529,14 +512,15 @@ class Teamsnap extends Webhook implements ProcessInterface
                     $data['group']['uuid']
                 );
 
+                // create new user on TeamSnap, if resource was not found
                 if (isset($roster['message'])) {
-                    // resource was not found
                     $method = self::HTTP_POST;
                 } elseif (isset($roster['external_resource_id'])) {
                     $method = self::HTTP_PUT;
                     $roster = $roster['external_resource_id'];
                 }
 
+                // get TeamID from partner-mapping
                 $team = parent::readPartnerMap(
                     self::PARTNER_MAP_GROUP,
                     $data['group']['uuid'],
@@ -544,32 +528,19 @@ class Teamsnap extends Webhook implements ProcessInterface
                 );
                 $team = $team['external_resource_id'];
 
-                /**
-                 * Gathers all available data to send to TeamSnap. If required
-                 * elements are not present in the submission, and the user does
-                 * not previously exist, this will default to using All Players
-                 * account information.
-                 */
+                // build payload, default to acct info for missing items
                 $send = array();
                 $webform = $data['webform']['data'];
                 if (isset($webform['profile__field_firstname__profile'])) {
                     $send['first'] = $webform['profile__field_firstname__profile'];
                 } elseif ($method == self::HTTP_POST && !isset($webform['profile__field_firstname__profile'])) {
-                    /*
-                     * Element required for roster creation, but not present in
-                     * user submission; use information from the users account.
-                     */
-
+                    // required element missing, use profile info
                     $send['first'] = $data['member']['first_name'];
                 }
                 if (isset($webform['profile__field_lastname__profile'])) {
                     $send['last'] = $webform['profile__field_lastname__profile'];
                 } elseif ($method == self::HTTP_POST && !isset($webform['profile__field_lastname__profile'])) {
-                    /*
-                     * Element required for roster creation, but not present in
-                     * user submission; use information from the users account.
-                     */
-
+                    // required element missing, use profile info
                     $send['last'] = $data['member']['last_name'];
                 }
 
@@ -590,11 +561,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                             ),
                         );
                     } elseif ($method == self::HTTP_POST && !isset($webform['profile__field_email__profile'])) {
-                        /*
-                         * Element required for roster invitation, but not present in
-                         * user submission; use information from the users account.
-                         */
-
+                        // required element missing, use profile info
                         $send['roster_email_addresses_attributes'] = array(
                             array(
                                 'label' => 'Profile',
@@ -611,7 +578,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                     $send['gender'] = $webform['profile__field_user_gender__profile'] == 1 ? 'Male' : 'Female';
                 }
 
-                // add roster phone numbers if any were set
+                // add roster phone numbers, if present
                 $roster_telephones_attributes = array();
                 if (isset($webform['profile__field_phone__profile'])) {
                     $roster_telephones_attributes[] = array(
@@ -635,7 +602,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                     $send['roster_telephones_attributes'] = $roster_telephones_attributes;
                 }
 
-                // add address fields if they were set
+                // add address fields, if present
                 if (isset($webform['profile__field_home_address_street__profile'])) {
                     $send['address'] = $webform['profile__field_home_address_street__profile'];
                 }
@@ -655,29 +622,17 @@ class Teamsnap extends Webhook implements ProcessInterface
                     $send['country'] = $webform['profile__field_home_address_country__profile'];
                 }
 
+                // update request and let PostWebhooks complete
                 $this->setData(array('roster' => $send));
-
                 if ($method == self::HTTP_POST) {
-                    /*
-                     * The user does not exist in the TeamSnap system; Create
-                     * the user from the given information.
-                     */
-
                     $this->domain .= '/teams/' . $team . '/as_roster/'
                         . $this->webhook->subscriber['commissioner_id']
                         . '/rosters';
-
                     parent::post();
                 } else {
-                    /*
-                     * The user does exist in the TeamSnap system; Update the
-                     * existing user with the given information.
-                     */
-
                     $this->domain .= '/teams/' . $team . '/as_roster/'
                         . $this->webhook->subscriber['commissioner_id']
                         . '/rosters/' . $roster;
-
                     parent::put();
                 }
                 break;
@@ -688,7 +643,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                     isset($data['event']['location']) ? $data['event']['location'] : null
                 );
 
-                // make request payload for an event
+                // build payload
                 $send = array(
                     'eventname' => $data['event']['title'],
                     'division_id' => $this->webhook->subscriber['division_id'],
@@ -698,7 +653,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                     'location_id' => $location,
                 );
 
-                // add additional information to event payload
+                // add additional information to payload
                 if (isset($data['event']['description']) && !empty($data['event']['description'])) {
                     $send['notes'] = $data['event']['description'];
                 }
@@ -709,7 +664,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                     $original_send = $send;
 
                     foreach ($data['event']['competitor'] as $group) {
-                        // retrieve group specific data to complete the request
+                        // get TeamID from partner-mapping
                         $team = parent::readPartnerMap(
                             self::PARTNER_MAP_GROUP,
                             $group['uuid'],
@@ -717,13 +672,14 @@ class Teamsnap extends Webhook implements ProcessInterface
                         );
                         $team = $team['external_resource_id'];
 
+                        // get OpponentID from partner-mapping
                         $opponent = $this->getOpponentResource(
                             $group['uuid'],
                             $team,
                             $data['event']['competitor']
                         );
 
-                        // update request payload to make a game event
+                        // update payload to make a game event
                         $send = $original_send;
                         $send['opponent_id'] = $opponent;
                         $this->domain = $original_domain . '/teams/' . $team
@@ -731,12 +687,13 @@ class Teamsnap extends Webhook implements ProcessInterface
                             . $this->webhook->subscriber['commissioner_id']
                             . '/games';
 
-                        // set request payload and process the response for each
+                        // update payload and process the response
                         $this->setData(array('game' => $send));
                         parent::post();
                         $response = $this->send();
                         $response = $this->processJsonResponse($response);
 
+                        // manually create event partner-mapping
                         parent::createPartnerMap(
                             $response['game']['id'],
                             self::PARTNER_MAP_EVENT,
@@ -748,26 +705,28 @@ class Teamsnap extends Webhook implements ProcessInterface
                         $this->domain = $original_domain;
                     }
 
-                    // cancel webhook from sending since we handled it above
-                    // (only cancel for game events)
+                    // cancel webhook for game events (manually processed)
                     parent::setSend(parent::WEBHOOK_CANCEL);
                 } else {
+                    // get TeamID from partner-mapping
                     $team = parent::readPartnerMap(
                         self::PARTNER_MAP_GROUP,
                         $data['group']['uuid'],
                         $data['group']['uuid']
                     );
+
                     $team = $team['external_resource_id'];
                     $this->domain .= '/teams/' . $team . '/as_roster/'
                         . $this->webhook->subscriber['commissioner_id']
                         . '/practices';
                 }
 
+                // update request and let PostWebhooks complete
                 $this->setData(array('practice' => $send));
                 parent::post();
                 break;
             case self::WEBHOOK_UPDATE_EVENT:
-                // make request payload for event
+                // build payload
                 $send = array(
                     'eventname' => $data['event']['title'],
                     'division_id' => $this->webhook->subscriber['division_id'],
@@ -775,7 +734,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                     'event_date_end' => $data['event']['end'],
                 );
 
-                // add additional information to event payload
+                // add additional information to payload
                 if (isset($data['event']['description']) && !empty($data['event']['description'])) {
                     $send['notes'] = $data['event']['description'];
                 }
@@ -786,7 +745,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                     $original_send = $send;
 
                     foreach ($data['event']['competitor'] as $group) {
-                        // retrieve group specific data to complete the request
+                        // get TeamID from partner-mapping
                         $team = parent::readPartnerMap(
                             self::PARTNER_MAP_GROUP,
                             $group['uuid'],
@@ -794,6 +753,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                         );
                         $team = $team['external_resource_id'];
 
+                        // get EventID from partner-mapping
                         $event = parent::readPartnerMap(
                             self::PARTNER_MAP_EVENT,
                             $data['event']['uuid'],
@@ -801,19 +761,21 @@ class Teamsnap extends Webhook implements ProcessInterface
                         );
                         $event = $event['external_resource_id'];
 
+                        // make/get location resource
                         $event_location = isset($data['event']['location']) ? $data['event']['location'] : null;
                         $location = $this->getLocationResource(
                             $group['uuid'],
                             $event_location
                         );
 
+                        // get opponent resource
                         $opponent = $this->getOpponentResource(
                             $group['uuid'],
                             $team,
                             $data['event']['competitor']
                         );
 
-                        // set request payload and send for each
+                        // update request payload and send
                         $send = $original_send;
                         $send['location_id'] = $location;
                         $send['opponent_id'] = $opponent;
@@ -829,11 +791,10 @@ class Teamsnap extends Webhook implements ProcessInterface
                         $this->domain = $original_domain;
                     }
 
-                    // cancel webhook from sending since we handled it above
-                    // (only cancel for game events)
+                    // cancel webhook for game events (manually processed)
                     parent::setSend(parent::WEBHOOK_CANCEL);
                 } else {
-                    // retrieve group specific data to complete the request
+                    // get TeamID from partner-mapping
                     $team = parent::readPartnerMap(
                         self::PARTNER_MAP_GROUP,
                         $data['group']['uuid'],
@@ -841,6 +802,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                     );
                     $team = $team['external_resource_id'];
 
+                    // get EventID from partner-mapping
                     $event = parent::readPartnerMap(
                         self::PARTNER_MAP_EVENT,
                         $data['event']['uuid'],
@@ -848,13 +810,14 @@ class Teamsnap extends Webhook implements ProcessInterface
                     );
                     $event = $event['external_resource_id'];
 
+                    // make/get location resource
                     $event_location = isset($data['event']['location']) ? $data['event']['location'] : null;
                     $location = $this->getLocationResource(
                         $data['group']['uuid'],
                         $event_location
                     );
 
-                    // set request payload and send
+                    // update request and let PostWebhooks complete
                     $send['location_id'] = $location;
                     $this->domain .= '/teams/' . $team . '/as_roster/'
                         . $this->webhook->subscriber['commissioner_id']
@@ -869,7 +832,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                     $original_domain = $this->domain;
 
                     foreach ($data['event']['competitor'] as $group) {
-                        // retrieve group specific data to complete the request
+                        // get TeamID from partner-mapping
                         $team = parent::readPartnerMap(
                             self::PARTNER_MAP_GROUP,
                             $group['uuid'],
@@ -877,6 +840,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                         );
                         $team = $team['external_resource_id'];
 
+                        // get EventID from partner-mapping
                         $event = parent::readPartnerMap(
                             self::PARTNER_MAP_EVENT,
                             $data['event']['uuid'],
@@ -884,7 +848,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                         );
                         $event = $event['external_resource_id'];
 
-                        // set request payload and send
+                        // update request payload and send
                         $this->domain = $original_domain . '/teams/' . $team
                             . '/as_roster/'
                             . $this->webhook->subscriber['commissioner_id']
@@ -896,11 +860,10 @@ class Teamsnap extends Webhook implements ProcessInterface
                         $this->domain = $original_domain;
                     }
 
-                    // cancel webhook from sending since we handled it above
-                    // (only cancel for game events)
+                    // cancel webhook for game events (manually processed)
                     parent::setSend(parent::WEBHOOK_CANCEL);
                 } else {
-                    // retrieve group specific data to complete the request
+                    // get TeamID from partner-mapping
                     $team = parent::readPartnerMap(
                         self::PARTNER_MAP_GROUP,
                         $data['group']['uuid'],
@@ -908,6 +871,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                     );
                     $team = $team['external_resource_id'];
 
+                    // get EventID from partner-mapping
                     $event = parent::readPartnerMap(
                         self::PARTNER_MAP_EVENT,
                         $data['event']['uuid'],
@@ -915,7 +879,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                     );
                     $event = $event['external_resource_id'];
 
-                    // set request payload and send
+                    // update request and let PostWebhooks complete
                     $this->domain .= '/teams/' . $team . '/as_roster/'
                         . $this->webhook->subscriber['commissioner_id']
                         . '/practices/' . $event;
@@ -924,6 +888,7 @@ class Teamsnap extends Webhook implements ProcessInterface
 
                 break;
             default:
+                // Cancel webhook if not supported
                 $this->setSend(self::WEBHOOK_CANCEL);
                 break;
         }
@@ -941,9 +906,9 @@ class Teamsnap extends Webhook implements ProcessInterface
      */
     public function processResponse(Response $response)
     {
-        // if test mode, account for extra json wrapper from requestbin
         include 'config/config.php';
         if (isset($config['test_url'])) {
+            // if testing, account for extra json wrapper from requestbin
             $response = $this->processJsonResponse($response);
             $response = json_decode($response['body'], true);
         } else {
@@ -955,7 +920,7 @@ class Teamsnap extends Webhook implements ProcessInterface
         $original_data = $this->getOriginalData();
         switch ($original_data['webhook_type']) {
             case self::WEBHOOK_CREATE_GROUP:
-                // associate AllPlayers team uid with TeamSnap team id
+                // associate AllPlayers group UUID with TeamSnap TeamID
                 parent::createPartnerMap(
                     $response['team']['id'],
                     self::PARTNER_MAP_GROUP,
@@ -964,7 +929,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                 );
                 break;
             case self::WEBHOOK_DELETE_GROUP:
-                // need to add management for connections to all child groups
+                // delete partner-mapping with group UUID
                 parent::deletePartnerMap(
                     self::PARTNER_MAP_GROUP,
                     $original_data['group']['uuid']
@@ -972,7 +937,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                 break;
             case self::WEBHOOK_ADD_ROLE:
             case self::WEBHOOK_ADD_SUBMISSION:
-                // associate AllPlayers user uid with TeamSnap roster id
+                // get UserID from partner-mapping
                 $query = parent::readPartnerMap(
                     self::PARTNER_MAP_USER,
                     $original_data['member']['uuid'],
@@ -980,7 +945,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                 );
 
                 if (isset($query['message'])) {
-                    // failed to find a row; create new partner mapping
+                    // associate AllPlayers user UUID with TeamSnap RosterID
                     parent::createPartnerMap(
                         $response['roster']['id'],
                         self::PARTNER_MAP_USER,
@@ -988,7 +953,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                         $original_data['group']['uuid']
                     );
 
-                    // add guardian if present and does not exist
+                    // create partner-mapping for ContactID
                     if (isset($original_data['member']['guardian'])) {
                         $this->domain = 'https://api.teamsnap.com/v2';
                         $this->getContactResource(
@@ -998,28 +963,29 @@ class Teamsnap extends Webhook implements ProcessInterface
                         );
                     }
 
-                    // invite the user to complete their TeamSnap account
-                    $query = parent::readPartnerMap(
+                    // get TeamID from partner-mapping
+                    $team = parent::readPartnerMap(
                         self::PARTNER_MAP_GROUP,
                         $original_data['group']['uuid'],
                         $original_data['group']['uuid']
                     );
+                    // send TeamSnap account invite
                     $this->domain = 'https://api.teamsnap.com/v2/teams/'
-                        . $query['external_resource_id'] . '/as_roster/'
+                        . $team['external_resource_id'] . '/as_roster/'
                         . $this->webhook->subscriber['commissioner_id']
                         . '/invitations';
                     $send = array(
                         $response['roster']['id'],
                     );
 
+                    // update request and send
                     $this->setData(array('rosters' => $send));
                     parent::post();
                     $this->send();
                 }
                 break;
             case self::WEBHOOK_CREATE_EVENT:
-                // associate an AllPlayers event UUID with TeamSnap event ID
-                // this will only occur if a practice event is scheduled
+                // associate AllPlayers event UUID with TeamSnap EventID
                 parent::createPartnerMap(
                     $response['practice']['id'],
                     self::PARTNER_MAP_EVENT,
@@ -1028,6 +994,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                 );
                 break;
             case self::WEBHOOK_DELETE_EVENT:
+                // delete partner-mapping with event UUID
                 parent::deletePartnerMap(
                     self::PARTNER_MAP_EVENT,
                     $original_data['event']['uuid'],
@@ -1048,8 +1015,8 @@ class Teamsnap extends Webhook implements ProcessInterface
      */
     public function getSport($data)
     {
-        // if sport is set in supported list, return its value
         if (isset(self::$sports[$data])) {
+            // if sport is supported
             return self::$sports[$data];
         } else {
             // return Non-Sport Group
@@ -1073,18 +1040,18 @@ class Teamsnap extends Webhook implements ProcessInterface
             (new \DateTime(null, new \DateTimeZone('UTC')))
         )/(3600);
         if (date_format(new \DateTime($timezone), 'I') == 1) {
-            $user_timezone += -1; //adjust for dst
+            $user_timezone += -1; //adjust for DST
         }
 
-        // convert to utc (non-DST) format
+        // convert to UTC (non-DST) format
         $user_timezone = str_replace(
             '.',
             ':',
             number_format((floor($user_timezone) + ($user_timezone - floor($user_timezone)) * 60), 2)
         );
 
-        // if region is in supported list, return its value.
         if (isset(self::$regions[$user_timezone])) {
+            // if region is supported
             return self::$regions[$user_timezone];
         } else {
             // return default UTC region
@@ -1113,7 +1080,7 @@ class Teamsnap extends Webhook implements ProcessInterface
         $original_domain = $this->domain; // store old domain
         $location = '';
 
-        // check team partner mapping for the given uuid
+        // get TeamID from partner-mapping
         $team = parent::readPartnerMap(
             self::PARTNER_MAP_GROUP,
             $group_uuid,
@@ -1121,8 +1088,8 @@ class Teamsnap extends Webhook implements ProcessInterface
         );
         $team = $team['external_resource_id'];
 
-        // check if location partner mapping exists
         if (isset($event_location) && !empty($event_location)) {
+            // get LocationID from partner-mapping
             $location = parent::readPartnerMap(
                 self::PARTNER_MAP_RESOURCE,
                 $event_location['uuid'],
@@ -1138,13 +1105,13 @@ class Teamsnap extends Webhook implements ProcessInterface
             $event_location['street'] = '(TBD)';
         }
 
-        // make a basic location resource
+        // build payload
         $send = array(
             'location_name' => $event_location['title'],
             'address' => $event_location['street'],
         );
 
-        // add additional location information, if present
+        // add additional information to payload
         if (isset($event_location['additional']) && !empty($event_location['additional'])) {
             $send['address'] .= ', ' . $event_location['additional'];
         }
@@ -1161,31 +1128,29 @@ class Teamsnap extends Webhook implements ProcessInterface
             $send['address'] .= '. ' . strtoupper($event_location['country']) . '.';
         }
 
-        // update request body
+        // update request
         $this->setData(array('location' => $send));
 
-        // update existing partner-mapping, or create a new mapping
         if (isset($location['external_resource_id'])) {
+            // update existing partner-mapping
             $location = $location['external_resource_id'];
             $this->domain = $original_domain . '/teams/' . $team . '/as_roster/'
                 . $this->webhook->subscriber['commissioner_id'] . '/locations/'
                 . $location;
 
-            // update existing location data
             parent::put();
             $this->send();
         } else {
-
+            // create new partner-mapping
             $this->domain = $original_domain . '/teams/' . $team . '/as_roster/'
                 . $this->webhook->subscriber['commissioner_id'] . '/locations';
 
-            // create location
             parent::post();
             $response = $this->send();
             $response = $this->processJsonResponse($response);
 
-            // make partner mapping with location creation response data
             if (isset($event_location['uuid']) && !empty($event_location['uuid'])) {
+                // associate AllPlayers resouce UUID with TeamSnap LocationID
                 parent::createPartnerMap(
                     $response['location']['id'],
                     parent::PARTNER_MAP_RESOURCE,
@@ -1194,11 +1159,10 @@ class Teamsnap extends Webhook implements ProcessInterface
                 );
             }
 
-            // update location id
             $location = $response['location']['id'];
         }
 
-        // restore the old domain
+        // restore the old domain, return LocationID
         $this->domain = $original_domain;
         return $location;
     }
@@ -1223,9 +1187,9 @@ class Teamsnap extends Webhook implements ProcessInterface
         $original_domain = $this->domain; // store old domain
         $opponent = '';
 
-        // return the opponent resource mapping
         foreach ($competitors as $competitor) {
             if ($competitor['uuid'] != $group_uuid) {
+                // get OpponentID
                 $opponent = parent::readPartnerMap(
                     self::PARTNER_MAP_GROUP,
                     $competitor['uuid'],
@@ -1237,39 +1201,38 @@ class Teamsnap extends Webhook implements ProcessInterface
                     $competitor['name'] = '(TBD)';
                 }
 
-                // make basic opponent resource
+                // build payload
                 $send = array(
                     'opponent_name' => $competitor['name'],
                     'opponent_contact_name' => '(TBD)',
                 );
 
-                // update request body and make the opponent
+                // update request
                 $this->setData(array('opponent' => $send));
 
-                // use existing partner mapping data, or create a new mapping
                 if (isset($opponent['external_resource_id'])) {
+                    // update existing partner-mapping
                     $opponent = $opponent['external_resource_id'];
                     $this->domain = $original_domain . '/teams/'
                         . $group_partner_id . '/as_roster/'
                         . $this->webhook->subscriber['commissioner_id']
                         . '/opponents/' . $opponent;
 
-                    // update existing opponent data
                     parent::put();
                     $this->send();
                 } else {
+                    // create partner-mapping
                     $this->domain = $original_domain . '/teams/'
                         . $group_partner_id . '/as_roster/'
                         . $this->webhook->subscriber['commissioner_id']
                         . '/opponents';
 
-                    // create new opponent
                     parent::post();
                     $response = $this->send();
                     $response = $this->processJsonResponse($response);
 
-                    // make partner opponent mapping (opponent to group)
                     if (isset($competitor['uuid']) && !empty($competitor['uuid'])) {
+                        // assiciate AllPlayers group UUID with TeamSnap TeamID
                         parent::createPartnerMap(
                             $response['opponent']['id'],
                             parent::PARTNER_MAP_GROUP,
@@ -1278,7 +1241,6 @@ class Teamsnap extends Webhook implements ProcessInterface
                         );
                     }
 
-                    // update opponent id
                     $opponent = $response['opponent']['id'];
                 }
             }
@@ -1287,9 +1249,8 @@ class Teamsnap extends Webhook implements ProcessInterface
             $this->domain = $original_domain;
         }
 
-        // restore old domain
+        // restore old domain, return OpponentID
         $this->domain = $original_domain;
-
         return $opponent;
     }
 
@@ -1313,7 +1274,7 @@ class Teamsnap extends Webhook implements ProcessInterface
         $original_domain = $this->domain; // store old domain
         $contact = '';
 
-        // check team partner mapping for the given uuid
+        // get TeamID from partner-mapping
         $team = parent::readPartnerMap(
             self::PARTNER_MAP_GROUP,
             $group_uuid,
@@ -1321,14 +1282,14 @@ class Teamsnap extends Webhook implements ProcessInterface
         );
         $team = $team['external_resource_id'];
 
-        // check if contact partner mapping exists
+        // get ContactID from partner-mapping
         $contact = parent::readPartnerMap(
             self::PARTNER_MAP_USER,
             $contact_info['uuid'],
             $user_uuid
         );
 
-        // get teamsnap user id
+        // get UserID from partner-mapping
         $user = parent::readPartnerMap(
             parent::PARTNER_MAP_USER,
             $user_uuid,
@@ -1341,7 +1302,7 @@ class Teamsnap extends Webhook implements ProcessInterface
             $contact_info['first_name'] = '(Guardian)';
         }
 
-        // make a basic contact resource
+        // make payload
         $send = array(
             'label' => 'Guardian',
             'first' => $contact_info['first_name'],
@@ -1352,19 +1313,23 @@ class Teamsnap extends Webhook implements ProcessInterface
             $send['last'] = $contact_info['last_name'];
         }
 
-        // update existing partner-mapping, or create a new mapping
         if (isset($contact['external_resource_id'])) {
+            // update existing partner-mapping
             $contact = $contact['external_resource_id'];
             $this->domain = $original_domain . '/teams/' . $team . '/as_roster/'
                 . $this->webhook->subscriber['commissioner_id'] . '/rosters/'
                 . $user .  '/contacts/' . $contact;
 
-            // update existing contact data
             $this->setData(array('contact' => $send));
             parent::put();
             $this->send();
         } else {
-            // add additional contact information, if present
+            // create new partner-mapping
+            $this->domain = $original_domain . '/teams/' . $team . '/as_roster/'
+                . $this->webhook->subscriber['commissioner_id'] .  '/rosters/'
+                . $user . '/contacts';
+
+            // add additional information to payload
             if (isset($contact_info['email']) && !empty($contact_info['email'])) {
                 $send['contact_email_addresses_attributes'] = array(
                     array(
@@ -1374,18 +1339,13 @@ class Teamsnap extends Webhook implements ProcessInterface
                 );
             }
 
-            $this->domain = $original_domain . '/teams/' . $team . '/as_roster/'
-                . $this->webhook->subscriber['commissioner_id'] .  '/rosters/'
-                . $user . '/contacts';
-
-            // create contact
             $this->setData(array('contact' => $send));
             parent::post();
             $response = $this->send();
             $response = $this->processJsonResponse($response);
 
-            // make partner mapping with contact creation response data
             if (isset($contact_info['uuid']) && !empty($contact_info['uuid'])) {
+                // associate AllPlayers user UUID with TeamSnap ContactID
                 parent::createPartnerMap(
                     $response['contact']['id'],
                     parent::PARTNER_MAP_USER,
