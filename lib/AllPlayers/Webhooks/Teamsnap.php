@@ -438,11 +438,14 @@ class Teamsnap extends Webhook implements ProcessInterface
                 );
                 $team = $team['external_resource_id'];
 
-                // role data to send
-                $send = array(
-                    'non_player' => $data['member']['role_name'] == 'Player' ? 0 : 1,
-                    'is_manager' => $data['member']['is_admin'] ? 1 : 0,
-                );
+                // role data to send if present
+                $send = array();
+                if ($data['member']['role_name'] == 'Player') {
+                    $send['non_player'] = 0;
+                }
+                if ($data['member']['is_admin'] == 1) {
+                    $send['is_manager'] = 1;
+                }
 
                 if ($method == self::HTTP_POST) {
                     /*
