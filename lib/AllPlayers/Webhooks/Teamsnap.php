@@ -468,6 +468,34 @@ class Teamsnap extends Webhook implements ProcessInterface
                         break;
                     }
 
+                    // check for existing email
+                    $email = parent::readPartnerMap(
+                        self::PARTNER_MAP_RESOURCE,
+                        $data['member']['uuid'],
+                        $data['member']['uuid']
+                    );
+
+                    // update existing email
+                    if (isset($email['external_resource_id'])) {
+                        $email = $email['external_resource_id'];
+
+                        if (isset($data['member']['guardian'])) {
+                            $send['roster_email_addresses_attributes'] = array(
+                                array(
+                                    'id' => $email,
+                                    'email' => $data['member']['guardian']['email'],
+                                ),
+                            );
+                        } else {
+                            $send['roster_email_addresses_attributes'] = array(
+                                array(
+                                    'id' => $email,
+                                    'email' => $data['member']['email'],
+                                ),
+                            );
+                        }
+                    }
+
                     // update existing partner-mapping
                     $this->domain .= '/teams/' . $team . '/as_roster/'
                         . $this->webhook->subscriber['commissioner_id']
@@ -959,6 +987,14 @@ class Teamsnap extends Webhook implements ProcessInterface
                         $original_data['group']['uuid']
                     );
 
+                    // associate AllPlayers email with Roster
+                    parent::createPartnerMap(
+                        $response['roster']['roster_email_addresses'][0]['id'],
+                        self::PARTNER_MAP_RESOURCE,
+                        $original_data['member']['uuid'],
+                        $original_data['member']['uuid']
+                    );
+
                     // create partner-mapping for ContactID
                     if (isset($original_data['member']['guardian'])) {
                         $this->domain = 'https://api.teamsnap.com/v2';
@@ -988,6 +1024,20 @@ class Teamsnap extends Webhook implements ProcessInterface
                     $this->setData(array('rosters' => $send));
                     parent::post();
                     $this->send();
+                } else {
+                    // update email partner mapping
+                    parent::deletePartnerMap(
+                        self::PARTNER_MAP_RESOURCE,
+                        $original_data['member']['uuid'],
+                        $original_data['member']['uuid']
+                    );
+
+                    parent::createPartnerMap(
+                        $response['roster']['roster_email_addresses'][0]['id'],
+                        self::PARTNER_MAP_RESOURCE,
+                        $original_data['member']['uuid'],
+                        $original_data['member']['uuid']
+                    );
                 }
                 break;
             case self::WEBHOOK_CREATE_EVENT:
@@ -1066,6 +1116,60 @@ class Teamsnap extends Webhook implements ProcessInterface
                 'location' => 'United Kingdom',
             );
         }
+    }
+
+    /**
+     * Dynamically build the email data to send for a TeamSnap user/contact.
+     *
+     * @param string $email_address
+     *   The email address to map.
+     * @param string $user_uuid
+     *   The AllPlayers UUID to make/search the partner-mapping.
+     * @param string $contact_uuid (optional)
+     *   The AllPlayers UUID of a contact to make/search the partner-mapping.
+     * @param boolean
+     *   A flag to determine if $email_address is a guardian email or not.
+     *
+     * @return array
+     *   The data to send to create/update the TeamSnap email resource.
+     */
+    public function getEmailResource($email_address, $user_uuid, $contact_uuid = null, $guardian = false) {
+        $email = '';
+        $email_id = parent::readPartnerMap(
+            self::PARTNER_MAP_RESOURCE,
+            $user_uuid,
+            $contact_uuid
+        );
+
+        // build email payload
+        if (isset($email_id['external_resource_id'])) {
+            // partner mapping exists, build put data
+            $email_id = $email_id['external_resource_id'];
+
+            $email = array(
+                array(
+                    'id' => $email_id,
+                    'email' => $email_address,
+                ),
+            );
+        } else {
+            // partner mapping does not exist, build post data
+            $label = 'Profile';
+
+            // update label for guardian
+            if ($guardian == true) {
+                $label = 'Guardian ' . $label;
+            }
+
+            $email = array(
+                array(
+                    'label' => $label,
+                    'email' => $email_address,
+                ),
+            );
+        }
+
+        return $email;
     }
 
     /**
