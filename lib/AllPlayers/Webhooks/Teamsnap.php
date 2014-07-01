@@ -334,11 +334,9 @@ class Teamsnap extends Webhook implements ProcessInterface
                 $send = array(
                     'first' => $data['member']['first_name'],
                     'last' => $data['member']['last_name'],
-                    'roster_email_addresses_attributes' => array(
-                        array(
-                            'label' => 'Profile',
-                            'email' => $data['member']['email'],
-                        ),
+                    'roster_email_addresses_attributes' => $this->getEmailResource(
+                        $data['member']['email'],
+                        $data['member']['uuid']
                     ),
                     'non_player' => 1,
                     'is_manager' => 1,
@@ -432,6 +430,21 @@ class Teamsnap extends Webhook implements ProcessInterface
                     $send['is_manager'] = 1;
                 }
 
+                // add email information to payload
+                if (isset($data['member']['guardian'])) {
+                   $send['roster_email_addresses_attributes'] = $this->getEmailResource(
+                        $data['member']['guardian']['email'],
+                        $data['member']['uuid'],
+                        $data['member']['guardian']['uuid'],
+                        true
+                    );
+                } else {
+                    $send['roster_email_addresses_attributes'] = $this->getEmailResource(
+                        $data['member']['email'],
+                        $data['member']['uuid']
+                    );
+                }
+
                 if ($method == self::HTTP_POST) {
                     // create new partner-mapping
                     $this->domain .= '/teams/' . $team . '/as_roster/'
@@ -441,22 +454,6 @@ class Teamsnap extends Webhook implements ProcessInterface
                     // add additional information to payload
                     $send['first'] = $data['member']['first_name'];
                     $send['last'] = $data['member']['last_name'];
-
-                    if (isset($data['member']['guardian'])) {
-                        $send['roster_email_addresses_attributes'] = array(
-                            array(
-                                'label' => 'Guardian Profile',
-                                'email' => $data['member']['guardian']['email'],
-                            ),
-                        );
-                    } else {
-                        $send['roster_email_addresses_attributes'] = array(
-                            array(
-                                'label' => 'Profile',
-                                'email' => $data['member']['email'],
-                            ),
-                        );
-                    }
 
                     // update request and let PostWebhooks complete
                     $this->setData(array('roster' => $send));
@@ -474,27 +471,6 @@ class Teamsnap extends Webhook implements ProcessInterface
                         $data['member']['uuid'],
                         $data['member']['uuid']
                     );
-
-                    // update existing email
-                    if (isset($email['external_resource_id'])) {
-                        $email = $email['external_resource_id'];
-
-                        if (isset($data['member']['guardian'])) {
-                            $send['roster_email_addresses_attributes'] = array(
-                                array(
-                                    'id' => $email,
-                                    'email' => $data['member']['guardian']['email'],
-                                ),
-                            );
-                        } else {
-                            $send['roster_email_addresses_attributes'] = array(
-                                array(
-                                    'id' => $email,
-                                    'email' => $data['member']['email'],
-                                ),
-                            );
-                        }
-                    }
 
                     // update existing partner-mapping
                     $this->domain .= '/teams/' . $team . '/as_roster/'
@@ -580,27 +556,23 @@ class Teamsnap extends Webhook implements ProcessInterface
 
                 // override email with guardian email, if present
                 if (isset($data['member']['guardian'])) {
-                    $send['roster_email_addresses_attributes'] = array(
-                        array(
-                            'label' => 'Guardian Profile',
-                            'email' => $data['member']['guardian']['email'],
-                        ),
+                   $send['roster_email_addresses_attributes'] = $this->getEmailResource(
+                        $data['member']['guardian']['email'],
+                        $data['member']['uuid'],
+                        $data['member']['guardian']['uuid'],
+                        true
                     );
                 } else {
                     if (isset($webform['profile__field_email__profile'])) {
-                        $send['roster_email_addresses_attributes'] = array(
-                            array(
-                                'label' => 'Webform',
-                                'email' => $webform['profile__field_email__profile'],
-                            ),
+                        $send['roster_email_addresses_attributes'] = $this->getEmailResource(
+                            $webform['profile__field_email__profile'],
+                            $data['member']['uuid']
                         );
                     } elseif ($method == self::HTTP_POST && !isset($webform['profile__field_email__profile'])) {
                         // required element missing, use profile info
-                        $send['roster_email_addresses_attributes'] = array(
-                            array(
-                                'label' => 'Profile',
-                                'email' => $data['member']['email'],
-                            ),
+                        $send['roster_email_addresses_attributes'] = $this->getEmailResource(
+                            $data['member']['email'],
+                            $data['member']['uuid']
                         );
                     }
                 }
@@ -1024,20 +996,6 @@ class Teamsnap extends Webhook implements ProcessInterface
                     $this->setData(array('rosters' => $send));
                     parent::post();
                     $this->send();
-                } else {
-                    // update email partner mapping
-                    parent::deletePartnerMap(
-                        self::PARTNER_MAP_RESOURCE,
-                        $original_data['member']['uuid'],
-                        $original_data['member']['uuid']
-                    );
-
-                    parent::createPartnerMap(
-                        $response['roster']['roster_email_addresses'][0]['id'],
-                        self::PARTNER_MAP_RESOURCE,
-                        $original_data['member']['uuid'],
-                        $original_data['member']['uuid']
-                    );
                 }
                 break;
             case self::WEBHOOK_CREATE_EVENT:
@@ -1418,9 +1376,17 @@ class Teamsnap extends Webhook implements ProcessInterface
             'first' => $contact_info['first_name'],
         );
 
-        // add additional contact information, if present
+        // add additional information to payload, if present
         if (isset($contact_info['last_name']) && !empty($contact_info['last_name'])) {
             $send['last'] = $contact_info['last_name'];
+        }
+
+        if (isset($contact_info['email']) && !empty($contact_info['email'])) {
+            $send['contact_email_addresses_attributes'] = $this->getEmailResource(
+                $contact_info['email'],
+                $user_uuid,
+                $contact_info['uuid']
+            );
         }
 
         if (isset($contact['external_resource_id'])) {
@@ -1438,16 +1404,6 @@ class Teamsnap extends Webhook implements ProcessInterface
             $this->domain = $original_domain . '/teams/' . $team . '/as_roster/'
                 . $this->webhook->subscriber['commissioner_id'] .  '/rosters/'
                 . $user . '/contacts';
-
-            // add additional information to payload
-            if (isset($contact_info['email']) && !empty($contact_info['email'])) {
-                $send['contact_email_addresses_attributes'] = array(
-                    array(
-                        'label' => 'Profile',
-                        'email' => $contact_info['email'],
-                    ),
-                );
-            }
 
             $this->setData(array('contact' => $send));
             parent::post();
