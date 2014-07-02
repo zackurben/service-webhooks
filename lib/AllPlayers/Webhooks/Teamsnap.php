@@ -653,7 +653,6 @@ class Teamsnap extends Webhook implements ProcessInterface
                 $send = array(
                     'eventname' => $data['event']['title'],
                     'division_id' => $this->webhook->subscriber['division_id'],
-                    'league_controlled' => false,
                     'event_date_start' => $data['event']['start'],
                     'event_date_end' => $data['event']['end'],
                     'location_id' => $location,
@@ -686,12 +685,26 @@ class Teamsnap extends Webhook implements ProcessInterface
                         );
 
                         // update payload to make a game event
-                        $send = $original_send;
-                        $send['opponent_id'] = $opponent;
                         $this->domain = $original_domain . '/teams/' . $team
                             . '/as_roster/'
                             . $this->webhook->subscriber['commissioner_id']
                             . '/games';
+                        $send['opponent_id'] = $opponent;
+
+                        // add additional information to payload
+                        $score = $this->getGameScores(
+                            $group['uuid'],
+                            $data['event']['competitor']
+                        );
+                        if (isset($score['score_for']) && !empty($score['score_for'])) {
+                            $send['score_for'] = $score['score_for'];
+                        }
+                        if (isset($score['score_against']) && !empty($score['score_agaist'])) {
+                            $send['score_against'] = $score['score_against'];
+                        }
+                        if (isset($score['home_or_away']) && !empty($score['home_or_away'])) {
+                            $send['home_or_away'] = $score['home_or_away'];
+                        }
 
                         // update payload and process the response
                         $this->setData(array('game' => $send));
@@ -709,6 +722,7 @@ class Teamsnap extends Webhook implements ProcessInterface
 
                         // reset temp variables for next iteration
                         $this->domain = $original_domain;
+                        $send = $original_send;
                     }
 
                     // cancel webhook for game events (manually processed)
@@ -1074,6 +1088,40 @@ class Teamsnap extends Webhook implements ProcessInterface
                 'location' => 'United Kingdom',
             );
         }
+    }
+
+    /**
+     * Get the scores for a given group, for an event.
+     *
+     * @param string $group_uuid
+     *   The group recieving an event update from the webhook.
+     * @param array $competitors
+     *   The list of competitors from the AllPlayers Webhook.
+     *
+     * @return array
+     *   The score specifics for a game event, keyed by TeamSnap qualities.
+     */
+    public function getGameScores($group_uuid, array $competitors) {
+        $score = array();
+
+        foreach ($competitors as $competitor) {
+            if ($competitor['uuid'] == $group_uuid) {
+                $score['score_for'] = $competitor['score'];
+
+                // determine team status
+                if (strcasecmp($competitor['label'], 'Home') == 0) {
+                    // group is home
+                    $score['home_or_away'] = 1;
+                } elseif (strcasecmp($competitor['label'], 'Away') == 0) {
+                    // group is away
+                    $score['home_or_away'] = 2;
+                }
+            } else {
+                $score['score_against'] = $competitor['score'];
+            }
+        }
+
+        return $score;
     }
 
     /**
