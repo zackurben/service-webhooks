@@ -684,22 +684,18 @@ class Teamsnap extends Webhook implements ProcessInterface
                             $data['event']['competitor']
                         );
 
-                        // update payload to make a game event
-                        $this->domain = $original_domain . '/teams/' . $team
-                            . '/as_roster/'
-                            . $this->webhook->subscriber['commissioner_id']
-                            . '/games';
-                        $send['opponent_id'] = $opponent;
-
-                        // add additional information to payload
+                        // get score data from webhook
                         $score = $this->getGameScores(
                             $group['uuid'],
                             $data['event']['competitor']
                         );
+
+                        // add additional information to payload
+                        $send['opponent_id'] = $opponent;
                         if (isset($score['score_for']) && !empty($score['score_for'])) {
                             $send['score_for'] = $score['score_for'];
                         }
-                        if (isset($score['score_against']) && !empty($score['score_agaist'])) {
+                        if (isset($score['score_against']) && !empty($score['score_against'])) {
                             $send['score_against'] = $score['score_against'];
                         }
                         if (isset($score['home_or_away']) && !empty($score['home_or_away'])) {
@@ -707,6 +703,10 @@ class Teamsnap extends Webhook implements ProcessInterface
                         }
 
                         // update payload and process the response
+                        $this->domain = $original_domain . '/teams/' . $team
+                            . '/as_roster/'
+                            . $this->webhook->subscriber['commissioner_id']
+                            . '/games';
                         $this->setData(array('game' => $send));
                         parent::post();
                         $response = $this->send();
@@ -795,10 +795,26 @@ class Teamsnap extends Webhook implements ProcessInterface
                             $data['event']['competitor']
                         );
 
-                        // update request payload and send
-                        $send = $original_send;
+                        // get score data from webhook
+                        $score = $this->getGameScores(
+                            $group['uuid'],
+                            $data['event']['competitor']
+                        );
+
+                        // add additional information to payload
                         $send['location_id'] = $location;
                         $send['opponent_id'] = $opponent;
+                        if (isset($score['score_for']) && !empty($score['score_for'])) {
+                            $send['score_for'] = $score['score_for'];
+                        }
+                        if (isset($score['score_against']) && !empty($score['score_against'])) {
+                            $send['score_against'] = $score['score_against'];
+                        }
+                        if (isset($score['home_or_away']) && !empty($score['home_or_away'])) {
+                            $send['home_or_away'] = $score['home_or_away'];
+                        }
+
+                        // update request payload and send
                         $this->domain = $original_domain . '/teams/' . $team
                             . '/as_roster/'
                             . $this->webhook->subscriber['commissioner_id']
@@ -809,6 +825,7 @@ class Teamsnap extends Webhook implements ProcessInterface
 
                         // reset temp variables for next iteration
                         $this->domain = $original_domain;
+                        $send = $original_send;
                     }
 
                     // cancel webhook for game events (manually processed)
