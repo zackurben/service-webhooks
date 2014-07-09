@@ -138,6 +138,13 @@ class Webhook
      *
      * @var string
      */
+    const WEBHOOK_DELETE_USER = 'user_removed_from_group';
+
+    /**
+     * A string value for an available webhook type.
+     *
+     * @var string
+     */
     const WEBHOOK_CREATE_EVENT = 'user_creates_event';
 
     /**
