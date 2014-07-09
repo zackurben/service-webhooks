@@ -674,6 +674,12 @@ class Webhook
     protected function deletePartnerMap($item_type, $item_uuid, $partner_uuid = null)
     {
         $url = "https://api.zurben.apci.ws/api/v2/externalid/{$item_type}/{$item_uuid}";
+
+        // delete single row
+        if (!is_null($partner_uuid)) {
+            $url .= "/{$partner_uuid}";
+        }
+
         $client = new Client(
             $url,
             array(
@@ -682,22 +688,10 @@ class Webhook
             )
         );
 
-        $data = array(
-            'item_type' => $item_type,
-            'item_uuid' => $item_uuid,
-        );
-
-        // delete single row
-        if (!is_null($partner_uuid)) {
-            $client->domain .= "/{$partner_uuid}";
-            $data['partner_uuid'] = $partner_uuid;
-        }
-
         // send API request and return response
         $response = $client->delete(
             $client->getBaseUrl() . '.json',
-            array('Content-Type' => 'application/json'),
-            json_encode($data)
+            array('Content-Type' => 'application/json')
         )->send();
         $response = $this->processJsonResponse($response);
 
