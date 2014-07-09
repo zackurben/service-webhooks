@@ -642,6 +642,29 @@ class Teamsnap extends Webhook implements ProcessInterface
                     parent::put();
                 }
                 break;
+            case self::WEBHOOK_DELETE_USER:
+                // get TeamID from partner-mapping
+                $team = parent::readPartnerMap(
+                    self::PARTNER_MAP_GROUP,
+                    $data['group']['uuid'],
+                    $data['group']['uuid']
+                );
+                $team = $team['external_resource_id'];
+
+                $roster = parent::readPartnerMap(
+                    self::PARTNER_MAP_USER,
+                    $data['member']['uuid'],
+                    $data['group']['uuid']
+                );
+                $roster = $roster['external_resource_id'];
+
+                // delete user from team
+                $this->domain .= '/teams/' . $team . '/as_roster/'
+                    . $this->webhook->subscriber['commissioner_id']
+                    . '/rosters/' . $roster;
+
+                parent::delete();
+                break;
             case self::WEBHOOK_CREATE_EVENT:
                 // make/get location resource
                 $location = $this->getLocationResource(
@@ -1028,6 +1051,14 @@ class Teamsnap extends Webhook implements ProcessInterface
                     parent::post();
                     $this->send();
                 }
+                break;
+            case self::WEBHOOK_DELETE_USER:
+                // delete partner-mapping with user UUID
+                parent::deletePartnerMap(
+                    self::PARTNER_MAP_USER,
+                    $original_data['member']['uuid'],
+                    $original_data['group']['uuid']
+                );
                 break;
             case self::WEBHOOK_CREATE_EVENT:
                 // associate AllPlayers event UUID with TeamSnap EventID
