@@ -432,7 +432,7 @@ class Teamsnap extends Webhook implements ProcessInterface
 
                 // add email information to payload
                 if (isset($data['member']['guardian'])) {
-                   $send['roster_email_addresses_attributes'] = $this->getEmailResource(
+                    $send['roster_email_addresses_attributes'] = $this->getEmailResource(
                         $data['member']['guardian']['email'],
                         $data['member']['uuid'],
                         $data['member']['guardian']['uuid'],
@@ -556,7 +556,7 @@ class Teamsnap extends Webhook implements ProcessInterface
 
                 // override email with guardian email, if present
                 if (isset($data['member']['guardian'])) {
-                   $send['roster_email_addresses_attributes'] = $this->getEmailResource(
+                    $send['roster_email_addresses_attributes'] = $this->getEmailResource(
                         $data['member']['guardian']['email'],
                         $data['member']['uuid'],
                         $data['member']['guardian']['uuid'],
@@ -1149,7 +1149,8 @@ class Teamsnap extends Webhook implements ProcessInterface
      * @return array
      *   The score specifics for a game event, keyed by TeamSnap qualities.
      */
-    public function getGameScores($group_uuid, array $competitors) {
+    public function getGameScores($group_uuid, array $competitors)
+    {
         $score = array();
 
         foreach ($competitors as $competitor) {
@@ -1187,7 +1188,12 @@ class Teamsnap extends Webhook implements ProcessInterface
      * @return array
      *   The data to send to create/update the TeamSnap email resource.
      */
-    public function getEmailResource($email_address, $user_uuid, $contact_uuid = null, $guardian = false) {
+    public function getEmailResource(
+        $email_address,
+        $user_uuid,
+        $contact_uuid = null,
+        $guardian = false
+    ) {
         $email = '';
         $email_id = parent::readPartnerMap(
             self::PARTNER_MAP_RESOURCE,
@@ -1366,10 +1372,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                 }
 
                 // build payload
-                $send = array(
-                    'opponent_name' => $competitor['name'],
-                    'opponent_contact_name' => '(TBD)',
-                );
+                $send = array('opponent_name' => $competitor['name']);
 
                 // update request
                 $this->setData(array('opponent' => $send));
