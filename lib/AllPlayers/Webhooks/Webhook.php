@@ -190,6 +190,27 @@ class Webhook
     const PARTNER_MAP_RESOURCE = 'resource';
 
     /**
+     * A string value for an available partner mapping subtype option.
+     *
+     * @var string
+     */
+    const PARTNER_MAP_SUBTYPE_USER_EMAIL = 'email';
+
+    /**
+     * A string value for an available partner mapping subtype option.
+     *
+     * @var string
+     */
+    const PARTNER_MAP_SUBTYPE_USER_CONTACT = 'contact';
+
+    /**
+     * A string value for an available partner mapping subtype option.
+     *
+     * @var string
+     */
+    const PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL = 'contact';
+
+    /**
      * The list of headers that will be sent with each request.
      *
      * @var array
@@ -567,6 +588,11 @@ class Webhook
      *   The AllPlayers item uuid to map.
      * @param string $partner_uuid
      *   The AllPlayers partner uuid.
+     * @param string $subtype (Optional)
+     *   The resource subtype to map.
+     *   @see PARTNER_MAP_SUBTYPE_USER_EMAIL
+     *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT
+     *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
      *
      * @return array
      *   The AllPlayers response from creating a resource mapping.
@@ -575,11 +601,11 @@ class Webhook
         $external_resource_id,
         $item_type,
         $item_uuid,
-        $partner_uuid
+        $partner_uuid,
+        $subtype = null
     ) {
-        $url = 'https://api.zurben.apci.ws/api/v2/externalid';
         $client = new Client(
-            $url,
+            'https://api.zurben.apci.ws/api/v2/externalid',
             array(
                 'curl.CURLOPT_SSL_VERIFYPEER' => false,
                 'curl.CURLOPT_CERTINFO' => false,
@@ -593,6 +619,11 @@ class Webhook
             'item_uuid' => $item_uuid,
             'partner_uuid' => $partner_uuid,
         );
+
+        // add subtype if present
+        if (!is_null($subtype)) {
+            $data['sub_item_type'] = $subtype;
+        }
 
         // send API request and return response
         $request = $client->post(
@@ -624,13 +655,35 @@ class Webhook
      *   The AllPlayers item uuid to map.
      * @param string $partner_uuid (Optional)
      *   The AllPlayers partner uuid.
+     * @param string $subtype (Optional)
+     *   The resource subtype to map.
+     *   @see PARTNER_MAP_SUBTYPE_USER_EMAIL
+     *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT
+     *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
      *
      * @return array
      *   The AllPlayers response from reading a resouce mapping.
      */
-    protected function readPartnerMap($item_type, $item_uuid, $partner_uuid = null)
-    {
+    protected function readPartnerMap(
+        $item_type,
+        $item_uuid,
+        $partner_uuid = null,
+        $subtype = null
+    ) {
         $url = "https://api.zurben.apci.ws/api/v2/externalid/{$item_type}/{$item_uuid}";
+
+        // add optional parameters if present
+        $param = array();
+        if (!is_null($partner_uuid)) {
+            $param['partner_uuid'] = $partner_uuid;
+        }
+        if (!is_null($subtype)) {
+            $param['sub_item_type'] = $subtype;
+        }
+        if (!empty($param)) {
+            $url .= '?' . http_build_query($param);
+        }
+
         $client = new Client(
             $url,
             array(
@@ -638,11 +691,6 @@ class Webhook
                 'curl.CURLOPT_CERTINFO' => false,
             )
         );
-
-        // read single row
-        if (!is_null($partner_uuid)) {
-            $client->setBaseUrl("{$client->getBaseUrl(false)}/{$partner_uuid}");
-        }
 
         // send API request and return response
         $request = $client->get($client->getBaseUrl() . '.json');
@@ -670,14 +718,33 @@ class Webhook
      *   The AllPlayers item uuid to map.
      * @param string $partner_uuid (Optional)
      *   The AllPlayers partner uuid.
+     * @param string $subtype (Optional)
+     *   The resource subtype to map.
+     *   @see PARTNER_MAP_SUBTYPE_USER_EMAIL
+     *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT
+     *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
+     *
+     * @return array
+     *   The AllPlayers response from deleting the resouce mapping.
      */
-    protected function deletePartnerMap($item_type, $item_uuid, $partner_uuid = null)
-    {
+    protected function deletePartnerMap(
+        $item_type,
+        $item_uuid,
+        $partner_uuid = null,
+        $subtype = null
+    ) {
         $url = "https://api.zurben.apci.ws/api/v2/externalid/{$item_type}/{$item_uuid}";
 
-        // delete single row
+        // add optional parameters if present
+        $param = array();
         if (!is_null($partner_uuid)) {
-            $url .= "/{$partner_uuid}";
+            $param['partner_uuid'] = $partner_uuid;
+        }
+        if (!is_null($subtype)) {
+            $param['sub_item_type'] = $subtype;
+        }
+        if (!empty($param)) {
+            $url .= '?' . http_build_query($param);
         }
 
         $client = new Client(
