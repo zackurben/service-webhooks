@@ -208,7 +208,7 @@ class Webhook
      *
      * @var string
      */
-    const PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL = 'contact';
+    const PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL = 'contact_email';
 
     /**
      * The list of headers that will be sent with each request.
@@ -627,10 +627,11 @@ class Webhook
 
         // send API request and return response
         $request = $client->post(
-            $client->getBaseUrl() . '.json',
+            $client->getBaseUrl(),
             array('Content-Type' => 'application/json'),
             json_encode($data)
         );
+
         $response = $request->send();
         $response = $this->processJsonResponse($response);
 
@@ -668,7 +669,7 @@ class Webhook
         $item_type,
         $item_uuid,
         $partner_uuid = null,
-        $subtype = null
+        $subtype = 'entity'
     ) {
         $url = "https://api.zurben.apci.ws/api/v2/externalid/{$item_type}/{$item_uuid}";
 
@@ -693,9 +694,14 @@ class Webhook
         );
 
         // send API request and return response
-        $request = $client->get($client->getBaseUrl() . '.json');
+        $request = $client->get($client->getBaseUrl());
         $response = $request->send();
         $response = $this->processJsonResponse($response);
+
+        // remove double array with 1 element
+        if (!array_key_exists('message', $response)) {
+            $response = array_shift($response);
+        }
 
         return $response;
     }
@@ -757,7 +763,7 @@ class Webhook
 
         // send API request and return response
         $response = $client->delete(
-            $client->getBaseUrl() . '.json',
+            $client->getBaseUrl(),
             array('Content-Type' => 'application/json')
         )->send();
         $response = $this->processJsonResponse($response);
