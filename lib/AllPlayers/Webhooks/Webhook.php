@@ -834,7 +834,7 @@ class Webhook
     }
 
     /**
-     * Read a resource mapping between AllPlayers and a partner.
+     * Read a multi-resource mapping between AllPlayers and a partner.
      *
      * If the partner_uuid parameter is not included, this function will return
      * all the elements mapped with the item_uuid.
@@ -890,6 +890,75 @@ class Webhook
                 return array(
                     'message' => 'The given unique_uuid does not have value associated with it in the existing partner-mapping.',
                 );
+            }
+        }
+    }
+
+    /**
+     * Delete a multi-resource mapping between AllPlayers and a partner.
+     *
+     * If the partner_uuid parameter is not included, this function will return
+     * all the elements mapped with the item_uuid.
+     *
+     * @todo Remove cURL options (Used for self-signed certificates).
+     *
+     * @param string $item_type
+     *   The AllPlayers item type to map.
+     *   @see PARTNER_MAP_USER
+     *   @see PARTNER_MAP_EVENT
+     *   @see PARTNER_MAP_GROUP
+     *   @see PARTNER_MAP_RESOURCE
+     * @param string $item_uuid
+     *   The AllPlayers item uuid to map.
+     * @param string $unique_uuid
+     *   The unique AllPlayers uuid to identify the relation.
+     * @param string $partner_uuid (Optional)
+     *   The AllPlayers partner uuid.
+     * @param string $subtype (Optional)
+     *   The resource subtype to map.
+     *   @see PARTNER_MAP_SUBTYPE_USER_EMAIL
+     *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT
+     *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
+     */
+    protected function deletePartnerMapMultiple(
+        $item_type,
+        $item_uuid,
+        $unique_uuid,
+        $partner_uuid = null,
+        $subtype = null
+    ) {
+        // determine if mapping exists
+        $mapping = $this->readPartnerMap(
+            $item_type,
+            $item_uuid,
+            $partner_uuid,
+            $subtype
+        );
+
+        if (is_array($mapping) && !array_key_exists('message', $mapping)) {
+            $mapping = json_decode($mapping, true);
+
+            if (array_key_exists($unique_uuid, $mapping)) {
+                unset($mapping[$unique_uuid]);
+
+                if (empty($mapping)) {
+                    // clean up empty resource left behind
+                    $this->deletePartnerMap(
+                        $item_type,
+                        $item_uuid,
+                        $partner_uuid,
+                        $subtype
+                    );
+                } else {
+                    // update current mapping
+                    $this->createPartnerMap(
+                        json_encode($mapping),
+                        $item_type,
+                        $item_uuid,
+                        $partner_uuid,
+                        $subtype
+                    );
+                }
             }
         }
     }
