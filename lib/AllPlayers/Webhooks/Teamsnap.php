@@ -1080,79 +1080,23 @@ class Teamsnap extends Webhook implements ProcessInterface
 
                 // delete partner-mapping for contact id
                 if (isset($original_data['member']['guardian'])) {
-                    // read partner-mapping for contact id
-                    $parent = parent::readPartnerMap(
+                    // delete partner-mapping for contact id.
+                    parent::deletePartnerMapMultiple(
                         self::PARTNER_MAP_USER,
                         $original_data['member']['guardian']['uuid'],
+                        $original_data['member']['uuid'],
                         $original_data['group']['uuid'],
                         self::PARTNER_MAP_SUBTYPE_USER_CONTACT
                     );
 
-                    // check if any resource is already defined
-                    $resource = null;
-                    if (array_key_exists('external_resource_id', $parent)) {
-                        $resource = json_decode($parent['external_resource_id'], true);
-                    }
-
-                    // delete partner-mapping
-                    if (!is_null($resource) && isset($resource[$original_data['member']['uuid']])) {
-                        unset($resource[$original_data['member']['uuid']]);
-
-                        if (empty($resource)) {
-                            // delete empty partner-mapping
-                            parent::deletePartnerMap(
-                                self::PARTNER_MAP_USER,
-                                $original_data['member']['guardian']['uuid'],
-                                $original_data['group']['uuid'],
-                                self::PARTNER_MAP_SUBTYPE_USER_CONTACT
-                            );
-                        } else {
-                            // update partner-mapping
-                            parent::createPartnerMap(
-                                self::PARTNER_MAP_USER,
-                                $original_data['member']['guardian']['uuid'],
-                                $original_data['group']['uuid'],
-                                self::PARTNER_MAP_SUBTYPE_USER_CONTACT
-                            );
-                        }
-                    }
-
-                    // read partner-mapping for contact email id
-                    $parent = parent::readPartnerMap(
+                    // delete partner-mapping for contact email id
+                    parent::deletePartnerMapMultiple(
                         self::PARTNER_MAP_USER,
                         $original_data['member']['guardian']['uuid'],
+                        $original_data['member']['uuid'],
                         $original_data['group']['uuid'],
                         self::PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
                     );
-
-                    // check if any resource is already defined
-                    $resource = null;
-                    if (array_key_exists('external_resource_id', $parent)) {
-                        $resource = json_decode($parent['external_resource_id'], true);
-                    }
-
-                    // delete partner-mapping
-                    if (!is_null($resource) && isset($resource[$original_data['member']['uuid']])) {
-                        unset($resource[$original_data['member']['uuid']]);
-
-                        if (empty($resource)) {
-                            // delete empty partner-mapping
-                            parent::deletePartnerMap(
-                                self::PARTNER_MAP_USER,
-                                $original_data['member']['guardian']['uuid'],
-                                $original_data['group']['uuid'],
-                                self::PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
-                            );
-                        } else {
-                            // update partner-mapping
-                            parent::createPartnerMap(
-                                self::PARTNER_MAP_USER,
-                                $original_data['member']['guardian']['uuid'],
-                                $original_data['group']['uuid'],
-                                self::PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
-                            );
-                        }
-                    }
                 }
                 break;
             case self::WEBHOOK_CREATE_EVENT:
@@ -1290,34 +1234,27 @@ class Teamsnap extends Webhook implements ProcessInterface
         $guardian_uuid = null
     ) {
         $email = '';
-        $email_id = parent::readPartnerMap(
-            self::PARTNER_MAP_USER,
-            !is_null($guardian_uuid) ? $guardian_uuid : $user_uuid,
-            $group_uuid,
-            !is_null($guardian_uuid) ? self::PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL : self::PARTNER_MAP_SUBTYPE_USER_EMAIL
-        );
 
-        // determine if we have the email id or not
-        if (array_key_exists('external_resource_id', $email_id)) {
-            if ($guardian_uuid != null) {
-                // account for multiple guardian contact emails
-                $resource = json_decode($contact['external_resource_id'], true);
-
-                // check if this guardian's email has been mapped
-                if (isset($resource[$user_uuid])) {
-                    $email_id = $resource[$user_uuid];
-                } else {
-                    $email_id = null;
-                }
-            } else {
-                $email_id = $email_id['external_resource_id'];
-            }
+        // determine which partner-mapping call to make
+        if ($guardian_uuid != null) {
+            $email_id = parent::readPartnerMapMultiple(
+                self::PARTNER_MAP_USER,
+                $guardian_uuid,
+                $user_uuid,
+                $group_uuid,
+                self::PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
+            );
         } else {
-            $email_id = null;
+            $email_id = parent::readPartnerMap(
+                self::PARTNER_MAP_USER,
+                $user_uuid,
+                $group_uuid,
+                self::PARTNER_MAP_SUBTYPE_USER_EMAIL
+            );
         }
 
         // build email payload
-        if ($email_id != null) {
+        if (!is_array($email_id)) {
             // partner mapping exists, build put data
             $email = array(
                 array(
@@ -1327,16 +1264,10 @@ class Teamsnap extends Webhook implements ProcessInterface
             );
         } else {
             // partner mapping does not exist, build post data
-            $label = '';
-
             // update label for guardian
-            if (!is_null($guardian_uuid)) {
-                $label = 'Contact';
-            }
-
             $email = array(
                 array(
-                    'label' => $label,
+                    'label' => !is_null($guardian_uuid) ? 'Contact' : '',
                     'email' => $email_address,
                 ),
             );
@@ -1571,20 +1502,21 @@ class Teamsnap extends Webhook implements ProcessInterface
         );
         $user = $user['external_resource_id'];
 
-        // get ContactID from partner-mapping
-        $contact = parent::readPartnerMap(
+        $contact = parent::readPartnerMapMultiple(
             self::PARTNER_MAP_USER,
             $contact_info['uuid'],
+            $user_uuid,
             $group_uuid,
             self::PARTNER_MAP_SUBTYPE_USER_CONTACT
         );
 
         // get Contact email ID from partner-mapping
-        $contact_email = parent::readPartnerMap(
+        $contact_email = parent::readPartnerMapMultiple(
             self::PARTNER_MAP_USER,
             $contact_info['uuid'],
+            $user_uuid,
             $group_uuid,
-            self::PARTNER_MAP_SUBTYPE_USER_CONTACT
+            self::PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
         );
 
         // set default data if something is missing
@@ -1613,23 +1545,15 @@ class Teamsnap extends Webhook implements ProcessInterface
             );
         }
 
-        // check if any resource is already defined for contact user/email
-        $resource = $resource_email = null;
-        if (array_key_exists('external_resource_id', $contact)) {
-            $resource = json_decode($contact['external_resource_id'], true);
-        }
-        if (array_key_exists('external_resource_id', $contact_email)) {
-            $resource_email = json_decode($contact_email['external_resource_id'], true);
-        }
-
+        // set request url and payload
         $this->domain = $original_domain . '/teams/' . $team . '/as_roster/'
             . $this->webhook->subscriber['commissioner_id'] .  '/rosters/'
             . $user . '/contacts';
         $this->setData(array('contact' => $send));
 
         // update/create partner-mapping
-        if (!is_null($resource) && isset($resource[$user_uuid])) {
-            $this->domain .= '/' . $resource[$user_uuid];
+        if (!is_array($contact)) {
+            $this->domain .= '/' . $contact;
             parent::put();
             $this->send();
         } else {
@@ -1637,49 +1561,32 @@ class Teamsnap extends Webhook implements ProcessInterface
             $response = $this->send();
             $response = $this->processJsonResponse($response);
 
-            if (is_array($resource)) {
-                // add a new external resource to the existing partner-mapping
-                $resource[$user_uuid] = $response['contact']['id'];
-            } else {
-                // create the partner-mapping from scratch
-                $resource = array($user_uuid => $response['contact']['id']);
-            }
-
-            if (is_array($resource_email)) {
-                // add a new external resource to the existing partner-mapping
-                $resource_email[$user_uuid] = $response['contact']['contact_email_addresses'][0]['id'];
-            } else {
-                // create the partner-mapping from scratch
-                $resource_email = array($user_uuid => $response['contact']['contact_email_addresses'][0]['id']);
-            }
-
-            // create partner mappings for the contact and the contact email
-            if (isset($contact_info['uuid']) && !empty($contact_info['uuid'])) {
-                // associate AllPlayers user UUID with TeamSnap ContactID
-                parent::createPartnerMap(
-                    json_encode($resource),
-                    parent::PARTNER_MAP_USER,
-                    $contact_info['uuid'],
-                    $group_uuid,
-                    parent::PARTNER_MAP_SUBTYPE_USER_CONTACT
-                );
-
-                // add contact email id to partner-mapping
-                parent::createPartnerMap(
-                    json_encode($resource_email),
-                    parent::PARTNER_MAP_USER,
-                    $contact_info['uuid'],
-                    $group_uuid,
-                    self::PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
-                );
-            }
+            // add new partner-mapping for this contact id
+            parent::createPartnerMapMultiple(
+                $response['contact']['id'],
+                parent::PARTNER_MAP_USER,
+                $contact_info['uuid'],
+                $group_uuid,
+                $user_uuid,
+                parent::PARTNER_MAP_SUBTYPE_USER_CONTACT
+            );
 
             // update contact id
             $contact = $response['contact']['id'];
+
+            // add new partner-mapping for this contact email id
+            parent::createPartnerMapMultiple(
+                $response['contact']['contact_email_addresses'][0]['id'],
+                parent::PARTNER_MAP_USER,
+                $contact_info['uuid'],
+                $group_uuid,
+                $user_uuid,
+                parent::PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
+            );
         }
 
         // restore the old domain
         $this->domain = $original_domain;
-        return $resource[$user_uuid];
+        return $contact;
     }
 }

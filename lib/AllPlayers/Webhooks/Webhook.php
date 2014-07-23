@@ -881,7 +881,7 @@ class Webhook
             // return partner-mapping error
             return $mapping;
         } else {
-            $mapping = json_decode($mapping, true);
+            $mapping = json_decode($mapping['external_resource_id'], true);
 
             if (array_key_exists($unique_uuid, $mapping)) {
                 return $mapping[$unique_uuid];
@@ -936,7 +936,7 @@ class Webhook
         );
 
         if (is_array($mapping) && !array_key_exists('message', $mapping)) {
-            $mapping = json_decode($mapping, true);
+            $mapping = json_decode($mapping['external_resource_id'], true);
 
             if (array_key_exists($unique_uuid, $mapping)) {
                 unset($mapping[$unique_uuid]);
