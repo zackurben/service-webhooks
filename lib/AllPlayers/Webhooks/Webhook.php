@@ -770,4 +770,127 @@ class Webhook
 
         return $response;
     }
+
+    /**
+     * Create a multi-resource mapping between AllPlayers and a partner.
+     *
+     * This is used for mapping 1 to n relationships.
+     *
+     * @todo Remove cURL options (Used for self-signed certificates).
+     *
+     * @param string $external_resource_id
+     *   The partner resource id to map.
+     * @param string $item_type
+     *   The AllPlayers item type to map.
+     *   @see PARTNER_MAP_USER
+     *   @see PARTNER_MAP_EVENT
+     *   @see PARTNER_MAP_GROUP
+     *   @see PARTNER_MAP_RESOURCE
+     * @param string $item_uuid
+     *   The AllPlayers item uuid to map.
+     * @param string $partner_uuid
+     *   The AllPlayers partner uuid.
+     * @param string $unique_uuid
+     *   The unique AllPlayers uuid to identify the relation.
+     * @param string $subtype (Optional)
+     *   The resource subtype to map.
+     *   @see PARTNER_MAP_SUBTYPE_USER_EMAIL
+     *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT
+     *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
+     */
+    protected function createPartnerMapMultiple(
+        $external_resource_id,
+        $item_type,
+        $item_uuid,
+        $partner_uuid,
+        $unique_uuid,
+        $subtype = null
+    ) {
+        // determine if mapping exists
+        $mapping = $this->readPartnerMap(
+            $item_type,
+            $item_uuid,
+            $partner_uuid,
+            $subtype
+        );
+
+        if (array_key_exists('message', $mapping)) {
+            // make mapping from scratch
+            $mapping = array($unique_uuid => $external_resource_id);
+        } else {
+            $mapping = json_decode($mapping['external_resource_id'], true);
+
+            // update/make existing mapping
+            $mapping[$unique_uuid] = $external_resource_id;
+        }
+
+        $this->createPartnerMap(
+            json_encode($mapping),
+            $item_type,
+            $item_uuid,
+            $partner_uuid,
+            $subtype
+        );
+    }
+
+    /**
+     * Read a resource mapping between AllPlayers and a partner.
+     *
+     * If the partner_uuid parameter is not included, this function will return
+     * all the elements mapped with the item_uuid.
+     *
+     * @todo Remove cURL options (Used for self-signed certificates).
+     *
+     * @param string $item_type
+     *   The AllPlayers item type to map.
+     *   @see PARTNER_MAP_USER
+     *   @see PARTNER_MAP_EVENT
+     *   @see PARTNER_MAP_GROUP
+     *   @see PARTNER_MAP_RESOURCE
+     * @param string $item_uuid
+     *   The AllPlayers item uuid to map.
+     * @param string $unique_uuid
+     *   The unique AllPlayers uuid to identify the relation.
+     * @param string $partner_uuid (Optional)
+     *   The AllPlayers partner uuid.
+     * @param string $subtype (Optional)
+     *   The resource subtype to map.
+     *   @see PARTNER_MAP_SUBTYPE_USER_EMAIL
+     *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT
+     *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
+     *
+     * @return string|array
+     *   The AllPlayers response from reading a resouce mapping.
+     */
+    protected function readPartnerMapMultiple(
+        $item_type,
+        $item_uuid,
+        $unique_uuid,
+        $partner_uuid = null,
+        $subtype = 'entity'
+    ) {
+        // determine if mapping exists
+        $mapping = $this->readPartnerMap(
+            $item_type,
+            $item_uuid,
+            $partner_uuid,
+            $subtype
+        );
+
+        if (array_key_exists('message', $mapping)) {
+            // return partner-mapping error
+            return $mapping;
+        } else {
+            $mapping = json_decode($mapping, true);
+
+            if (array_key_exists($unique_uuid, $mapping)) {
+                return $mapping[$unique_uuid];
+            } else {
+                // build error for unique_uuid not existing
+                return array(
+                    'message' => 'The given unique_uuid does not have value associated with it in the existing partner-mapping.',
+                );
+            }
+        }
+    }
 }
