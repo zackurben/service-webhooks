@@ -1309,6 +1309,16 @@ class Teamsnap extends Webhook implements ProcessInterface
                 $event_location['uuid'],
                 $group_uuid
             );
+        } else {
+            $event_location = array();
+
+            // read default mapping, if location isnt specified
+            $location = parent::readPartnerMap(
+                self::PARTNER_MAP_GROUP,
+                $group_uuid,
+                $group_uuid,
+                'default_location'
+            );
         }
 
         // set default data if something is missing
@@ -1345,7 +1355,7 @@ class Teamsnap extends Webhook implements ProcessInterface
         // update request
         $this->setData(array('location' => $send));
 
-        if (isset($location['external_resource_id'])) {
+        if (array_key_exists('external_resource_id', $location)) {
             // update existing partner-mapping
             $location = $location['external_resource_id'];
             $this->domain = $original_domain . '/teams/' . $team . '/as_roster/'
@@ -1363,7 +1373,6 @@ class Teamsnap extends Webhook implements ProcessInterface
             $response = $this->send();
             $response = $this->processJsonResponse($response);
 
-            // @todo fix this, this cant happen if a location isnt specified
             if (isset($event_location['uuid']) && !empty($event_location['uuid'])) {
                 // associate AllPlayers resouce UUID with TeamSnap LocationID
                 parent::createPartnerMap(
@@ -1371,6 +1380,15 @@ class Teamsnap extends Webhook implements ProcessInterface
                     parent::PARTNER_MAP_RESOURCE,
                     $event_location['uuid'],
                     $group_uuid
+                );
+            } else {
+                // create default location, work around for above
+                parent::createPartnerMap(
+                    $response['location']['id'],
+                    parent::PARTNER_MAP_GROUP,
+                    $group_uuid,
+                    $group_uuid,
+                    'default_location'
                 );
             }
 
