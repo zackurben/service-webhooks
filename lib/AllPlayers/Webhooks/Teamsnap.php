@@ -1244,6 +1244,14 @@ class Teamsnap extends Webhook implements ProcessInterface
                 $group_uuid,
                 self::PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
             );
+
+            // @todo remove hack
+            // temp hack for partner-mapping changes, to keep testing available
+            if (is_array($email_id)) {
+                $email_id = null;
+            } else {
+                $email_id = array('external_resource_id' => $email_id);
+            }
         } else {
             $email_id = parent::readPartnerMap(
                 self::PARTNER_MAP_USER,
@@ -1254,11 +1262,11 @@ class Teamsnap extends Webhook implements ProcessInterface
         }
 
         // build email payload
-        if (!is_array($email_id)) {
+        if (is_array($email_id) && array_key_exists('external_resource_id', $email_id)) {
             // partner mapping exists, build put data
             $email = array(
                 array(
-                    'id' => $email_id,
+                    'id' => $email_id['external_resource_id'],
                     'email' => $email_address,
                 ),
             );
