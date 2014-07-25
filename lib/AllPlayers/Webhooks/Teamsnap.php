@@ -17,6 +17,13 @@ use Guzzle\Http\Message\Response;
 class Teamsnap extends Webhook implements ProcessInterface
 {
     /**
+     * The unique partner identifier for the AllPlayers partner-mapping API.
+     *
+     * @var string
+     */
+    const PARTNER_ID = 'teamsnap';
+
+    /**
      * The list of supported Sports from TeamSnap and their ID numbers.
      *
      * @var array $sports
