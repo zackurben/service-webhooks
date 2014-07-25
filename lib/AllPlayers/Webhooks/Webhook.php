@@ -525,6 +525,23 @@ class Webhook
      */
     public function send()
     {
+        // send a debug request if enabled
+        include 'config/config.php';
+        if (isset($config['debug']) && $config['debug']['active']) {
+            $dbg = new Client($config['debug']['url']);
+            $req = $dbg->post(
+                $dbg->getBaseUrl(),
+                array('Content-Type' => 'application/json'),
+                json_encode(
+                    array(
+                        'Body' => json_decode($this->request->getBody(), true),
+                        'URL' => $this->request->getUrl(),
+                    )
+                )
+            );
+            $req->send();
+        }
+
         return $this->request->send();
     }
 
