@@ -274,6 +274,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                 $preprocess
             );
 
+            $this->partner = self::PARTNER_ID;
             $this->headers['X-Teamsnap-Token'] = $this->webhook->subscriber['token'];
             $this->process();
         }

@@ -610,8 +610,8 @@ class Webhook
      *   @see PARTNER_MAP_RESOURCE
      * @param string $item_uuid
      *   The AllPlayers item uuid to map.
-     * @param string $partner_uuid
-     *   The AllPlayers partner uuid.
+     * @param string $group_uuid
+     *   The AllPlayers group uuid associated with the item uuid.
      * @param string $subtype (Optional)
      *   The resource subtype to map.
      *   @see PARTNER_MAP_SUBTYPE_USER_EMAIL
@@ -625,7 +625,7 @@ class Webhook
         $external_resource_id,
         $item_type,
         $item_uuid,
-        $partner_uuid,
+        $group_uuid,
         $subtype = null
     ) {
         $client = new Client(
@@ -641,7 +641,8 @@ class Webhook
             'external_resource_id' => $external_resource_id,
             'item_type' => $item_type,
             'item_uuid' => $item_uuid,
-            'partner_uuid' => $partner_uuid,
+            'group_uuid' => $group_uuid,
+            'partner' => $this->partner,
         );
 
         // add subtype if present
@@ -678,8 +679,8 @@ class Webhook
      *   @see PARTNER_MAP_RESOURCE
      * @param string $item_uuid
      *   The AllPlayers item uuid to map.
-     * @param string $partner_uuid (Optional)
-     *   The AllPlayers partner uuid.
+     * @param string $group_uuid
+     *   The AllPlayers group uuid associated with the item uuid.
      * @param string $subtype (Optional)
      *   The resource subtype to map.
      *   @see PARTNER_MAP_SUBTYPE_USER_EMAIL
@@ -692,21 +693,14 @@ class Webhook
     protected function readPartnerMap(
         $item_type,
         $item_uuid,
-        $partner_uuid = null,
+        $group_uuid,
         $subtype = 'entity'
     ) {
-        $url = "https://api.zurben.apci.ws/api/v2/externalid/{$item_type}/{$item_uuid}";
+        $url = "https://api.zurben.apci.ws/api/v2/externalid/{$item_type}/{$item_uuid}/{$group_uuid}/{$this->partner}";
 
         // add optional parameters if present
-        $param = array();
-        if (!is_null($partner_uuid)) {
-            $param['partner_uuid'] = $partner_uuid;
-        }
         if (!is_null($subtype)) {
-            $param['sub_item_type'] = $subtype;
-        }
-        if (!empty($param)) {
-            $url .= '?' . http_build_query($param);
+            $url .= '?sub_item_type=' . $subtype;
         }
 
         $client = new Client(
@@ -746,7 +740,7 @@ class Webhook
      *   @see PARTNER_MAP_RESOURCE
      * @param string $item_uuid
      *   The AllPlayers item uuid to map.
-     * @param string $partner_uuid (Optional)
+     * @param string $group_uuid (Optional)
      *   The AllPlayers partner uuid.
      * @param string $subtype (Optional)
      *   The resource subtype to map.
@@ -760,21 +754,14 @@ class Webhook
     protected function deletePartnerMap(
         $item_type,
         $item_uuid,
-        $partner_uuid = null,
+        $group_uuid,
         $subtype = null
     ) {
-        $url = "https://api.zurben.apci.ws/api/v2/externalid/{$item_type}/{$item_uuid}";
+        $url = "https://api.zurben.apci.ws/api/v2/externalid/{$item_type}/{$item_uuid}/{$group_uuid}/{$this->partner}";
 
         // add optional parameters if present
-        $param = array();
-        if (!is_null($partner_uuid)) {
-            $param['partner_uuid'] = $partner_uuid;
-        }
         if (!is_null($subtype)) {
-            $param['sub_item_type'] = $subtype;
-        }
-        if (!empty($param)) {
-            $url .= '?' . http_build_query($param);
+            $url .= '?sub_item_type=' . $subtype;
         }
 
         $client = new Client(
