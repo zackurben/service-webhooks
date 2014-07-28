@@ -1014,23 +1014,51 @@ class Teamsnap extends Webhook implements ProcessInterface
                     $original_data['group']['uuid']
                 );
 
-                if (isset($query['message'])) {
-                    // associate AllPlayers user UUID with TeamSnap RosterID
-                    parent::createPartnerMap(
-                        $response['roster']['id'],
-                        self::PARTNER_MAP_USER,
-                        $original_data['member']['uuid'],
-                        $original_data['group']['uuid']
-                    );
+                // add/update mapping of email with Roster
+                parent::createPartnerMap(
+                    $response['roster']['roster_email_addresses'][0]['id'],
+                    self::PARTNER_MAP_USER,
+                    $original_data['member']['uuid'],
+                    $original_data['group']['uuid'],
+                    parent::PARTNER_MAP_SUBTYPE_USER_EMAIL
+                );
 
-                    // associate AllPlayers email with Roster
-                    parent::createPartnerMap(
-                        $response['roster']['roster_email_addresses'][0]['id'],
-                        self::PARTNER_MAP_USER,
-                        $original_data['member']['uuid'],
-                        $original_data['group']['uuid'],
-                        parent::PARTNER_MAP_SUBTYPE_USER_EMAIL
-                    );
+                // add/update mapping of phones with Roster
+                $phones = $response['roster']['roster_telephone_numbers'];
+                if (count($phones) > 0) {
+                    // determine which phones we have
+                    foreach ($phones as $entry) {
+                        switch ($entry['label']) {
+                            case 'Home':
+                                parent::createPartnerMap(
+                                    $entry['id'],
+                                    self::PARTNER_MAP_USER,
+                                    $original_data['member']['uuid'],
+                                    $original_data['group']['uuid'],
+                                    parent::PARTNER_MAP_SUBTYPE_USER_PHONE
+                                );
+                                break;
+                            case 'Cell':
+                                parent::createPartnerMap(
+                                    $entry['id'],
+                                    self::PARTNER_MAP_USER,
+                                    $original_data['member']['uuid'],
+                                    $original_data['group']['uuid'],
+                                    parent::PARTNER_MAP_SUBTYPE_USER_CELL
+                                );
+                                break;
+                            case 'Work':
+                                parent::createPartnerMap(
+                                    $entry['id'],
+                                    self::PARTNER_MAP_USER,
+                                    $original_data['member']['uuid'],
+                                    $original_data['group']['uuid'],
+                                    parent::PARTNER_MAP_SUBTYPE_USER_WORK
+                                );
+                                break;
+                        }
+                    }
+                }
 
 //                    /*
 //                     * Create partner-mapping for ContactID.
@@ -1048,6 +1076,16 @@ class Teamsnap extends Webhook implements ProcessInterface
 //                            $original_data['member']['guardian']
 //                        );
 //                    }
+
+                // user is registering for the first time, send email invite.
+                if (isset($query['message'])) {
+                    // add mapping of user UUID with TeamSnap Roster
+                    parent::createPartnerMap(
+                        $response['roster']['id'],
+                        self::PARTNER_MAP_USER,
+                        $original_data['member']['uuid'],
+                        $original_data['group']['uuid']
+                    );
 
                     // send TeamSnap account invite
                     $team = parent::readPartnerMap(

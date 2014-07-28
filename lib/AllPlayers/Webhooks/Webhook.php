@@ -211,6 +211,27 @@ class Webhook
     const PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL = 'contact_email';
 
     /**
+     * A string value for an available partner mapping subtype option.
+     *
+     * @var string
+     */
+    const PARTNER_MAP_SUBTYPE_USER_PHONE = 'phone';
+
+    /**
+     * A string value for an available partner mapping subtype option.
+     *
+     * @var string
+     */
+    const PARTNER_MAP_SUBTYPE_USER_PHONE_CELL = 'phone_cell';
+
+    /**
+     * A string value for an available partner mapping subtype option.
+     *
+     * @var string
+     */
+    const PARTNER_MAP_SUBTYPE_USER_PHONE_WORK = 'phone_work';
+
+    /**
      * The base url for the AllPlayers Partner-Mapping API.
      *
      * @var string
