@@ -211,6 +211,13 @@ class Webhook
     const PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL = 'contact_email';
 
     /**
+     * The base url for the AllPlayers Partner-Mapping API.
+     *
+     * @var string
+     */
+    const PARTNER_MAPPING_URL_BASE = 'https://api.zurben.apci.ws/api/v2/externalid';
+
+    /**
      * The list of headers that will be sent with each request.
      *
      * @var array
@@ -629,7 +636,7 @@ class Webhook
         $subtype = null
     ) {
         $client = new Client(
-            'https://api.zurben.apci.ws/api/v2/externalid',
+            self::PARTNER_MAPPING_URL_BASE,
             array(
                 'curl.CURLOPT_SSL_VERIFYPEER' => false,
                 'curl.CURLOPT_CERTINFO' => false,
@@ -696,12 +703,9 @@ class Webhook
         $group_uuid,
         $subtype = 'entity'
     ) {
-        $url = "https://api.zurben.apci.ws/api/v2/externalid/{$item_type}/{$item_uuid}/{$group_uuid}/{$this->partner}";
-
-        // add optional parameters if present
-        if (!is_null($subtype)) {
-            $url .= '?sub_item_type=' . $subtype;
-        }
+        $url = self::PARTNER_MAPPING_URL_BASE . '/' . $item_type . '/'
+            . $item_uuid . '/' . $group_uuid . '/' . $this->partner
+            . '?sub_item_type=' . $subtype;
 
         $client = new Client(
             $url,
@@ -727,8 +731,11 @@ class Webhook
     /**
      * Delete a resource mapping between AllPlayers and a partner.
      *
-     * If the partner_uuid parameter is not included, this function will return
-     * all the elements mapped with the item_uuid.
+     * If the group_uuid is not included, this function will delete all the
+     * elements mapped with the item_uuid.
+     *
+     * If the item_uuid is not included, this function will delete all the items
+     * associated with the given group.
      *
      * @todo Remove cURL options (Used for self-signed certificates).
      *
@@ -738,10 +745,10 @@ class Webhook
      *   @see PARTNER_MAP_EVENT
      *   @see PARTNER_MAP_GROUP
      *   @see PARTNER_MAP_RESOURCE
-     * @param string $item_uuid
+     * @param string $group_uuid
+     *   The AllPlayers group uuid.
+     * @param string $item_uuid (Optional)
      *   The AllPlayers item uuid to map.
-     * @param string $group_uuid (Optional)
-     *   The AllPlayers partner uuid.
      * @param string $subtype (Optional)
      *   The resource subtype to map.
      *   @see PARTNER_MAP_SUBTYPE_USER_EMAIL
@@ -753,13 +760,20 @@ class Webhook
      */
     protected function deletePartnerMap(
         $item_type,
-        $item_uuid,
         $group_uuid,
+        $item_uuid = null,
         $subtype = null
     ) {
-        $url = "https://api.zurben.apci.ws/api/v2/externalid/{$item_type}/{$item_uuid}/{$group_uuid}/{$this->partner}";
+        // dynamically change the url based on the contents give
+        if ($item_uuid != null) {
+            $url .= self::PARTNER_MAPPING_URL_BASE . $item_type . '/'
+                . $item_uuid . '/' . $group_uuid . '/' . $this->partner;
+        } else {
+            $url .= self::PARTNER_MAPPING_URL_BASE . $item_type . '/'
+                . $group_uuid . '/' . $this->partner;
+        }
 
-        // add optional parameters if present
+        // add optional url parameters if present
         if (!is_null($subtype)) {
             $url .= '?sub_item_type=' . $subtype;
         }

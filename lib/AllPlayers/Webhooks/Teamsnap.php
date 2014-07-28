@@ -1074,15 +1074,15 @@ class Teamsnap extends Webhook implements ProcessInterface
                 // delete partner-mapping for user
                 parent::deletePartnerMap(
                     self::PARTNER_MAP_USER,
-                    $original_data['member']['uuid'],
-                    $original_data['group']['uuid']
+                    $original_data['group']['uuid'],
+                    $original_data['member']['uuid']
                 );
 
                 // delete partner-mapping for user email id
                 parent::deletePartnerMap(
                     self::PARTNER_MAP_RESOURCE,
-                    $original_data['member']['uuid'],
                     $original_data['group']['uuid'],
+                    $original_data['member']['uuid'],
                     self::PARTNER_MAP_SUBTYPE_USER_EMAIL
                 );
 
@@ -1120,8 +1120,8 @@ class Teamsnap extends Webhook implements ProcessInterface
                 // delete partner-mapping with event UUID
                 parent::deletePartnerMap(
                     self::PARTNER_MAP_EVENT,
-                    $original_data['event']['uuid'],
-                    $original_data['group']['uuid']
+                    $original_data['group']['uuid'],
+                    $original_data['event']['uuid']
                 );
                 break;
         }
