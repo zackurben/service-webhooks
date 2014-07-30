@@ -17,13 +17,6 @@ use Guzzle\Http\Message\Response;
 class Teamsnap extends Webhook implements ProcessInterface
 {
     /**
-     * The unique partner identifier for the AllPlayers partner-mapping API.
-     *
-     * @var string
-     */
-    const PARTNER_ID = 'teamsnap';
-
-    /**
      * The list of supported Sports from TeamSnap and their ID numbers.
      *
      * @var array $sports
@@ -255,6 +248,13 @@ class Teamsnap extends Webhook implements ProcessInterface
     protected $method = self::TRANSMISSION_JSON;
 
     /**
+     * The unique partner identifier for the AllPlayers partner-mapping API.
+     *
+     * @var string
+     */
+    protected $partner_id = 'teamsnap';
+
+    /**
      * Create Teamsnap webhook
      */
     public function __construct(
@@ -274,7 +274,12 @@ class Teamsnap extends Webhook implements ProcessInterface
                 $preprocess
             );
 
-            $this->partner = self::PARTNER_ID;
+            // Enable AllPlayers Partner-Mapping API
+            $this->makeCookie(
+                $config['teamsnap']['api_username'],
+                $config['teamsnap']['api_password']
+            );
+
             $this->headers['X-Teamsnap-Token'] = $this->webhook->subscriber['token'];
             $this->process();
         }
