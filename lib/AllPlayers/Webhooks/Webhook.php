@@ -13,15 +13,16 @@ namespace AllPlayers\Webhooks;
 
 use Guzzle\Http\Client;
 use Guzzle\Http\Message\Response;
+use Guzzle\Http\Plugin\OauthPlugin;
+use Guzzle\Http\Plugin\CookiePlugin;
 use Guzzle\Http\Plugin\CurlAuthPlugin;
-use Guzzle\Plugin\Oauth\OauthPlugin;
+use Guzzle\Http\CookieJar\ArrayCookieJar;
 
 /**
  * Base Webhook definition, to provide structure to all child Webhooks.
  */
 class Webhook
 {
-
     /**
      * An enumerated value for using no authentication.
      *
@@ -239,11 +240,25 @@ class Webhook
     const PARTNER_MAPPING_URL_BASE = 'https://api.zurben.apci.ws/api/v2/externalid';
 
     /**
-     * The list of headers that will be sent with each request.
+     * The list of headers that will be sent with each client request.
      *
      * @var array
      */
     protected $headers = array();
+
+    /**
+     * The list of headers that will be sent with each api request.
+     *
+     * @var array
+     */
+    protected $api_headers = array();
+
+    /**
+     * The name of the cookie for AllPlayers Partner-Mapping API Authentication.
+     *
+     * @var null|CookiePlugin
+     */
+    protected $cookie = null;
 
     /**
      * The top object of a webhook.
@@ -315,11 +330,11 @@ class Webhook
     protected $send = self::WEBHOOK_SEND;
 
     /**
-     * The unique partner identifier, if it exists.
+     * The unique partner identifier for the AllPlayers partner-mapping API.
      *
-     * @var string
+     * @var null|string
      */
-    protected $partner = null;
+    protected $partner_id = null;
 
     /**
      * Initialize the webhook object.
@@ -469,6 +484,45 @@ class Webhook
     protected function setSend($send)
     {
         $this->send = $send;
+    }
+
+    /**
+     * Make the AllPlayers API cookie for the subsequent requests.
+     *
+     * This is only required if the webhook is using the Partner-Mapping API.
+     *
+     * @param string $username
+     *   The AllPlayers username for logging into APIv1.
+     * @param string $password
+     *   The AllPlayers password for logging into APIv1.
+     */
+    protected function makeCookie($username, $password) {
+        // Fetch the AllPlayers Auth cookie
+        $this->cookie = new CookiePlugin(new ArrayCookieJar());
+        $cookie_client = new Client(
+            'https://www.zurben.apci.ws/api/v1/rest/users/login.json',
+            array(
+                'curl.CURLOPT_SSL_VERIFYPEER' => false,
+                'curl.CURLOPT_CERTINFO' => false,
+            )
+        );
+        $cookie_client->addSubscriber($this->cookie);
+
+        $cookie_auth = $cookie_client->post(
+            $cookie_client->getBaseUrl(),
+            array('Content-Type' => 'application/x-www-form-urlencoded'),
+            'email=' . $username . '&password=' . $password
+        );
+        $cookie_auth->send();
+
+        // Set the AllPlayers auth Header for subsequent API calls.
+        $temp = $this->cookie->getCookieJar()->all();
+        foreach ($temp as $c) {
+            if (strstr($c->getName(), "SESS")) {
+                $this->api_headers['X-Token'] = hash("sha256", $c->getValue());
+                break;
+            }
+        }
     }
 
     /**
@@ -663,6 +717,7 @@ class Webhook
                 'curl.CURLOPT_CERTINFO' => false,
             )
         );
+        $client->addSubscriber($this->cookie);
 
         // set required data fields
         $data = array(
@@ -670,7 +725,7 @@ class Webhook
             'item_type' => $item_type,
             'item_uuid' => $item_uuid,
             'group_uuid' => $group_uuid,
-            'partner' => $this->partner,
+            'partner' => $this->partner_id,
         );
 
         // add subtype if present
@@ -681,7 +736,7 @@ class Webhook
         // send API request and return response
         $request = $client->post(
             $client->getBaseUrl(),
-            array('Content-Type' => 'application/json'),
+            array_merge(array('Content-Type' => 'application/json'), $this->api_headers),
             json_encode($data)
         );
 
@@ -725,7 +780,7 @@ class Webhook
         $subtype = 'entity'
     ) {
         $url = self::PARTNER_MAPPING_URL_BASE . '/' . $item_type . '/'
-            . $item_uuid . '/' . $group_uuid . '/' . $this->partner
+            . $item_uuid . '/' . $this->partner_id . '/' . $group_uuid
             . '?sub_item_type=' . $subtype;
 
         $client = new Client(
@@ -735,9 +790,10 @@ class Webhook
                 'curl.CURLOPT_CERTINFO' => false,
             )
         );
+        $client->addSubscriber($this->cookie);
 
         // send API request and return response
-        $request = $client->get($client->getBaseUrl());
+        $request = $client->get($client->getBaseUrl(), $this->api_headers);
         $response = $request->send();
         $response = $this->processJsonResponse($response);
 
@@ -752,11 +808,13 @@ class Webhook
     /**
      * Delete a resource mapping between AllPlayers and a partner.
      *
-     * If the group_uuid is not included, this function will delete all the
-     * elements mapped with the item_uuid.
+     * Either item_type and item_uuid or partner and group_uuid have to be set.
      *
-     * If the item_uuid is not included, this function will delete all the items
-     * associated with the given group.
+     * If the item_type and item_uuid are included, the entities associated with
+     * them will be removed.
+     *
+     * If the group_uuid alone is set, all entities associated with the group
+     * will be removed.
      *
      * @todo Remove cURL options (Used for self-signed certificates).
      *
@@ -780,18 +838,18 @@ class Webhook
      *   The AllPlayers response from deleting the resouce mapping.
      */
     protected function deletePartnerMap(
-        $item_type,
-        $group_uuid,
+        $item_type = null,
+        $group_uuid = null,
         $item_uuid = null,
         $subtype = null
     ) {
         // dynamically change the url based on the contents give
-        if ($item_uuid != null) {
-            $url .= self::PARTNER_MAPPING_URL_BASE . $item_type . '/'
-                . $item_uuid . '/' . $group_uuid . '/' . $this->partner;
-        } else {
-            $url .= self::PARTNER_MAPPING_URL_BASE . $item_type . '/'
-                . $group_uuid . '/' . $this->partner;
+        if ($item_type != null && $item_uuid != null) {
+            $url = self::PARTNER_MAPPING_URL_BASE . '/' . $item_type . '/'
+                . $item_uuid . '/' . $this->partner_id . '/' . $group_uuid;
+        } else if ($group_uuid != null) {
+            $url = self::PARTNER_MAPPING_URL_BASE . '/' . $item_type . '/'
+                . $this->partner_id . '/' . $group_uuid;
         }
 
         // add optional url parameters if present
@@ -806,206 +864,18 @@ class Webhook
                 'curl.CURLOPT_CERTINFO' => false,
             )
         );
+        $client->addSubscriber($this->cookie);
 
         // send API request and return response
         $response = $client->delete(
             $client->getBaseUrl(),
-            array('Content-Type' => 'application/json')
+            array_merge(
+                array('Content-Type' => 'application/json'),
+                $this->api_headers
+            )
         )->send();
         $response = $this->processJsonResponse($response);
 
         return $response;
     }
-
-//    /**
-//     * Create a multi-resource mapping between AllPlayers and a partner.
-//     *
-//     * This is used for mapping 1 to n relationships.
-//     *
-//     * @todo Remove cURL options (Used for self-signed certificates).
-//     *
-//     * @param string $external_resource_id
-//     *   The partner resource id to map.
-//     * @param string $item_type
-//     *   The AllPlayers item type to map.
-//     *   @see PARTNER_MAP_USER
-//     *   @see PARTNER_MAP_EVENT
-//     *   @see PARTNER_MAP_GROUP
-//     *   @see PARTNER_MAP_RESOURCE
-//     * @param string $item_uuid
-//     *   The AllPlayers item uuid to map.
-//     * @param string $partner_uuid
-//     *   The AllPlayers partner uuid.
-//     * @param string $unique_uuid
-//     *   The unique AllPlayers uuid to identify the relation.
-//     * @param string $subtype (Optional)
-//     *   The resource subtype to map.
-//     *   @see PARTNER_MAP_SUBTYPE_USER_EMAIL
-//     *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT
-//     *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
-//     */
-//    protected function createPartnerMapMultiple(
-//        $external_resource_id,
-//        $item_type,
-//        $item_uuid,
-//        $partner_uuid,
-//        $unique_uuid,
-//        $subtype = null
-//    ) {
-//        // determine if mapping exists
-//        $mapping = $this->readPartnerMap(
-//            $item_type,
-//            $item_uuid,
-//            $partner_uuid,
-//            $subtype
-//        );
-//
-//        if (array_key_exists('message', $mapping)) {
-//            // make mapping from scratch
-//            $mapping = array($unique_uuid => $external_resource_id);
-//        } else {
-//            $mapping = json_decode($mapping['external_resource_id'], true);
-//
-//            // update/make existing mapping
-//            $mapping[$unique_uuid] = $external_resource_id;
-//        }
-//
-//        $this->createPartnerMap(
-//            json_encode($mapping),
-//            $item_type,
-//            $item_uuid,
-//            $partner_uuid,
-//            $subtype
-//        );
-//    }
-//
-//    /**
-//     * Read a multi-resource mapping between AllPlayers and a partner.
-//     *
-//     * If the partner_uuid parameter is not included, this function will return
-//     * all the elements mapped with the item_uuid.
-//     *
-//     * @todo Remove cURL options (Used for self-signed certificates).
-//     *
-//     * @param string $item_type
-//     *   The AllPlayers item type to map.
-//     *   @see PARTNER_MAP_USER
-//     *   @see PARTNER_MAP_EVENT
-//     *   @see PARTNER_MAP_GROUP
-//     *   @see PARTNER_MAP_RESOURCE
-//     * @param string $item_uuid
-//     *   The AllPlayers item uuid to map.
-//     * @param string $unique_uuid
-//     *   The unique AllPlayers uuid to identify the relation.
-//     * @param string $partner_uuid (Optional)
-//     *   The AllPlayers partner uuid.
-//     * @param string $subtype (Optional)
-//     *   The resource subtype to map.
-//     *   @see PARTNER_MAP_SUBTYPE_USER_EMAIL
-//     *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT
-//     *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
-//     *
-//     * @return string|array
-//     *   The AllPlayers response from reading a resouce mapping.
-//     */
-//    protected function readPartnerMapMultiple(
-//        $item_type,
-//        $item_uuid,
-//        $unique_uuid,
-//        $partner_uuid = null,
-//        $subtype = 'entity'
-//    ) {
-//        // determine if mapping exists
-//        $mapping = $this->readPartnerMap(
-//            $item_type,
-//            $item_uuid,
-//            $partner_uuid,
-//            $subtype
-//        );
-//
-//        if (array_key_exists('message', $mapping)) {
-//            // return partner-mapping error
-//            return $mapping;
-//        } else {
-//            $mapping = json_decode($mapping['external_resource_id'], true);
-//
-//            if (array_key_exists($unique_uuid, $mapping)) {
-//                return $mapping[$unique_uuid];
-//            } else {
-//                // build error for unique_uuid not existing
-//                return array(
-//                    'message' => 'The given unique_uuid does not have value associated with it in the existing partner-mapping.',
-//                );
-//            }
-//        }
-//    }
-//
-//    /**
-//     * Delete a multi-resource mapping between AllPlayers and a partner.
-//     *
-//     * If the partner_uuid parameter is not included, this function will return
-//     * all the elements mapped with the item_uuid.
-//     *
-//     * @todo Remove cURL options (Used for self-signed certificates).
-//     *
-//     * @param string $item_type
-//     *   The AllPlayers item type to map.
-//     *   @see PARTNER_MAP_USER
-//     *   @see PARTNER_MAP_EVENT
-//     *   @see PARTNER_MAP_GROUP
-//     *   @see PARTNER_MAP_RESOURCE
-//     * @param string $item_uuid
-//     *   The AllPlayers item uuid to map.
-//     * @param string $unique_uuid
-//     *   The unique AllPlayers uuid to identify the relation.
-//     * @param string $partner_uuid (Optional)
-//     *   The AllPlayers partner uuid.
-//     * @param string $subtype (Optional)
-//     *   The resource subtype to map.
-//     *   @see PARTNER_MAP_SUBTYPE_USER_EMAIL
-//     *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT
-//     *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
-//     */
-//    protected function deletePartnerMapMultiple(
-//        $item_type,
-//        $item_uuid,
-//        $unique_uuid,
-//        $partner_uuid = null,
-//        $subtype = null
-//    ) {
-//        // determine if mapping exists
-//        $mapping = $this->readPartnerMap(
-//            $item_type,
-//            $item_uuid,
-//            $partner_uuid,
-//            $subtype
-//        );
-//
-//        if (is_array($mapping) && !array_key_exists('message', $mapping)) {
-//            $mapping = json_decode($mapping['external_resource_id'], true);
-//
-//            if (array_key_exists($unique_uuid, $mapping)) {
-//                unset($mapping[$unique_uuid]);
-//
-//                if (empty($mapping)) {
-//                    // clean up empty resource left behind
-//                    $this->deletePartnerMap(
-//                        $item_type,
-//                        $item_uuid,
-//                        $partner_uuid,
-//                        $subtype
-//                    );
-//                } else {
-//                    // update current mapping
-//                    $this->createPartnerMap(
-//                        json_encode($mapping),
-//                        $item_type,
-//                        $item_uuid,
-//                        $partner_uuid,
-//                        $subtype
-//                    );
-//                }
-//            }
-//        }
-//    }
 }
