@@ -1049,7 +1049,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                                     self::PARTNER_MAP_USER,
                                     $original_data['member']['uuid'],
                                     $original_data['group']['uuid'],
-                                    parent::PARTNER_MAP_SUBTYPE_USER_CELL
+                                    parent::PARTNER_MAP_SUBTYPE_USER_PHONE_CELL
                                 );
                                 break;
                             case 'Work':
@@ -1058,7 +1058,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                                     self::PARTNER_MAP_USER,
                                     $original_data['member']['uuid'],
                                     $original_data['group']['uuid'],
-                                    parent::PARTNER_MAP_SUBTYPE_USER_WORK
+                                    parent::PARTNER_MAP_SUBTYPE_USER_PHONE_WORK
                                 );
                                 break;
                         }

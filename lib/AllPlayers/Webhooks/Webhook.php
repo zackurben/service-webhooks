@@ -694,7 +694,7 @@ class Webhook
      *   The AllPlayers item uuid to map.
      * @param string $group_uuid
      *   The AllPlayers group uuid associated with the item uuid.
-     * @param string $subtype (Optional)
+     * @param string $sub_item_type (Optional)
      *   The resource subtype to map.
      *   @see PARTNER_MAP_SUBTYPE_USER_EMAIL
      *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT
@@ -708,7 +708,7 @@ class Webhook
         $item_type,
         $item_uuid,
         $group_uuid,
-        $subtype = null
+        $sub_item_type = null
     ) {
         $client = new Client(
             self::PARTNER_MAPPING_URL_BASE,
@@ -729,8 +729,8 @@ class Webhook
         );
 
         // add subtype if present
-        if (!is_null($subtype)) {
-            $data['sub_item_type'] = $subtype;
+        if (!is_null($sub_item_type)) {
+            $data['sub_item_type'] = $sub_item_type;
         }
 
         // send API request and return response
@@ -764,7 +764,7 @@ class Webhook
      *   The AllPlayers item uuid to map.
      * @param string $group_uuid
      *   The AllPlayers group uuid associated with the item uuid.
-     * @param string $subtype (Optional)
+     * @param string $sub_item_type (Optional)
      *   The resource subtype to map.
      *   @see PARTNER_MAP_SUBTYPE_USER_EMAIL
      *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT
@@ -777,11 +777,11 @@ class Webhook
         $item_type,
         $item_uuid,
         $group_uuid,
-        $subtype = 'entity'
+        $sub_item_type = 'entity'
     ) {
         $url = self::PARTNER_MAPPING_URL_BASE . '/' . $item_type . '/'
             . $item_uuid . '/' . $this->partner_id . '/' . $group_uuid
-            . '?sub_item_type=' . $subtype;
+            . '?sub_item_type=' . $sub_item_type;
 
         $client = new Client(
             $url,
@@ -828,7 +828,7 @@ class Webhook
      *   The AllPlayers group uuid.
      * @param string $item_uuid (Optional)
      *   The AllPlayers item uuid to map.
-     * @param string $subtype (Optional)
+     * @param string $sub_item_type (Optional)
      *   The resource subtype to map.
      *   @see PARTNER_MAP_SUBTYPE_USER_EMAIL
      *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT
@@ -841,22 +841,26 @@ class Webhook
         $item_type = null,
         $group_uuid = null,
         $item_uuid = null,
-        $subtype = null
+        $sub_item_type = null
     ) {
-        // dynamically change the url based on the contents give
-        if ($item_type != null && $item_uuid != null) {
-            $url = self::PARTNER_MAPPING_URL_BASE . '/' . $item_type . '/'
-                . $item_uuid . '/' . $this->partner_id . '/' . $group_uuid;
-        } else if ($group_uuid != null) {
-            $url = self::PARTNER_MAPPING_URL_BASE . '/' . $item_type . '/'
-                . $this->partner_id . '/' . $group_uuid;
+        $url = array();
+        if ($item_type != null) {
+            $url['item_type'] = $item_type;
+        }
+        if ($group_uuid != null) {
+            $url['group_uuid'] = $group_uuid;
+        }
+        if ($item_uuid != null) {
+            $url['item_uuid'] = $item_uuid;
+        }
+        if ($sub_item_type != null) {
+            $url['sub_item_type'] = $sub_item_type;
+        }
+        if ($this->partner_id != null) {
+            $url['partner'] = $this->partner_id;
         }
 
-        // add optional url parameters if present
-        if (!is_null($subtype)) {
-            $url .= '?sub_item_type=' . $subtype;
-        }
-
+        $url = self::PARTNER_MAPPING_URL_BASE . '?' . http_build_query($url);
         $client = new Client(
             $url,
             array(
