@@ -1125,23 +1125,6 @@ class Teamsnap extends Webhook implements ProcessInterface
                     }
                 }
 
-//                    /*
-//                     * Create partner-mapping for ContactID.
-//                     *
-//                     * This must happen here, because it needs an existing user
-//                     * in the TeamSnap system to be linked; additionally, we
-//                     * dont care about the return value, because this is
-//                     * creating the initial partner-mapping.
-//                     */
-//                    if (isset($original_data['member']['guardian'])) {
-//                        $this->domain = 'https://api.teamsnap.com/v2';
-//                        $this->getContactResource(
-//                            $original_data['group']['uuid'],
-//                            $original_data['member']['uuid'],
-//                            $original_data['member']['guardian']
-//                        );
-//                    }
-
                 // user is registering for the first time, send email invite.
                 if (isset($query['message'])) {
                     // add mapping of user UUID with TeamSnap Roster
@@ -1188,27 +1171,6 @@ class Teamsnap extends Webhook implements ProcessInterface
                     $original_data['member']['uuid'],
                     self::PARTNER_MAP_SUBTYPE_USER_EMAIL
                 );
-
-//                // delete partner-mapping for contact id
-//                if (isset($original_data['member']['guardian'])) {
-//                    // delete partner-mapping for contact id.
-//                    parent::deletePartnerMapMultiple(
-//                        self::PARTNER_MAP_USER,
-//                        $original_data['member']['guardian']['uuid'],
-//                        $original_data['member']['uuid'],
-//                        $original_data['group']['uuid'],
-//                        self::PARTNER_MAP_SUBTYPE_USER_CONTACT
-//                    );
-//
-//                    // delete partner-mapping for contact email id
-//                    parent::deletePartnerMapMultiple(
-//                        self::PARTNER_MAP_USER,
-//                        $original_data['member']['guardian']['uuid'],
-//                        $original_data['member']['uuid'],
-//                        $original_data['group']['uuid'],
-//                        self::PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
-//                    );
-//                }
                 break;
             case self::WEBHOOK_CREATE_EVENT:
                 // associate AllPlayers event UUID with TeamSnap EventID
@@ -1332,8 +1294,6 @@ class Teamsnap extends Webhook implements ProcessInterface
      *   The AllPlayers UUID to make/search the partner-mapping.
      * @param string $group_uuid
      *   The AllPlayers Group UUID to make/search the partner-mapping.
-     * @param string $guardian_uuid
-     *   (Optional) The guardian uuid if this is a guardian email.
      *
      * @return array
      *   The data to send to create/update the TeamSnap email resource.
@@ -1341,36 +1301,15 @@ class Teamsnap extends Webhook implements ProcessInterface
     public function getEmailResource(
         $email_address,
         $user_uuid,
-        $group_uuid,
-        $guardian_uuid = null
+        $group_uuid
     ) {
         $email = '';
-
-        // determine which partner-mapping call to make
-        if ($guardian_uuid != null) {
-//            $email_id = parent::readPartnerMapMultiple(
-//                self::PARTNER_MAP_USER,
-//                $guardian_uuid,
-//                $user_uuid,
-//                $group_uuid,
-//                self::PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
-//            );
-//
-//            // @todo remove hack
-//            // temp hack for partner-mapping changes, to keep testing available
-//            if (is_array($email_id)) {
-//                $email_id = null;
-//            } else {
-//                $email_id = array('external_resource_id' => $email_id);
-//            }
-        } else {
-            $email_id = parent::readPartnerMap(
-                self::PARTNER_MAP_USER,
-                $user_uuid,
-                $group_uuid,
-                self::PARTNER_MAP_SUBTYPE_USER_EMAIL
-            );
-        }
+        $email_id = parent::readPartnerMap(
+            self::PARTNER_MAP_USER,
+            $user_uuid,
+            $group_uuid,
+            self::PARTNER_MAP_SUBTYPE_USER_EMAIL
+        );
 
         // build email payload
         if (is_array($email_id) && array_key_exists('external_resource_id', $email_id)) {
@@ -1383,10 +1322,9 @@ class Teamsnap extends Webhook implements ProcessInterface
             );
         } else {
             // partner mapping does not exist, build post data
-            // update label for guardian
             $email = array(
                 array(
-                    'label' => !is_null($guardian_uuid) ? 'Contact' : '',
+                    'label' => 'Contact',
                     'email' => $email_address,
                 ),
             );
@@ -1602,128 +1540,4 @@ class Teamsnap extends Webhook implements ProcessInterface
         $this->domain = $original_domain;
         return $opponent;
     }
-
-//    /**
-//     * Get the partner-mapped (guardian) contact resource ID for TeamSnap.
-//     *
-//     * This will create the resource if it does not already exist.
-//     *
-//     * @param string $group_uuid
-//     *   The group that the user belongs too.
-//     * @param string $user_uuid
-//     *   The user that has a contact.
-//     * @param array $contact_info
-//     *   The contacts information.
-//     *
-//     * @return string
-//     *   The resource ID for TeamSnap API calls.
-//     */
-//    public function getContactResource($group_uuid, $user_uuid, array $contact_info)
-//    {
-//        $original_domain = $this->domain; // store old domain
-//        $contact = '';
-//
-//        // get TeamID from partner-mapping
-//        $team = parent::readPartnerMap(
-//            self::PARTNER_MAP_GROUP,
-//            $group_uuid,
-//            $group_uuid
-//        );
-//        $team = $team['external_resource_id'];
-//
-//        // get UserID from partner-mapping
-//        $user = parent::readPartnerMap(
-//            parent::PARTNER_MAP_USER,
-//            $user_uuid,
-//            $group_uuid
-//        );
-//        $user = $user['external_resource_id'];
-//
-//        $contact = parent::readPartnerMapMultiple(
-//            self::PARTNER_MAP_USER,
-//            $contact_info['uuid'],
-//            $user_uuid,
-//            $group_uuid,
-//            self::PARTNER_MAP_SUBTYPE_USER_CONTACT
-//        );
-//
-//        // get Contact email ID from partner-mapping
-//        $contact_email = parent::readPartnerMapMultiple(
-//            self::PARTNER_MAP_USER,
-//            $contact_info['uuid'],
-//            $user_uuid,
-//            $group_uuid,
-//            self::PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
-//        );
-//
-//        // set default data if something is missing
-//        if (!isset($contact_info['first_name']) || empty($contact_info['first_name'])) {
-//            $contact_info['first_name'] = '(Guardian)';
-//        }
-//
-//        // make payload
-//        $send = array(
-//            'label' => 'Guardian',
-//            'first' => $contact_info['first_name'],
-//        );
-//
-//        // add additional information to payload, if present
-//        if (isset($contact_info['last_name']) && !empty($contact_info['last_name'])) {
-//            $send['last'] = $contact_info['last_name'];
-//        }
-//
-//        // set the guardian email address
-//        if (isset($contact_info['email']) && !empty($contact_info['email'])) {
-//            $send['contact_email_addresses_attributes'] = $this->getEmailResource(
-//                $contact_info['email'],
-//                $user_uuid,
-//                $group_uuid,
-//                $contact_info['uuid']
-//            );
-//        }
-//
-//        // set request url and payload
-//        $this->domain = $original_domain . '/teams/' . $team . '/as_roster/'
-//            . $this->webhook->subscriber['commissioner_id'] .  '/rosters/'
-//            . $user . '/contacts';
-//        $this->setData(array('contact' => $send));
-//
-//        // update/create partner-mapping
-//        if (!is_array($contact)) {
-//            $this->domain .= '/' . $contact;
-//            parent::put();
-//            $this->send();
-//        } else {
-//            parent::post();
-//            $response = $this->send();
-//            $response = $this->processJsonResponse($response);
-//
-//            // add new partner-mapping for this contact id
-//            parent::createPartnerMapMultiple(
-//                $response['contact']['id'],
-//                parent::PARTNER_MAP_USER,
-//                $contact_info['uuid'],
-//                $group_uuid,
-//                $user_uuid,
-//                parent::PARTNER_MAP_SUBTYPE_USER_CONTACT
-//            );
-//
-//            // update contact id
-//            $contact = $response['contact']['id'];
-//
-//            // add new partner-mapping for this contact email id
-//            parent::createPartnerMapMultiple(
-//                $response['contact']['contact_email_addresses'][0]['id'],
-//                parent::PARTNER_MAP_USER,
-//                $contact_info['uuid'],
-//                $group_uuid,
-//                $user_uuid,
-//                parent::PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
-//            );
-//        }
-//
-//        // restore the old domain
-//        $this->domain = $original_domain;
-//        return $contact;
-//    }
 }
