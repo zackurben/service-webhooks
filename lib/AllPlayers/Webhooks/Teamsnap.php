@@ -1066,7 +1066,7 @@ class Teamsnap extends Webhook implements ProcessInterface
             case self::WEBHOOK_DELETE_GROUP:
                 // delete partner-mapping with group UUID
                 parent::deletePartnerMap(
-                    self::PARTNER_MAP_GROUP,
+                    null,
                     $original_data['group']['uuid']
                 );
                 break;
