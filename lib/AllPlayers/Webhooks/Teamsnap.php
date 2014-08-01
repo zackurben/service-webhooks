@@ -446,6 +446,9 @@ class Teamsnap extends Webhook implements ProcessInterface
                     case 'Coach':
                         $send['is_manager'] = 1;
                         break;
+                    case 'Fan':
+                        $send['non_player'] = 1;
+                        break;
                 }
 
                 // add email information to payload
@@ -601,20 +604,77 @@ class Teamsnap extends Webhook implements ProcessInterface
                 // add roster phone numbers, if present
                 $roster_telephones_attributes = array();
                 if (isset($webform['profile__field_phone__profile'])) {
+                    // check for existing phone number
+                    $query = parent::readPartnerMap(
+                        parent::PARTNER_MAP_USER,
+                        $data['member']['uuid'],
+                        $data['group']['uuid'],
+                        parent::PARTNER_MAP_SUBTYPE_USER_PHONE
+                    );
+
+                    // dynamically adjust label/id
+                    $key = $value = null;
+                    if (array_key_exists('external_resource_id', $query)) {
+                        $key = 'id';
+                        $value = $query['external_resource_id'];
+                    } else {
+                        $key = 'label';
+                        $value = 'Home';
+                    }
+
+                    // add home phone info to payload
                     $roster_telephones_attributes[] = array(
-                        'label' => 'Home',
+                        $key => $value,
                         'phone_number' => $webform['profile__field_phone__profile'],
                     );
                 }
                 if (isset($webform['profile__field_phone_cell__profile'])) {
+                    // check for existing cell phone number
+                    $query = parent::readPartnerMap(
+                        parent::PARTNER_MAP_USER,
+                        $data['member']['uuid'],
+                        $data['group']['uuid'],
+                        parent::PARTNER_MAP_SUBTYPE_USER_PHONE_CELL
+                    );
+
+                    // dynamically adjust label/id
+                    $key = $value = null;
+                    if (array_key_exists('external_resource_id', $query)) {
+                        $key = 'id';
+                        $value = $query['external_resource_id'];
+                    } else {
+                        $key = 'label';
+                        $value = 'Cell';
+                    }
+
+                    // add cell phone info to payload
                     $roster_telephones_attributes[] = array(
-                        'label' => 'Cell',
+                        $key => $value,
                         'phone_number' => $webform['profile__field_phone_cell__profile'],
                     );
                 }
                 if (isset($webform['profile__field_work_number__profile'])) {
+                    // check for existing work phone number
+                    $query = parent::readPartnerMap(
+                        parent::PARTNER_MAP_USER,
+                        $data['member']['uuid'],
+                        $data['group']['uuid'],
+                        parent::PARTNER_MAP_SUBTYPE_USER_PHONE_WORK
+                    );
+
+                    // dynamically adjust label/id
+                    $key = $value = null;
+                    if (array_key_exists('external_resource_id', $query)) {
+                        $key = 'id';
+                        $value = $query['external_resource_id'];
+                    } else {
+                        $key = 'label';
+                        $value = 'Work';
+                    }
+
+                    // add work phone info to payload
                     $roster_telephones_attributes[] = array(
-                        'label' => 'Work',
+                        $key => $value,
                         'phone_number' => $webform['profile__field_work_number__profile'],
                     );
                 }
