@@ -496,7 +496,8 @@ class Webhook
      * @param string $password
      *   The AllPlayers password for logging into APIv1.
      */
-    protected function makeCookie($username, $password) {
+    protected function makeCookie($username, $password)
+    {
         // Fetch the AllPlayers Auth cookie
         $this->cookie = new CookiePlugin(new ArrayCookieJar());
         $cookie_client = new Client(
