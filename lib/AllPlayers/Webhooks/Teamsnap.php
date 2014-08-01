@@ -447,7 +447,11 @@ class Teamsnap extends Webhook implements ProcessInterface
                         $send['is_manager'] = 1;
                         break;
                     case 'Fan':
-                        $send['non_player'] = 1;
+                        // if user is being created, specify non-player role,
+                        // else disregard to avoid overwriting player status.
+                        if ($method == self::HTTP_POST) {
+                            $send['non_player'] = 1;
+                        }
                         break;
                 }
 
@@ -525,8 +529,13 @@ class Teamsnap extends Webhook implements ProcessInterface
                         break;
                 }
 
-                // update request and let PostWebhooks complete
-                $this->setData(array('roster' => $send));
+                // update request and let PostWebhooks complete, only if update
+                // data is included.
+                if (empty($send)) {
+                    $this->setSend(self::WEBHOOK_CANCEL);
+                } else {
+                    $this->setData(array('roster' => $send));
+                }
                 parent::put();
                 break;
             case self::WEBHOOK_ADD_SUBMISSION:
