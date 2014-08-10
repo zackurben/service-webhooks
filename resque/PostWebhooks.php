@@ -34,6 +34,11 @@ class PostWebhooks
         if (isset($config['test_url'])) {
             $this->test_url = $config['test_url'];
         }
+
+        // Listen for lock queues so that we can remove the que after the job finishes
+        Resque_Event::listen('beforePerform', array(new \AllPlayers\ResquePlugins\LockPlugin(), 'beforePerform'));
+        Resque_Event::listen('onFailure', array(new \AllPlayers\ResquePlugins\LockPlugin(), 'onFailure'));
+        Resque_Event::listen('afterPerform', array(new \AllPlayers\ResquePlugins\LockPlugin(), 'afterPerform'));
     }
 
     /**
