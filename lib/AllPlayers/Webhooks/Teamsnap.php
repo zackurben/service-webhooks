@@ -453,6 +453,10 @@ class Teamsnap extends Webhook implements ProcessInterface
                             $send['non_player'] = 1;
                         }
                         break;
+                    case 'Guardian':
+                        // ignore AllPlayers guardian changes
+                        $this->setSend(self::WEBHOOK_CANCEL);
+                        break;
                 }
 
                 // add email information to payload
