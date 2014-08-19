@@ -1,7 +1,7 @@
 <?php
 /**
  * @file
- * Contains Drupal\resque\PerformLockPlugin.
+ * Contains AllPlayers\ResquePlugins\LockPlugin.
  */
 
 namespace AllPlayers\ResquePlugins;
