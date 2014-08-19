@@ -1,5 +1,4 @@
 <?php
-
 /**
  * @file Webhook.php
  *
@@ -12,11 +11,8 @@
 namespace AllPlayers\Webhooks;
 
 use Guzzle\Http\Client;
-use Guzzle\Http\Message\Response;
 use Guzzle\Http\Plugin\OauthPlugin;
-use Guzzle\Http\Plugin\CookiePlugin;
 use Guzzle\Http\Plugin\CurlAuthPlugin;
-use Guzzle\Http\CookieJar\ArrayCookieJar;
 
 /**
  * Base Webhook definition, to provide structure to all child Webhooks.
@@ -163,83 +159,6 @@ class Webhook
     const WEBHOOK_DELETE_EVENT = 'user_deletes_event';
 
     /**
-     * A string value for an available partner mapping option.
-     *
-     * @var string
-     */
-    const PARTNER_MAP_USER = 'user';
-
-    /**
-     * A string value for an available partner mapping option.
-     *
-     * @var string
-     */
-    const PARTNER_MAP_EVENT = 'event';
-
-    /**
-     * A string value for an available partner mapping option.
-     *
-     * @var string
-     */
-    const PARTNER_MAP_GROUP = 'group';
-
-    /**
-     * A string value for an available partner mapping option.
-     *
-     * @var string
-     */
-    const PARTNER_MAP_RESOURCE = 'resource';
-
-    /**
-     * A string value for an available partner mapping subtype option.
-     *
-     * @var string
-     */
-    const PARTNER_MAP_SUBTYPE_USER_EMAIL = 'email';
-
-    /**
-     * A string value for an available partner mapping subtype option.
-     *
-     * @var string
-     */
-    const PARTNER_MAP_SUBTYPE_USER_CONTACT = 'contact';
-
-    /**
-     * A string value for an available partner mapping subtype option.
-     *
-     * @var string
-     */
-    const PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL = 'contact_email';
-
-    /**
-     * A string value for an available partner mapping subtype option.
-     *
-     * @var string
-     */
-    const PARTNER_MAP_SUBTYPE_USER_PHONE = 'phone';
-
-    /**
-     * A string value for an available partner mapping subtype option.
-     *
-     * @var string
-     */
-    const PARTNER_MAP_SUBTYPE_USER_PHONE_CELL = 'phone_cell';
-
-    /**
-     * A string value for an available partner mapping subtype option.
-     *
-     * @var string
-     */
-    const PARTNER_MAP_SUBTYPE_USER_PHONE_WORK = 'phone_work';
-
-    /**
-     * The base url for the AllPlayers Partner-Mapping API.
-     *
-     * @var string
-     */
-    const PARTNER_MAPPING_URL_BASE = 'https://api.zurben.apci.ws/api/v2/externalid';
-
-    /**
      * The list of headers that will be sent with each client request.
      *
      * @var array
@@ -252,13 +171,6 @@ class Webhook
      * @var array
      */
     protected $api_headers = array();
-
-    /**
-     * The name of the cookie for AllPlayers Partner-Mapping API Authentication.
-     *
-     * @var null|CookiePlugin
-     */
-    protected $cookie = null;
 
     /**
      * The top object of a webhook.
@@ -328,13 +240,6 @@ class Webhook
      * @var integer
      */
     protected $send = self::WEBHOOK_SEND;
-
-    /**
-     * The unique partner identifier for the AllPlayers partner-mapping API.
-     *
-     * @var null|string
-     */
-    protected $partner_id = null;
 
     /**
      * Initialize the webhook object.
@@ -487,46 +392,6 @@ class Webhook
     }
 
     /**
-     * Make the AllPlayers API cookie for the subsequent requests.
-     *
-     * This is only required if the webhook is using the Partner-Mapping API.
-     *
-     * @param string $username
-     *   The AllPlayers username for logging into APIv1.
-     * @param string $password
-     *   The AllPlayers password for logging into APIv1.
-     */
-    protected function makeCookie($username, $password)
-    {
-        // Fetch the AllPlayers Auth cookie
-        $this->cookie = new CookiePlugin(new ArrayCookieJar());
-        $cookie_client = new Client(
-            'https://www.zurben.apci.ws/api/v1/rest/users/login.json',
-            array(
-                'curl.CURLOPT_SSL_VERIFYPEER' => false,
-                'curl.CURLOPT_CERTINFO' => false,
-            )
-        );
-        $cookie_client->addSubscriber($this->cookie);
-
-        $cookie_auth = $cookie_client->post(
-            $cookie_client->getBaseUrl(),
-            array('Content-Type' => 'application/x-www-form-urlencoded'),
-            'email=' . $username . '&password=' . $password
-        );
-        $cookie_auth->send();
-
-        // Set the AllPlayers auth Header for subsequent API calls.
-        $temp = $this->cookie->getCookieJar()->all();
-        foreach ($temp as $c) {
-            if (strstr($c->getName(), "SESS")) {
-                $this->api_headers['X-Token'] = hash("sha256", $c->getValue());
-                break;
-            }
-        }
-    }
-
-    /**
      * Makes a POST request to send to the external service.
      *
      * @return Request
@@ -647,240 +512,5 @@ class Webhook
         if (isset($data['test_url']) && $data['test_url'] != '') {
             $this->test_domain = $data['test_url'];
         }
-    }
-
-    /**
-     * Return the JSON object from a Guzzle Response object.
-     *
-     * @param \Guzzle\Http\Message\Response $response
-     *   The Guzzle Response from which to parse the JSON object.
-     *
-     * @return array
-     *   The JSON decoded, associative keyed, array.
-     */
-    protected function processJsonResponse(Response $response)
-    {
-        $return = '';
-
-        // Strip JSON string data from response message
-        if (strpos($response->getMessage(), "\n[{") !== false) {
-            $return = substr(
-                $response->getMessage(),
-                strpos($response->getMessage(), '[{')
-            );
-        } else {
-            $return = substr(
-                $response->getMessage(),
-                strpos($response->getMessage(), '{')
-            );
-        }
-
-        return json_decode($return, true);
-    }
-
-    /**
-     * Create a resource mapping between AllPlayers and a partner.
-     *
-     * @todo Remove cURL options (Used for self-signed certificates).
-     *
-     * @param string $external_resource_id
-     *   The partner resource id to map.
-     * @param string $item_type
-     *   The AllPlayers item type to map.
-     *   @see PARTNER_MAP_USER
-     *   @see PARTNER_MAP_EVENT
-     *   @see PARTNER_MAP_GROUP
-     *   @see PARTNER_MAP_RESOURCE
-     * @param string $item_uuid
-     *   The AllPlayers item uuid to map.
-     * @param string $group_uuid
-     *   The AllPlayers group uuid associated with the item uuid.
-     * @param string $sub_item_type (Optional)
-     *   The resource subtype to map.
-     *   @see PARTNER_MAP_SUBTYPE_USER_EMAIL
-     *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT
-     *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
-     *
-     * @return array
-     *   The AllPlayers response from creating a resource mapping.
-     */
-    protected function createPartnerMap(
-        $external_resource_id,
-        $item_type,
-        $item_uuid,
-        $group_uuid,
-        $sub_item_type = null
-    ) {
-        $client = new Client(
-            self::PARTNER_MAPPING_URL_BASE,
-            array(
-                'curl.CURLOPT_SSL_VERIFYPEER' => false,
-                'curl.CURLOPT_CERTINFO' => false,
-            )
-        );
-        $client->addSubscriber($this->cookie);
-
-        // set required data fields
-        $data = array(
-            'external_resource_id' => $external_resource_id,
-            'item_type' => $item_type,
-            'item_uuid' => $item_uuid,
-            'group_uuid' => $group_uuid,
-            'partner' => $this->partner_id,
-        );
-
-        // add subtype if present
-        if (!is_null($sub_item_type)) {
-            $data['sub_item_type'] = $sub_item_type;
-        }
-
-        // send API request and return response
-        $request = $client->post(
-            $client->getBaseUrl(),
-            array_merge(array('Content-Type' => 'application/json'), $this->api_headers),
-            json_encode($data)
-        );
-
-        $response = $request->send();
-        $response = $this->processJsonResponse($response);
-
-        return $response;
-    }
-
-    /**
-     * Read a resource mapping between AllPlayers and a partner.
-     *
-     * If the partner_uuid parameter is not included, this function will return
-     * all the elements mapped with the item_uuid.
-     *
-     * @todo Remove cURL options (Used for self-signed certificates).
-     *
-     * @param string $item_type
-     *   The AllPlayers item type to map.
-     *   @see PARTNER_MAP_USER
-     *   @see PARTNER_MAP_EVENT
-     *   @see PARTNER_MAP_GROUP
-     *   @see PARTNER_MAP_RESOURCE
-     * @param string $item_uuid
-     *   The AllPlayers item uuid to map.
-     * @param string $group_uuid
-     *   The AllPlayers group uuid associated with the item uuid.
-     * @param string $sub_item_type (Optional)
-     *   The resource subtype to map.
-     *   @see PARTNER_MAP_SUBTYPE_USER_EMAIL
-     *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT
-     *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
-     *
-     * @return array
-     *   The AllPlayers response from reading a resouce mapping.
-     */
-    protected function readPartnerMap(
-        $item_type,
-        $item_uuid,
-        $group_uuid,
-        $sub_item_type = 'entity'
-    ) {
-        $url = self::PARTNER_MAPPING_URL_BASE . '/' . $item_type . '/'
-            . $item_uuid . '/' . $this->partner_id . '/' . $group_uuid
-            . '?sub_item_type=' . $sub_item_type;
-
-        $client = new Client(
-            $url,
-            array(
-                'curl.CURLOPT_SSL_VERIFYPEER' => false,
-                'curl.CURLOPT_CERTINFO' => false,
-            )
-        );
-        $client->addSubscriber($this->cookie);
-
-        // send API request and return response
-        $request = $client->get($client->getBaseUrl(), $this->api_headers);
-        $response = $request->send();
-        $response = $this->processJsonResponse($response);
-
-        // remove double array with 1 element
-        if (!array_key_exists('message', $response)) {
-            $response = array_shift($response);
-        }
-
-        return $response;
-    }
-
-    /**
-     * Delete a resource mapping between AllPlayers and a partner.
-     *
-     * Either item_type and item_uuid or partner and group_uuid have to be set.
-     *
-     * If the item_type and item_uuid are included, the entities associated with
-     * them will be removed.
-     *
-     * If the group_uuid alone is set, all entities associated with the group
-     * will be removed.
-     *
-     * @todo Remove cURL options (Used for self-signed certificates).
-     *
-     * @param string $item_type
-     *   The AllPlayers item type to map.
-     *   @see PARTNER_MAP_USER
-     *   @see PARTNER_MAP_EVENT
-     *   @see PARTNER_MAP_GROUP
-     *   @see PARTNER_MAP_RESOURCE
-     * @param string $group_uuid
-     *   The AllPlayers group uuid.
-     * @param string $item_uuid (Optional)
-     *   The AllPlayers item uuid to map.
-     * @param string $sub_item_type (Optional)
-     *   The resource subtype to map.
-     *   @see PARTNER_MAP_SUBTYPE_USER_EMAIL
-     *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT
-     *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
-     *
-     * @return array
-     *   The AllPlayers response from deleting the resouce mapping.
-     */
-    protected function deletePartnerMap(
-        $item_type = null,
-        $group_uuid = null,
-        $item_uuid = null,
-        $sub_item_type = null
-    ) {
-        $url = array();
-        if ($item_type != null) {
-            $url['item_type'] = $item_type;
-        }
-        if ($group_uuid != null) {
-            $url['group_uuid'] = $group_uuid;
-        }
-        if ($item_uuid != null) {
-            $url['item_uuid'] = $item_uuid;
-        }
-        if ($sub_item_type != null) {
-            $url['sub_item_type'] = $sub_item_type;
-        }
-        if ($this->partner_id != null) {
-            $url['partner'] = $this->partner_id;
-        }
-
-        $url = self::PARTNER_MAPPING_URL_BASE . '?' . http_build_query($url);
-        $client = new Client(
-            $url,
-            array(
-                'curl.CURLOPT_SSL_VERIFYPEER' => false,
-                'curl.CURLOPT_CERTINFO' => false,
-            )
-        );
-        $client->addSubscriber($this->cookie);
-
-        // send API request and return response
-        $response = $client->delete(
-            $client->getBaseUrl(),
-            array_merge(
-                array('Content-Type' => 'application/json'),
-                $this->api_headers
-            )
-        )->send();
-        $response = $this->processJsonResponse($response);
-
-        return $response;
     }
 }
