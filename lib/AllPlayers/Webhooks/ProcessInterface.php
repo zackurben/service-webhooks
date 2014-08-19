@@ -1,10 +1,9 @@
 <?php
-
 /**
- * @file ProcessInterface.php
+ * @file
+ * Contains /AllPlayers/Webhooks/ProcessInterface.
  *
- * Provides the processing interface for all custom webhooks that require
- * processing.
+ * Provides the required method signatures for additional processing.
  */
 
 namespace AllPlayers\Webhooks;
@@ -12,11 +11,10 @@ namespace AllPlayers\Webhooks;
 use Guzzle\Http\Message\Response;
 
 /**
- * Interface definition.
+ * The required functions for any webhook that implements the ProcessInterface.
  */
 interface ProcessInterface
 {
-
     /**
      * Process the webhook data returned from sending the webhook.
      *

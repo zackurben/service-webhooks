@@ -496,7 +496,7 @@ class Teamsnap extends Webhook implements ProcessInterface
 
                 // Create/update partner-mapping information.
                 if ($method == self::HTTP_POST) {
-                    // add additional information to payload
+                    // Add additional information to the payload.
                     $send['first'] = $data['member']['first_name'];
                     $send['last'] = $data['member']['last_name'];
 
@@ -761,7 +761,7 @@ class Teamsnap extends Webhook implements ProcessInterface
                 );
                 $roster = $roster['external_resource_id'];
 
-                // Delete the user from team.
+                // Delete the user from the team.
                 $this->domain .= '/teams/' . $team . '/as_roster/'
                     . $this->webhook->subscriber['commissioner_id']
                     . '/rosters/' . $roster;

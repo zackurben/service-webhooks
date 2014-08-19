@@ -2,6 +2,8 @@
 /**
  * @file
  * Contains /AllPlayers/Utilities/Helper.
+ *
+ * Provides helper functions for processing webhooks.
  */
 
 namespace AllPlayers\Utilities;
@@ -26,7 +28,7 @@ class Helper
     {
         $return = '';
 
-        // Strip JSON string data from response message
+        // Strip JSON string data from response message.
         if (strpos($response->getMessage(), "\n[{") !== false) {
             $return = substr(
                 $response->getMessage(),

@@ -1,11 +1,13 @@
 <?php
 /**
- * @file Webhook.php
+ * @file
+ * Contains /AllPlayers/Webhooks/Webhook.
  *
- * Provides the basic Webhooks plugin definition. Every custom Webhook should
- * extend this skeleton, and be throughly documented. Any custom authentication
- * methods should be communicated to AllPlayers to be included into our
- * authenticate method.
+ * Provides the basic Webhooks plugin definition.
+ *
+ * Every custom Webhook should extend this skeleton, and be throughly
+ * documented. Any custom authentication methods should be communicated to
+ * AllPlayers to be included into our authenticate method.
  */
 
 namespace AllPlayers\Webhooks;
@@ -210,11 +212,11 @@ class Webhook
     /**
      * The method used for Client authentication.
      *
+     * @var integer
+     *
      * @see AUTHENTICATION_NONE
      * @see AUTHENTICATION_BASIC
      * @see AUTHENTICATION_OAUTH
-     *
-     * @var integer
      */
     protected $authentication = self::AUTHENTICATION_NONE;
 
@@ -224,20 +226,20 @@ class Webhook
      * This establishes the method of transmission between the AllPlayers
      * webhook and the third-party webhook.
      *
+     * @var string
+     *
      * @see TRANSMISSION_URLENCODED
      * @see TRANSMISSION_JSON
-     *
-     * @var string
      */
     protected $method = self::TRANSMISSION_JSON;
 
     /**
      * Determines if the webhook should be sent or not.
      *
+     * @var integer
+     *
      * @see WEBHOOK_SEND
      * @see WEBHOOK_CANCEL
-     *
-     * @var integer
      */
     protected $send = self::WEBHOOK_SEND;
 
@@ -245,11 +247,11 @@ class Webhook
      * Initialize the webhook object.
      *
      * @param array $subscriber
-     *   The parameters (subscriber variables) for the request.
+     *   The Subscriber variable provided by the Resque Job.
      * @param array $data
-     *   The event data from the webhook.
+     *   The Event Data variable provided by the Resque Job.
      * @param array $preprocess
-     *   Data that needs to be processed before the REST methods are called.
+     *   Additional data used for pre-processing, defined in PostWebhooks.
      */
     public function __construct(
         array $subscriber = array(),
@@ -269,9 +271,9 @@ class Webhook
     /**
      * Authenticate client based on the webhooks authentication method.
      *
-     * This function is not abstract due to the possibility that many partners will
-     * need to use either basic_auth or oauth; those who do not can have a custom
-     * auth definition here.
+     * This function is not abstract due to the possibility that many partners
+     * will need to use either basic_auth or oauth; those who do not can have a
+     * custom auth definition here.
      */
     public function authenticate()
     {
@@ -354,11 +356,11 @@ class Webhook
     }
 
     /**
-     * Set the Clients' domain, based on the URL in the webhook definition and test url.
+     * Wrapper function to redirect the webhook if testing is enabled.
      */
     protected function setDomain()
     {
-        // swap domain and redirect domain
+        // Swap the domain and redirect domain variables.
         if (isset($this->test_domain) && $this->test_domain != '') {
             $this->webhook->data['original_url'] = $this->domain;
             $this->client->setBaseUrl($this->test_domain);
@@ -370,10 +372,10 @@ class Webhook
     /**
      * Get the webhook send flag.
      *
+     * @return integer
+     *
      * @see WEBHOOK_SEND
      * @see WEBHOOK_CANCEL
-     *
-     * @return integer
      */
     public function getSend()
     {
@@ -382,6 +384,9 @@ class Webhook
 
     /**
      * Set the webhook send flag.
+     *
+     * @param integer $send
+     *   The send value to set.
      *
      * @see WEBHOOK_SEND
      * @see WEBHOOK_CANCEL
@@ -394,14 +399,14 @@ class Webhook
     /**
      * Makes a POST request to send to the external service.
      *
-     * @return Request
+     * @return \Guzzle\Http\Message\Request
      *   Returns the Guzzle request object, ready to send.
      */
     protected function post()
     {
         $this->setDomain();
 
-        // encode data in the requested method
+        // Encode the webhook data using the requested method.
         if ($this->method === self::TRANSMISSION_URLENCODED) {
             $this->request = $this->client->post(
                 $this->client->getBaseUrl(),
@@ -428,7 +433,7 @@ class Webhook
     {
         $this->setDomain();
 
-        // encode data in the requested method
+        // Encode the webhook data using the requested method.
         if ($this->method === self::TRANSMISSION_URLENCODED) {
             $this->request = $this->client->put(
                 $this->client->getBaseUrl(),
@@ -455,7 +460,7 @@ class Webhook
     {
         $this->setDomain();
 
-        // encode data in the requested method
+        // Encode the webhook data using the requested method.
         if ($this->method === self::TRANSMISSION_URLENCODED) {
             $this->request = $this->client->delete(
                 $this->client->getBaseUrl(),
@@ -480,7 +485,7 @@ class Webhook
      */
     public function send()
     {
-        // send a debug request if enabled
+        // Send an additional debug request if enabled.
         include 'config/config.php';
         if (isset($config['debug']) && $config['debug']['active']) {
             $dbg = new Client($config['debug']['url']);
@@ -508,7 +513,7 @@ class Webhook
      */
     protected function preprocess(array $data)
     {
-        // set the redirect url, so we can swap domains before sending the data
+        // Set the redirect url, so we can swap domains before sending the data.
         if (isset($data['test_url']) && $data['test_url'] != '') {
             $this->test_domain = $data['test_url'];
         }

@@ -1,20 +1,18 @@
 <?php
-
 /**
- * @file Custom.php
+ * @file
+ * Contains /AllPlayers/Webhooks/Custom.
  *
- * Provides the Custom Webhooks plugin definition. The Custom Webhook is a
- * simplex Webhook for sending all data to a single, non-authenticated, url.
+ * Provides the Custom Webhook definitions.
  */
 
 namespace AllPlayers\Webhooks;
 
 /**
- * Base Custom Webhook definition, to send data to a custom URL.
+ * Base Custom Webhook definition.
  */
 class Custom extends Webhook
 {
-
     /**
      * The URL to post the webhook.
      *
@@ -25,11 +23,11 @@ class Custom extends Webhook
     /**
      * The method used for Client authentication.
      *
+     * @var integer
+     *
      * @see AUTHENTICATION_NONE
      * @see AUTHENTICATION_BASIC
      * @see AUTHENTICATION_OAUTH
-     *
-     * @var integer
      */
     protected $authentication = self::AUTHENTICATION_NONE;
 
@@ -39,15 +37,22 @@ class Custom extends Webhook
      * This establishes the method of transmission between the AllPlayers
      * webhook and the third-party webhook.
      *
+     * @var string
+     *
      * @see TRANSMISSION_URLENCODED
      * @see TRANSMISSION_JSON
-     *
-     * @var string
      */
     protected $method = self::TRANSMISSION_JSON;
 
     /**
-     * Use custom url as domain.
+     * Create a Custom webhook object.
+     *
+     * @param array $subscriber
+     *   The Subscriber variable provided by the Resque Job.
+     * @param array $data
+     *   The Event Data variable provided by the Resque Job.
+     * @param array $preprocess
+     *   Additional data used for pre-processing, defined in PostWebhooks.
      */
     public function __construct(
         array $subscriber = array(),
@@ -60,14 +65,12 @@ class Custom extends Webhook
     }
 
     /**
-     * Process the webhook data and set the domain to the appropriate URL
+     * Process the webhook data and set the domain to the appropriate URL.
      */
     protected function process()
     {
-        /**
-         * Do no processing here, because this is a simplex webhook that dumps
-         * all raw data to a single URL.
-         */
+        // Do no processing here, because this is a simplex webhook that dumps
+        // all raw data to a single URL.
         parent::post();
     }
 }

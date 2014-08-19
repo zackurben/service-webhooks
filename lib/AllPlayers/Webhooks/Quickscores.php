@@ -1,7 +1,7 @@
 <?php
-
 /**
- * @file Quickscores.php
+ * @file
+ * Contains /AllPlayers/Webhooks/Quickscores.
  *
  * Provides the Quickscores Webhooks plugin definition. The Quickscores Webhook
  * sends AllPlayers hook data to a single endpoint for processing the data;
@@ -15,7 +15,6 @@ namespace AllPlayers\Webhooks;
  */
 class Quickscores extends Webhook
 {
-
     /**
      * The URL to post the webhook.
      *
@@ -26,11 +25,11 @@ class Quickscores extends Webhook
     /**
      * The method used for Client authentication.
      *
+     * @var integer
+     *
      * @see AUTHENTICATION_NONE
      * @see AUTHENTICATION_BASIC
      * @see AUTHENTICATION_OAUTH
-     *
-     * @var integer
      */
     protected $authentication = self::AUTHENTICATION_BASIC;
 
@@ -40,15 +39,22 @@ class Quickscores extends Webhook
      * This establishes the method of transmission between the AllPlayers
      * webhook and the third-party webhook.
      *
+     * @var string
+     *
      * @see TRANSMISSION_URLENCODED
      * @see TRANSMISSION_JSON
-     *
-     * @var string
      */
     protected $method = self::TRANSMISSION_URLENCODED;
 
     /**
      * Authenticate using basic auth.
+     *
+     * @param array $subscriber
+     *   The Subscriber variable provided by the Resque Job.
+     * @param array $data
+     *   The Event Data variable provided by the Resque Job.
+     * @param array $preprocess
+     *   Additional data used for pre-processing, defined in PostWebhooks.
      */
     public function __construct(
         array $subscriber = array(),
@@ -67,14 +73,12 @@ class Quickscores extends Webhook
     }
 
     /**
-     * Process the webhook and set the domain to the appropriate URL
+     * Process the webhook and set the domain to the appropriate URL.
      */
     protected function process()
     {
-        /**
-         * Do nothing here because, QuickScores has a single API endpoint for
-         * processing our data.
-         */
+        // Do nothing here because, QuickScores has a single API endpoint for
+        // processing data.
         parent::post();
     }
 }

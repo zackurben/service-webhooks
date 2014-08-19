@@ -2,6 +2,8 @@
 /**
  * @file
  * Contains /AllPlayers/Utilities/PartnerMap.
+ *
+ * Provides the Partner-Mapping API functionality.
  */
 
 namespace AllPlayers\Utilities;
@@ -143,7 +145,7 @@ class PartnerMap
      */
     private function makeCookie($username, $password)
     {
-        // Fetch the AllPlayers Auth cookie
+        // Fetch the AllPlayers Authentication cookie.
         $this->cookie = new CookiePlugin(new ArrayCookieJar());
         $cookie_client = new Client(
             'https://www.zurben.apci.ws/api/v1/rest/users/login.json',
@@ -174,28 +176,29 @@ class PartnerMap
     /**
      * Create a resource mapping between AllPlayers and a partner.
      *
-     * @todo Remove cURL options (Used for self-signed certificates).
-     *
      * @param string $external_resource_id
      *   The partner resource id to map.
      * @param string $item_type
      *   The AllPlayers item type to map.
-     *   @see PARTNER_MAP_USER
-     *   @see PARTNER_MAP_EVENT
-     *   @see PARTNER_MAP_GROUP
-     *   @see PARTNER_MAP_RESOURCE
      * @param string $item_uuid
      *   The AllPlayers item uuid to map.
      * @param string $group_uuid
      *   The AllPlayers group uuid associated with the item uuid.
      * @param string $sub_item_type (Optional)
      *   The resource subtype to map.
-     *   @see PARTNER_MAP_SUBTYPE_USER_EMAIL
-     *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT
-     *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
      *
      * @return array
      *   The AllPlayers response from creating a resource mapping.
+     *
+     * @see PARTNER_MAP_USER
+     * @see PARTNER_MAP_EVENT
+     * @see PARTNER_MAP_GROUP
+     * @see PARTNER_MAP_RESOURCE
+     * @see PARTNER_MAP_SUBTYPE_USER_EMAIL
+     * @see PARTNER_MAP_SUBTYPE_USER_CONTACT
+     * @see PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
+     *
+     * @todo Remove cURL options (Used for self-signed certificates).
      */
     public function createPartnerMap(
         $external_resource_id,
@@ -213,7 +216,7 @@ class PartnerMap
         );
         $client->addSubscriber($this->cookie);
 
-        // set required data fields
+        // Set the required data fields.
         $data = array(
             'external_resource_id' => $external_resource_id,
             'item_type' => $item_type,
@@ -222,12 +225,12 @@ class PartnerMap
             'partner' => $this->partner_id,
         );
 
-        // add subtype if present
+        // Add the item subtype if present.
         if (!is_null($sub_item_type)) {
             $data['sub_item_type'] = $sub_item_type;
         }
 
-        // send API request and return response
+        // Send an API request and return the response.
         $request = $client->post(
             $client->getBaseUrl(),
             array_merge(array('Content-Type' => 'application/json'), $this->api_headers),
@@ -246,26 +249,27 @@ class PartnerMap
      * If the partner_uuid parameter is not included, this function will return
      * all the elements mapped with the item_uuid.
      *
-     * @todo Remove cURL options (Used for self-signed certificates).
-     *
      * @param string $item_type
      *   The AllPlayers item type to map.
-     *   @see PARTNER_MAP_USER
-     *   @see PARTNER_MAP_EVENT
-     *   @see PARTNER_MAP_GROUP
-     *   @see PARTNER_MAP_RESOURCE
      * @param string $item_uuid
      *   The AllPlayers item uuid to map.
      * @param string $group_uuid
      *   The AllPlayers group uuid associated with the item uuid.
      * @param string $sub_item_type (Optional)
      *   The resource subtype to map.
-     *   @see PARTNER_MAP_SUBTYPE_USER_EMAIL
-     *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT
-     *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
      *
      * @return array
      *   The AllPlayers response from reading a resouce mapping.
+     *
+     * @see PARTNER_MAP_USER
+     * @see PARTNER_MAP_EVENT
+     * @see PARTNER_MAP_GROUP
+     * @see PARTNER_MAP_RESOURCE
+     * @see PARTNER_MAP_SUBTYPE_USER_EMAIL
+     * @see PARTNER_MAP_SUBTYPE_USER_CONTACT
+     * @see PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
+     *
+     * @todo Remove cURL options (Used for self-signed certificates).
      */
     public function readPartnerMap(
         $item_type,
@@ -286,12 +290,12 @@ class PartnerMap
         );
         $client->addSubscriber($this->cookie);
 
-        // send API request and return response
+        // Send an API request and return the response.
         $request = $client->get($client->getBaseUrl(), $this->api_headers);
         $response = $request->send();
         $response = $this->helper->processJsonResponse($response);
 
-        // remove double array with 1 element
+        // Remove the nested array with one element.
         if (!array_key_exists('message', $response)) {
             $response = array_shift($response);
         }
@@ -310,26 +314,27 @@ class PartnerMap
      * If the group_uuid alone is set, all entities associated with the group
      * will be removed.
      *
-     * @todo Remove cURL options (Used for self-signed certificates).
-     *
      * @param string $item_type
      *   The AllPlayers item type to map.
-     *   @see PARTNER_MAP_USER
-     *   @see PARTNER_MAP_EVENT
-     *   @see PARTNER_MAP_GROUP
-     *   @see PARTNER_MAP_RESOURCE
      * @param string $group_uuid
      *   The AllPlayers group uuid.
      * @param string $item_uuid (Optional)
      *   The AllPlayers item uuid to map.
      * @param string $sub_item_type (Optional)
      *   The resource subtype to map.
-     *   @see PARTNER_MAP_SUBTYPE_USER_EMAIL
-     *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT
-     *   @see PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
      *
      * @return array
      *   The AllPlayers response from deleting the resouce mapping.
+     *
+     * @see PARTNER_MAP_USER
+     * @see PARTNER_MAP_EVENT
+     * @see PARTNER_MAP_GROUP
+     * @see PARTNER_MAP_RESOURCE
+     * @see PARTNER_MAP_SUBTYPE_USER_EMAIL
+     * @see PARTNER_MAP_SUBTYPE_USER_CONTACT
+     * @see PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
+     *
+     * @todo Remove cURL options (Used for self-signed certificates).
      */
     public function deletePartnerMap(
         $item_type = null,
@@ -364,7 +369,7 @@ class PartnerMap
         );
         $client->addSubscriber($this->cookie);
 
-        // send API request and return response
+        // Send an API request and return the response.
         $response = $client->delete(
             $client->getBaseUrl(),
             array_merge(

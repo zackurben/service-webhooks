@@ -19,48 +19,36 @@ AllPlayers will accept service hooks for production web applications. We would l
 
 ```php
 /**
- * @file YourService.php
+ * @file
+ * Contains /AllPlayers/Webhooks/Yourservice.
  *
- * Every file must have a code block explaining what the file does.
+ * Provides the Yourservice Webhook definitions.
  */
 
 namespace AllPlayers\Webhooks;
 
 /**
- * Every class must have a code block detailing what the class does.
+ * Base Yourservice Webhook definition.
  */
-class YourService extends Webhook
+class Yourservice extends Webhook
 {
-    /**
-     * Every property must have a codeblock detailing the reason for it.
-     */ 
-
     /**
      * The URL to post the webhook.
      *
      * @var string
      */
-    protected $domain = 'http://your-service-domain.com';
-
-    /**
-     * The URL of the logo (Optional but desired for optimal user experience).
-     *
-     * @var string
-     */
-    protected $service_logo = 'http://your-service-domain.com/logo.png';
+    protected $domain;
 
     /**
      * The method used for Client authentication.
      *
-     * Note: These authentication methods are defined in the Webhook class.
+     * @var integer
      *
      * @see AUTHENTICATION_NONE
      * @see AUTHENTICATION_BASIC
      * @see AUTHENTICATION_OAUTH
-     *
-     * @var integer
      */
-    protected $authentication = self::AUTHENTICATION_BASIC;
+    protected $authentication = self::AUTHENTICATION_NONE;
 
     /**
      * The method of data transmission.
@@ -68,38 +56,61 @@ class YourService extends Webhook
      * This establishes the method of transmission between the AllPlayers
      * webhook and the third-party webhook.
      *
+     * @var string
+     *
      * @see TRANSMISSION_URLENCODED
      * @see TRANSMISSION_JSON
-     *
-     * @var string
      */
-    protected $method = self::TRANSMISSION_URLENCODED;
-	
+    protected $method = self::TRANSMISSION_JSON;
+
     /**
-     * Configure the authentication credentials, and other Webhook specifics here.
+     * Create a Yourservice webhook object.
+     *
+     * @param array $subscriber
+     *   The Subscriber variable provided by the Resque Job.
+     * @param array $data
+     *   The Event Data variable provided by the Resque Job.
+     * @param array $preprocess
+     *   Additional data used for pre-processing, defined in PostWebhooks.
      */
-    public function __construct(array $subscriber = array(), array $data = array(), array $preprocess = array())
-    {
+    public function __construct(
+        array $subscriber = array(),
+        array $data = array(),
+        array $preprocess = array()
+    ) {
+        $this->domain = $subscriber['url'];
         parent::__construct($subscriber, $data, $preprocess);
         $this->process();
     }
-	
+
     /**
-     * Process the webhook data and set the domain to the appropriate URL
+     * Process the webhook data and set the domain to the appropriate URL.
      */
     protected function process()
     {
-        // do webhook processing here, such as, changing the URL and data being sent.
+        // Do no processing here.
         parent::post();
     }
 }
 ```
 
 ### Additional Processing
-Any webhook that requires processing of an API response, may implement the interface: ProcessInterface.php
+Any webhook that requires processing of an API response, may implement the interface: ```ProcessInterface.php```
 
 ```php
-class YourService extends Webhook implements ProcessInterface
+/**
+ * @file
+ * Contains /AllPlayers/Webhooks/Yourservice.
+ *
+ * Provides the Yourservice Webhook definitions.
+ */
+
+namespace AllPlayers\Webhooks;
+
+/**
+ * Base Yourservice Webhook definition.
+ */
+class Yourservice extends Webhook implements ProcessInterface
 {
     ...
 }

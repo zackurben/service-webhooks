@@ -1,9 +1,9 @@
 <?php
-
 /**
- * @file PostWebhooks.php
+ * @file
+ * Contains PostWebhooks.
  *
- * Provides the definition of resque worker used to make POST requests.
+ * Provides the definition for a resque worker with Webhook jobs.
  */
 
 /**
@@ -11,16 +11,15 @@
  */
 class PostWebhooks
 {
-
     /**
-     * Redirect all requests to this URL for development.
+     * Redirect all requests to this URL for testing/development.
      *
      * @var string
      */
     public $test_url;
 
     /**
-     * Initiate redis connection before processing.
+     * Initiate a redis connection before processing.
      */
     public function __construct()
     {
@@ -35,14 +34,14 @@ class PostWebhooks
             $this->test_url = $config['test_url'];
         }
 
-        // Listen for lock queues so that we can remove the que after the job finishes
+        // Listen for Perform events so that we can manage Unique Locks.
         Resque_Event::listen('beforePerform', array(new \AllPlayers\ResquePlugins\LockPlugin(), 'beforePerform'));
         Resque_Event::listen('onFailure', array(new \AllPlayers\ResquePlugins\LockPlugin(), 'onFailure'));
         Resque_Event::listen('afterPerform', array(new \AllPlayers\ResquePlugins\LockPlugin(), 'afterPerform'));
     }
 
     /**
-     * Perform the webhook processing operation.
+     * Perform the Resque Job processing operation.
      */
     public function perform()
     {
@@ -57,11 +56,11 @@ class PostWebhooks
             array('test_url' => $this->test_url)
         );
 
-        if($webhook->getSend() == \AllPlayers\Webhooks\Webhook::WEBHOOK_SEND) {
+        if ($webhook->getSend() == \AllPlayers\Webhooks\Webhook::WEBHOOK_SEND) {
             $response = $webhook->send();
 
             if ($webhook instanceof \AllPlayers\Webhooks\ProcessInterface) {
-                // process the response, according to each specific webhook
+                // Process the response, according to each specific webhook.
                 $webhook->processResponse($response);
             }
         }
