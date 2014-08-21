@@ -7,17 +7,15 @@
  *
  * Every custom Webhook should extend this skeleton, and be throughly
  * documented. Any custom authentication methods should be communicated to
- * AllPlayers to be included into our authenticate method.
+ * AllPlayers to be included into our Webhook#authenticate() method.
  */
 
 namespace AllPlayers\Webhooks;
 
 use Guzzle\Http\Client;
-use Guzzle\Http\Plugin\OauthPlugin;
-use Guzzle\Http\Plugin\CurlAuthPlugin;
 
 /**
- * Base Webhook definition, to provide structure to all child Webhooks.
+ * The base Webhook definition; provides structure to all child Webhooks.
  */
 class Webhook
 {
@@ -161,18 +159,22 @@ class Webhook
     const WEBHOOK_DELETE_EVENT = 'user_deletes_event';
 
     /**
-     * The list of headers that will be sent with each client request.
+     * A string value for the name of the class corresponding to a webhook type.
      *
      * @var array
      */
-    protected $headers = array();
-
-    /**
-     * The list of headers that will be sent with each api request.
-     *
-     * @var array
-     */
-    protected $api_headers = array();
+    public static $classes = array(
+        self::WEBHOOK_CREATE_GROUP => "UserCreatesGroup",
+        self::WEBHOOK_UPDATE_GROUP => "UserUpdatesGroup",
+        self::WEBHOOK_DELETE_GROUP => "UserDeletesGroup",
+        self::WEBHOOK_ADD_ROLE => "UserAddsRole",
+        self::WEBHOOK_REMOVE_ROLE => "UserRemovesRole",
+        self::WEBHOOK_ADD_SUBMISSION => "UserAddsSubmission",
+        self::WEBHOOK_DELETE_USER => "UserRemovedFromGroup",
+        self::WEBHOOK_CREATE_EVENT => "UserCreatesEvent",
+        self::WEBHOOK_UPDATE_EVENT => "UserUpdatesEvent",
+        self::WEBHOOK_DELETE_EVENT => "UserDeletesEvent",
+    );
 
     /**
      * The top object of a webhook.
@@ -180,20 +182,6 @@ class Webhook
      * @var stdClass
      */
     protected $webhook;
-
-    /**
-     * The Guzzle client object.
-     *
-     * @var \Guzzle\Http\Client
-     */
-    protected $client;
-
-    /**
-     * The Guzzle request to be sent.
-     *
-     * @var \Guzzle\Http\Message\EntityEnclosingRequest
-     */
-    protected $request;
 
     /**
      * The URL to post the webhook.
@@ -210,28 +198,32 @@ class Webhook
     protected $test_domain;
 
     /**
-     * The method used for Client authentication.
+     * The list of headers that will be sent with each client request.
      *
-     * @var integer
-     *
-     * @see AUTHENTICATION_NONE
-     * @see AUTHENTICATION_BASIC
-     * @see AUTHENTICATION_OAUTH
+     * @var array
      */
-    protected $authentication = self::AUTHENTICATION_NONE;
+    protected $headers = array();
 
     /**
-     * The method of data transmission.
+     * The list of headers that will be sent with each api request.
      *
-     * This establishes the method of transmission between the AllPlayers
-     * webhook and the third-party webhook.
-     *
-     * @var string
-     *
-     * @see TRANSMISSION_URLENCODED
-     * @see TRANSMISSION_JSON
+     * @var array
      */
-    protected $method = self::TRANSMISSION_JSON;
+    protected $api_headers = array();
+
+    /**
+     * The Guzzle client object.
+     *
+     * @var \Guzzle\Http\Client
+     */
+    protected $client;
+
+    /**
+     * The Guzzle request to be sent.
+     *
+     * @var \Guzzle\Http\Message\EntityEnclosingRequest
+     */
+    protected $request;
 
     /**
      * Determines if the webhook should be sent or not.
@@ -242,6 +234,30 @@ class Webhook
      * @see WEBHOOK_CANCEL
      */
     protected $send = self::WEBHOOK_SEND;
+
+    /**
+     * The method used for Client authentication.
+     *
+     * @var integer
+     *
+     * @see Webhook::AUTHENTICATION_NONE
+     * @see Webhook::AUTHENTICATION_BASIC
+     * @see Webhook::AUTHENTICATION_OAUTH
+     */
+    protected $authentication = Webhook::AUTHENTICATION_NONE;
+
+    /**
+     * The method of data transmission.
+     *
+     * This establishes the method of transmission between the AllPlayers
+     * webhook and the third-party webhook.
+     *
+     * @var string
+     *
+     * @see Webhook::TRANSMISSION_URLENCODED
+     * @see Webhook::TRANSMISSION_JSON
+     */
+    protected $method = Webhook::TRANSMISSION_JSON;
 
     /**
      * Initialize the webhook object.
@@ -299,6 +315,31 @@ class Webhook
     }
 
     /**
+     * Perform processing on the webhook before preparing to send it.
+     *
+     * @param array $data
+     *   An array of data to be processed before the webhook data is sent.
+     */
+    protected function preprocess(array $data)
+    {
+        // Set the redirect url, so we can swap domains before sending the data.
+        if (isset($data['test_url']) && $data['test_url'] != '') {
+            $this->test_domain = $data['test_url'];
+        }
+    }
+
+    /**
+     * Get the data from the original AllPlayers Webhook.
+     *
+     * @return array
+     *   The data from the original AllPlayers Webhook.
+     */
+    public function getOriginalData()
+    {
+        return $this->webhook->original_data;
+    }
+
+    /**
      * Get the data to be transmitted for the webhook.
      *
      * @return array
@@ -307,6 +348,30 @@ class Webhook
     public function getData()
     {
         return $this->webhook->data;
+    }
+
+    /**
+     * Get Guzzle HTTP Client.
+     *
+     * @return \Guzzle\Http\Client
+     *   Returns the Guzzle HTTP Client.
+     */
+    public function getClient()
+    {
+        return $this->client;
+    }
+
+    /**
+     * Get the webhook send flag.
+     *
+     * @return integer
+     *
+     * @see WEBHOOK_SEND
+     * @see WEBHOOK_CANCEL
+     */
+    public function getSend()
+    {
+        return $this->send;
     }
 
     /**
@@ -323,17 +388,6 @@ class Webhook
     }
 
     /**
-     * Get the data from the original AllPlayers Webhook.
-     *
-     * @return array
-     *   The data from the original AllPlayers Webhook.
-     */
-    public function getOriginalData()
-    {
-        return $this->webhook->original_data;
-    }
-
-    /**
      * Store the original AllPlayers webhook data.
      *
      * @param array $data
@@ -345,41 +399,17 @@ class Webhook
     }
 
     /**
-     * Get Guzzle HTTP Client.
-     *
-     * @return \Guzzle\Http\Client
-     *   Returns the Guzzle HTTP Client.
-     */
-    public function getClient()
-    {
-        return $this->client;
-    }
-
-    /**
      * Wrapper function to redirect the webhook if testing is enabled.
      */
     protected function setDomain()
     {
-        // Swap the domain and redirect domain variables.
+        // Swap the destination and add the original URL to the webhook payload.
         if (isset($this->test_domain) && $this->test_domain != '') {
             $this->webhook->data['original_url'] = $this->domain;
             $this->client->setBaseUrl($this->test_domain);
         } else {
             $this->client->setBaseUrl($this->domain);
         }
-    }
-
-    /**
-     * Get the webhook send flag.
-     *
-     * @return integer
-     *
-     * @see WEBHOOK_SEND
-     * @see WEBHOOK_CANCEL
-     */
-    public function getSend()
-    {
-        return $this->send;
     }
 
     /**
@@ -480,7 +510,7 @@ class Webhook
     /**
      * Send the prepared Guzzle request to the external service.
      *
-     * @return \Guzzle\Http\Message\Resonse
+     * @return \Guzzle\Http\Message\Response
      *   The Guzzle response object with data about the request.
      */
     public function send()
@@ -503,19 +533,5 @@ class Webhook
         }
 
         return $this->request->send();
-    }
-
-    /**
-     * Perform processing on the webhook before preparing to send it.
-     *
-     * @param array $data
-     *   An array of data to be processed before the webhook data is sent.
-     */
-    protected function preprocess(array $data)
-    {
-        // Set the redirect url, so we can swap domains before sending the data.
-        if (isset($data['test_url']) && $data['test_url'] != '') {
-            $this->test_domain = $data['test_url'];
-        }
     }
 }
