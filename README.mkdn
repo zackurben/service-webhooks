@@ -131,7 +131,7 @@ By implementing the ProcessInterface, you must also include its function inside 
  */
 public function processResponse(Response $response)
 {
-    // Do some action because some API response was returned
+    // Do some action because some API response was returned.
 }
 ```
 Note that the processResponse function is automatically called at the end of each webhook, if your webhook implements ProcessInterface.

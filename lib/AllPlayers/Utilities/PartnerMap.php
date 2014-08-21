@@ -14,7 +14,7 @@ use Guzzle\Http\Plugin\CookiePlugin;
 use Guzzle\Http\CookieJar\ArrayCookieJar;
 
 /**
- * Provides PartnerMapping functionality via function calls.
+ * Provides Partner-Mapping API functionality via function calls.
  */
 class PartnerMap
 {
@@ -92,13 +92,24 @@ class PartnerMap
      * The base url for the AllPlayers Partner-Mapping API.
      *
      * @var string
+     *
+     * @todo Change the APIv2 URL to pdup/prod server.
      */
     const PARTNER_MAPPING_URL_BASE = 'https://api.zurben.apci.ws/api/v2/externalid';
 
     /**
+     * The AllPlayers APIv1 Authentication endpoint for cookie authentication.
+     *
+     * @var string
+     *
+     * @todo Change the APIv1 URL to pdup/prod server.
+     */
+    const ALLPLAYERS_AUTHENTICATION_URL = 'https://www.zurben.apci.ws/api/v1/rest/users/login.json';
+
+    /**
      * The name of the cookie for AllPlayers Partner-Mapping API Authentication.
      *
-     * @var null|CookiePlugin
+     * @var CookiePlugin|null
      */
     protected $cookie = null;
 
@@ -112,7 +123,7 @@ class PartnerMap
     /**
      * The Helper object used to format Webhook response data.
      *
-     * @var Helper
+     * @var Helper|null
      */
     protected $helper = null;
 
@@ -142,13 +153,15 @@ class PartnerMap
      *   The AllPlayers username for logging into APIv1.
      * @param string $password
      *   The AllPlayers password for logging into APIv1.
+     *
+     * @todo Remove cURL options (Used for self-signed certificates).
      */
     private function makeCookie($username, $password)
     {
         // Fetch the AllPlayers Authentication cookie.
         $this->cookie = new CookiePlugin(new ArrayCookieJar());
         $cookie_client = new Client(
-            'https://www.zurben.apci.ws/api/v1/rest/users/login.json',
+            self::ALLPLAYERS_AUTHENTICATION_URL,
             array(
                 'curl.CURLOPT_SSL_VERIFYPEER' => false,
                 'curl.CURLOPT_CERTINFO' => false,

@@ -1,7 +1,7 @@
 <?php
 /**
  * @file
- * Contains AllPlayers\ResquePlugins\LockPlugin.
+ * Contains /AllPlayers/ResquePlugins/LockPlugin.
  *
  * Provides a resource lock for the Resque Job Perform function.
  */
