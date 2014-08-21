@@ -27,7 +27,9 @@ class Teamsnap extends WebhookProcessor
         array $preprocess = array()
     ) {
         // Create the TeamSnap specific webhook, if it is defined.
-        if (array_key_exists("webhook_type", $data) && class_exists('AllPlayers\\Webhooks\\Teamsnap\\' . Webhook::$classes[$data["webhook_type"]])) {
+        $teamsnap_class = 'AllPlayers\\Webhooks\\Teamsnap\\'
+            . Webhook::$classes[$data["webhook_type"]];
+        if (array_key_exists("webhook_type", $data) && class_exists($teamsnap_class)) {
             $class = 'AllPlayers\\Webhooks\\Teamsnap\\' . Webhook::$classes[$data["webhook_type"]];
             $this->webhook = new $class($subscriber, $data, $preprocess);
             $this->webhook->process();

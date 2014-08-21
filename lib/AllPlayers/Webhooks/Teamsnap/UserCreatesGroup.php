@@ -65,7 +65,11 @@ class UserCreatesGroup extends SimpleWebhook implements ProcessInterface
             $temp_data['webhook_type'] = self::WEBHOOK_ADD_ROLE;
             $temp_data['member']['role_name'] = 'Owner';
 
-            $temp = new \AllPlayers\Webhooks\Teamsnap\UserAddsRole(array(), $temp_data, array("test_url" => $this->test_domain));
+            $temp = new \AllPlayers\Webhooks\Teamsnap\UserAddsRole(
+                array(),
+                $temp_data,
+                array("test_url" => $this->test_domain)
+            );
             $temp->process();
 
             if ($temp->getSend() == self::WEBHOOK_SEND) {
