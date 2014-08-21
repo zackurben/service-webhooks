@@ -16,31 +16,14 @@ use Guzzle\Http\Message\Response;
 class UserCreatesGroup extends SimpleWebhook implements ProcessInterface
 {
     /**
-     * Create a TeamSnap Webhook object.
-     *
-     * @param array $subscriber
-     *   The Subscriber variable provided by the Resque Job.
-     * @param array $data
-     *   The Event Data variable provided by the Resque Job.
-     * @param array $preprocess
-     *   Additional data used for pre-processing, defined in PostWebhooks.
-     */
-    public function __construct(
-        array $subscriber = array(),
-        array $data = array(),
-        array $preprocess = array()
-    ) {
-        parent::__construct($subscriber, $data, $preprocess);
-    }
-
-    /**
      * Process the webhook data and manage the partner-mapping API calls.
      */
     public function process()
     {
-        // Set the original webhook data.
+        parent::process();
+
+        // Get the data from the AllPlayers webhook.
         $data = $this->getData();
-        $this->setOriginalData($data);
 
         // Cancel the webhook if this is not a team being registered.
         if ($data['group']['group_type'] == 'Team') {
@@ -71,22 +54,24 @@ class UserCreatesGroup extends SimpleWebhook implements ProcessInterface
             // Manually invoke the partner-mapping.
             $this->processResponse($response);
 
-            // Create a UserAddsRole webhook with modified contents to force
-            // the creation of the group creator.
-            $data['webhook_type'] = \AllPlayers\Webhooks\Webhook::WEBHOOK_ADD_ROLE;
-            $data['member']['role_name'] = 'Owner';
-            $temp = new \AllPlayers\Webhooks\Teamsnap\UserAddsRole(array(), $data, array());
-            $temp->process();
-
-            if ($temp->getSend() == \AllPlayers\Webhooks\Webhook::WEBHOOK_SEND) {
-                $temp_response = $temp->send();
-                $temp->processResponse($temp_response);
-            }
-
             // Stop the call PostWebhooks#send() because the processing and
             // response processing for both the user_creates_group and
             // user_adds_role was handled above.
             $this->setSend(self::WEBHOOK_CANCEL);
+
+            // Create a UserAddsRole webhook with modified contents to force
+            // the creation of the group creator.
+            $temp_data = $data;
+            $temp_data['webhook_type'] = self::WEBHOOK_ADD_ROLE;
+            $temp_data['member']['role_name'] = 'Owner';
+
+            $temp = new \AllPlayers\Webhooks\Teamsnap\UserAddsRole(array(), $temp_data, array("test_url" => $this->test_domain));
+            $temp->process();
+
+            if ($temp->getSend() == self::WEBHOOK_SEND) {
+                $temp_response = $temp->send();
+                $temp->processResponse($temp_response);
+            }
         } else {
             $this->setSend(self::WEBHOOK_CANCEL);
         }
@@ -100,21 +85,13 @@ class UserCreatesGroup extends SimpleWebhook implements ProcessInterface
      */
     public function processResponse(Response $response)
     {
-        include 'config/config.php';
-        if (isset($config['test_url'])) {
-            // Account for the extra JSON wrapper from requestbin (if testing).
-            $response = $this->helper->processJsonResponse($response);
-            $response = json_decode($response['body'], true);
-        } else {
-            $response = $this->helper->processJsonResponse($response);
-        }
+        $response = $this->helper->processJsonResponse($response);
 
         // Get the original data sent from the AllPlayers webhook.
-        $data = $this->getData();
         $original_data = $this->getOriginalData();
 
         // Associate an AllPlayers group UUID with a TeamSnap TeamID.
-        $create = $this->partner_mapping->createPartnerMap(
+        $this->partner_mapping->createPartnerMap(
             $response['team']['id'],
             PartnerMap::PARTNER_MAP_GROUP,
             $original_data['group']['uuid'],

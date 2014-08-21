@@ -105,9 +105,9 @@ class Yourservice extends WebhookProcessor
 ## <a name="#making-your-custom-webbhook-definitions">Making your custom webbhook definitions</a>
 A custom webhook definition must extend `Webhook` and implement the
 `WebhookInterface`. A webhook only requires the `__construct()` method to
-function and must contain a `process()` method. Below is a simple webhook
-example which does not uniquely process the different types of webhooks
-available.
+function, if the method signature is different from `Webhook::__construct()`.
+Below is a simple webhook example which does not uniquely process the different
+types of webhooks available.
 ```php
 <?php
 /**
@@ -127,17 +127,6 @@ class SimpleWebhook extends Webhook implements WebhookInterface
 {
     // If your webhook requires authentication or an alternative method of data
     // transmission, be sure to override the default values for Webhook.
-
-    /**
-     * Create the simple webhook and process it.
-     */
-    public function __construct(
-        array $subscriber = array(),
-        array $data = array(),
-        array $preprocess = array()
-    ) {
-        parent::__construct($subscriber, $data, $preprocess);
-    }
 
     /**
      * Process the webhook data and set the domain to the appropriate URL.

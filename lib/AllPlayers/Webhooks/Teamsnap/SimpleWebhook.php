@@ -275,6 +275,15 @@ class SimpleWebhook extends Webhook
     }
 
     /**
+     * Process the webhook data and manage the partner-mapping API calls.
+     */
+    public function process()
+    {
+        // Set the original webhook data.
+        $this->setOriginalData($this->getData());
+    }
+
+    /**
      * Get the TeamSnap Sport from the list of supported Sports.
      *
      * @param string $data

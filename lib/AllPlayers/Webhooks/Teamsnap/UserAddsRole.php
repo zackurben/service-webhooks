@@ -16,31 +16,14 @@ use Guzzle\Http\Message\Response;
 class UserAddsRole extends SimpleWebhook implements ProcessInterface
 {
     /**
-     * Create a TeamSnap Webhook object.
-     *
-     * @param array $subscriber
-     *   The Subscriber variable provided by the Resque Job.
-     * @param array $data
-     *   The Event Data variable provided by the Resque Job.
-     * @param array $preprocess
-     *   Additional data used for pre-processing, defined in PostWebhooks.
-     */
-    public function __construct(
-        array $subscriber = array(),
-        array $data = array(),
-        array $preprocess = array()
-    ) {
-        parent::__construct($subscriber, $data, $preprocess);
-    }
-
-    /**
      * Process the webhook data and manage the partner-mapping API calls.
      */
     public function process()
     {
-        // Set the original webhook data.
+        parent::process();
+
+        // Get the data from the AllPlayers webhook.
         $data = $this->getData();
-        $this->setOriginalData($data);
 
         // Get the UserID from partner-mapping API.
         $method = $roster = '';
@@ -146,17 +129,9 @@ class UserAddsRole extends SimpleWebhook implements ProcessInterface
      */
     public function processResponse(Response $response)
     {
-        include 'config/config.php';
-        if (isset($config['test_url'])) {
-            // Account for the extra JSON wrapper from requestbin (if testing).
-            $response = $this->helper->processJsonResponse($response);
-            $response = json_decode($response['body'], true);
-        } else {
-            $response = $this->helper->processJsonResponse($response);
-        }
+        $response = $this->helper->processJsonResponse($response);
 
         // Get the original data sent from the AllPlayers webhook.
-        $data = $this->getData();
         $original_data = $this->getOriginalData();
 
         // Get UserID from the partner-mapping API.

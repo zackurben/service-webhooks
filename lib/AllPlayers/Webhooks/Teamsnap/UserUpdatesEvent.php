@@ -16,31 +16,14 @@ use Guzzle\Http\Message\Response;
 class UserUpdatesEvent extends SimpleWebhook implements ProcessInterface
 {
     /**
-     * Create a TeamSnap Webhook object.
-     *
-     * @param array $subscriber
-     *   The Subscriber variable provided by the Resque Job.
-     * @param array $data
-     *   The Event Data variable provided by the Resque Job.
-     * @param array $preprocess
-     *   Additional data used for pre-processing, defined in PostWebhooks.
-     */
-    public function __construct(
-        array $subscriber = array(),
-        array $data = array(),
-        array $preprocess = array()
-    ) {
-        parent::__construct($subscriber, $data, $preprocess);
-    }
-
-    /**
      * Process the webhook data and manage the partner-mapping API calls.
      */
     public function process()
     {
-        // Set the original webhook data.
+        parent::process();
+
+        // Get the data from the AllPlayers webhook.
         $data = $this->getData();
-        $this->setOriginalData($data);
 
         // Build the webhook payload.
         $send = array(
