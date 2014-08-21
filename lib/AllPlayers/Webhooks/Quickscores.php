@@ -2,52 +2,20 @@
 /**
  * @file
  * Contains /AllPlayers/Webhooks/Quickscores.
- *
- * Provides the Quickscores Webhooks plugin definition. The Quickscores Webhook
- * sends AllPlayers hook data to a single endpoint for processing the data;
- * this webhook uses basic authentication.
  */
 
 namespace AllPlayers\Webhooks;
 
+use AllPlayers\Webhooks\Quickscores\SimpleWebhook;
+
 /**
- * Base Quickscores Webhook definition.
+ * Quickscores WebhookProcessor which will send all webhooks to the designated
+ * URL.
  */
-class Quickscores extends Webhook
+class Quickscores extends WebhookProcessor
 {
     /**
-     * The URL to post the webhook.
-     *
-     * @var string
-     */
-    protected $domain = 'http://www.quickscores.com/API/SynchEvents.php';
-
-    /**
-     * The method used for Client authentication.
-     *
-     * @var integer
-     *
-     * @see AUTHENTICATION_NONE
-     * @see AUTHENTICATION_BASIC
-     * @see AUTHENTICATION_OAUTH
-     */
-    protected $authentication = self::AUTHENTICATION_BASIC;
-
-    /**
-     * The method of data transmission.
-     *
-     * This establishes the method of transmission between the AllPlayers
-     * webhook and the third-party webhook.
-     *
-     * @var string
-     *
-     * @see TRANSMISSION_URLENCODED
-     * @see TRANSMISSION_JSON
-     */
-    protected $method = self::TRANSMISSION_URLENCODED;
-
-    /**
-     * Authenticate using basic auth.
+     * Instantiate a SimpleWebhook using basic auth.
      *
      * @param array $subscriber
      *   The Subscriber variable provided by the Resque Job.
@@ -61,24 +29,9 @@ class Quickscores extends Webhook
         array $data = array(),
         array $preprocess = array()
     ) {
-        parent::__construct(
-            array(
-                'user' => $subscriber['user'],
-                'pass' => $subscriber['token']
-            ),
-            $data,
-            $preprocess
-        );
-        $this->process();
-    }
-
-    /**
-     * Process the webhook and set the domain to the appropriate URL.
-     */
-    protected function process()
-    {
-        // Do nothing here because, QuickScores has a single API endpoint for
-        // processing data.
-        parent::post();
+        // Create and process the SimpleWebhook defined for all Quickscores
+        //  Webhooks.
+        $this->webhook = new SimpleWebhook($subscriber, $data, $preprocess);
+        $this->webhook->process();
     }
 }

@@ -35,9 +35,18 @@ class PostWebhooks
         }
 
         // Listen for Perform events so that we can manage Unique Locks.
-        Resque_Event::listen('beforePerform', array(new \AllPlayers\ResquePlugins\LockPlugin(), 'beforePerform'));
-        Resque_Event::listen('onFailure', array(new \AllPlayers\ResquePlugins\LockPlugin(), 'onFailure'));
-        Resque_Event::listen('afterPerform', array(new \AllPlayers\ResquePlugins\LockPlugin(), 'afterPerform'));
+        Resque_Event::listen(
+            'beforePerform',
+            array(new \AllPlayers\ResquePlugins\LockPlugin(), 'beforePerform')
+        );
+        Resque_Event::listen(
+            'onFailure',
+            array(new \AllPlayers\ResquePlugins\LockPlugin(), 'onFailure')
+        );
+        Resque_Event::listen(
+            'afterPerform',
+            array(new \AllPlayers\ResquePlugins\LockPlugin(), 'afterPerform')
+        );
     }
 
     /**
@@ -49,6 +58,7 @@ class PostWebhooks
         $subscriber = $this->args['subscriber'];
         $event_data = $this->args['event_data'];
 
+        // Create a new WebhookProcessor for the given partner.
         $classname = 'AllPlayers\\Webhooks\\' . $hook['name'];
         $webhook = new $classname(
             $subscriber['variables'],
@@ -56,12 +66,13 @@ class PostWebhooks
             array('test_url' => $this->test_url)
         );
 
-        if ($webhook->getSend() == \AllPlayers\Webhooks\Webhook::WEBHOOK_SEND) {
+        // Send the webhook if it was not canceled during its processing.
+        if ($webhook->getWebhook()->getSend() == \AllPlayers\Webhooks\Webhook::WEBHOOK_SEND) {
             $response = $webhook->send();
 
-            if ($webhook instanceof \AllPlayers\Webhooks\ProcessInterface) {
+            if ($webhook->getWebhook() instanceof \AllPlayers\Webhooks\ProcessInterface) {
                 // Process the response, according to each specific webhook.
-                $webhook->processResponse($response);
+                $webhook->getWebhook()->processResponse($response);
             }
         }
     }

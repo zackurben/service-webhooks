@@ -2,50 +2,19 @@
 /**
  * @file
  * Contains /AllPlayers/Webhooks/Custom.
- *
- * Provides the Custom Webhook definitions.
  */
 
 namespace AllPlayers\Webhooks;
 
+use AllPlayers\Webhooks\Custom\SimpleWebhook;
+
 /**
- * Base Custom Webhook definition.
+ * Custom WebhookProcessor which will send any webhook to the specified URL.
  */
-class Custom extends Webhook
+class Custom extends WebhookProcessor
 {
     /**
-     * The URL to post the webhook.
-     *
-     * @var string
-     */
-    protected $domain;
-
-    /**
-     * The method used for Client authentication.
-     *
-     * @var integer
-     *
-     * @see AUTHENTICATION_NONE
-     * @see AUTHENTICATION_BASIC
-     * @see AUTHENTICATION_OAUTH
-     */
-    protected $authentication = self::AUTHENTICATION_NONE;
-
-    /**
-     * The method of data transmission.
-     *
-     * This establishes the method of transmission between the AllPlayers
-     * webhook and the third-party webhook.
-     *
-     * @var string
-     *
-     * @see TRANSMISSION_URLENCODED
-     * @see TRANSMISSION_JSON
-     */
-    protected $method = self::TRANSMISSION_JSON;
-
-    /**
-     * Create a Custom webhook object.
+     * Instantiate a SimpleWebhook using basic auth.
      *
      * @param array $subscriber
      *   The Subscriber variable provided by the Resque Job.
@@ -59,18 +28,8 @@ class Custom extends Webhook
         array $data = array(),
         array $preprocess = array()
     ) {
-        $this->domain = $subscriber['url'];
-        parent::__construct($subscriber, $data, $preprocess);
-        $this->process();
-    }
-
-    /**
-     * Process the webhook data and set the domain to the appropriate URL.
-     */
-    protected function process()
-    {
-        // Do no processing here, because this is a simplex webhook that dumps
-        // all raw data to a single URL.
-        parent::post();
+        // Create and process the SimpleWebhook defined for all Custom Webhooks.
+        $this->webhook = new SimpleWebhook($subscriber, $data, $preprocess);
+        $this->webhook->process();
     }
 }
