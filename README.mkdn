@@ -137,7 +137,6 @@ class SimpleWebhook extends Webhook implements WebhookInterface
         array $preprocess = array()
     ) {
         parent::__construct($subscriber, $data, $preprocess);
-        $this->process();
     }
 
     /**

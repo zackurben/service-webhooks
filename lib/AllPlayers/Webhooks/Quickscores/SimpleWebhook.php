@@ -61,7 +61,6 @@ class SimpleWebhook extends Webhook implements WebhookInterface
             $data,
             $preprocess
         );
-        $this->process();
     }
 
     /**
