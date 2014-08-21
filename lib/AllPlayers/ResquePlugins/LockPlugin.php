@@ -8,8 +8,8 @@
 
 namespace AllPlayers\ResquePlugins;
 
-use Resque as Php_Resque;
-use Resque_Job;
+use \Resque as Php_Resque;
+use \Resque_Job;
 
 /**
  * Provides semaphore-like behavior for Reque Jobs, by using the event hooks.
