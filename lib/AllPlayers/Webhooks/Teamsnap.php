@@ -6,8 +6,6 @@
 
 namespace AllPlayers\Webhooks;
 
-use AllPlayers\Webhooks\WebhookProcessor;
-
 /**
  * TeamSnap WebhookProcessor which will uniquely process each webhook.
  */
