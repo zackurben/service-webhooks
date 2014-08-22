@@ -50,16 +50,14 @@ class SimpleWebhook extends Webhook implements WebhookInterface
      */
     public function __construct(
         array $subscriber = array(),
-        array $data = array(),
-        array $preprocess = array()
+        array $data = array()
     ) {
         parent::__construct(
             array(
                 'user' => $subscriber['user'],
                 'pass' => $subscriber['token']
             ),
-            $data,
-            $preprocess
+            $data
         );
     }
 

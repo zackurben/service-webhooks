@@ -12,26 +12,18 @@
 class PostWebhooks
 {
     /**
-     * Redirect all requests to this URL for testing/development.
-     *
-     * @var string
-     */
-    public $test_url;
-
-    /**
      * Initiate a redis connection before processing.
      */
     public function __construct()
     {
         include __DIR__ . '/config/config.php';
 
-        if (isset($config['redis_password']) && !$config['redis_password'] == '') {
+        $redis = (array_key_exists('redis_password', $config)
+            && !$config['redis_password'] == '');
+        if ($redis) {
             Resque::setBackend(
                 'redis://redis:' . $config['redis_password'] . '@' . $config['redis_host']
             );
-        }
-        if (isset($config['test_url'])) {
-            $this->test_url = $config['test_url'];
         }
 
         // Listen for Perform events so that we can manage Unique Locks.
@@ -62,8 +54,7 @@ class PostWebhooks
         $classname = 'AllPlayers\\Webhooks\\' . $hook['name'];
         $webhook = new $classname(
             $subscriber['variables'],
-            $event_data,
-            array('test_url' => $this->test_url)
+            $event_data
         );
 
         // Send the webhook if it was not canceled during its processing.

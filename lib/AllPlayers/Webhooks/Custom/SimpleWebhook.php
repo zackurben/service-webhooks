@@ -19,11 +19,10 @@ class SimpleWebhook extends Webhook implements WebhookInterface
      */
     public function __construct(
         array $subscriber = array(),
-        array $data = array(),
-        array $preprocess = array()
+        array $data = array()
     ) {
         $this->domain = $subscriber['url'];
-        parent::__construct($subscriber, $data, $preprocess);
+        parent::__construct($subscriber, $data);
     }
 
     /**

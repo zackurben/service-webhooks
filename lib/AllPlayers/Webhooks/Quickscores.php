@@ -21,17 +21,14 @@ class Quickscores extends WebhookProcessor
      *   The Subscriber variable provided by the Resque Job.
      * @param array $data
      *   The Event Data variable provided by the Resque Job.
-     * @param array $preprocess
-     *   Additional data used for pre-processing, defined in PostWebhooks.
      */
     public function __construct(
         array $subscriber = array(),
-        array $data = array(),
-        array $preprocess = array()
+        array $data = array()
     ) {
         // Create and process the SimpleWebhook defined for all Quickscores
         //  Webhooks.
-        $this->webhook = new SimpleWebhook($subscriber, $data, $preprocess);
+        $this->webhook = new SimpleWebhook($subscriber, $data);
         $this->webhook->process();
     }
 }

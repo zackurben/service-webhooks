@@ -67,8 +67,7 @@ class UserCreatesGroup extends SimpleWebhook implements ProcessInterface
 
             $temp = new \AllPlayers\Webhooks\Teamsnap\UserAddsRole(
                 array(),
-                $temp_data,
-                array("test_url" => $this->test_domain)
+                $temp_data
             );
             $temp->process();
 

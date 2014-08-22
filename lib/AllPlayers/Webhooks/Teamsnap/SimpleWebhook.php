@@ -243,13 +243,10 @@ class SimpleWebhook extends Webhook
      *   The Subscriber variable provided by the Resque Job.
      * @param array $data
      *   The Event Data variable provided by the Resque Job.
-     * @param array $preprocess
-     *   Additional data used for pre-processing, defined in PostWebhooks.
      */
     public function __construct(
         array $subscriber = array(),
-        array $data = array(),
-        array $preprocess = array()
+        array $data = array()
     ) {
         include 'config/config.php';
         if (isset($config['teamsnap'])) {
@@ -259,8 +256,7 @@ class SimpleWebhook extends Webhook
                     'commissioner_id' => $config['teamsnap']['commissioner_id'],
                     'division_id' => $config['teamsnap']['division_id'],
                 ),
-                $data,
-                $preprocess
+                $data
             );
 
             // Set the TeamSnap webhook variables.

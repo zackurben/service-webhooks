@@ -266,13 +266,10 @@ class Webhook
      *   The Subscriber variable provided by the Resque Job.
      * @param array $data
      *   The Event Data variable provided by the Resque Job.
-     * @param array $preprocess
-     *   Additional data used for pre-processing, defined in PostWebhooks.
      */
     public function __construct(
         array $subscriber = array(),
-        array $data = array(),
-        array $preprocess = array()
+        array $data = array()
     ) {
         $this->webhook->subscriber = $subscriber;
         $this->setData($data);
@@ -281,7 +278,7 @@ class Webhook
         if ($this->authentication != self::AUTHENTICATION_NONE) {
             $this->authenticate();
         }
-        $this->preprocess($preprocess);
+        $this->preprocess();
     }
 
     /**
@@ -316,15 +313,26 @@ class Webhook
 
     /**
      * Perform processing on the webhook before preparing to send it.
-     *
-     * @param array $data
-     *   An array of data to be processed before the webhook data is sent.
      */
-    protected function preprocess(array $data)
+    protected function preprocess()
     {
+        include 'config/config.php';
+
+        // Check if the test_url was defined.
+        $config_url = (array_key_exists('test_url', $config)
+            && $config['test_url'] != '');
+
+        // Get the name of the webhook processor and check if we should send.
+        $webhook_processor = explode('\\', get_class($this));
+        $webhook_processor = strtolower($webhook_processor[2]);
+
+        // Check if the send option was enabled.
+        $config_dev = (array_key_exists($webhook_processor, $config)
+            && !$config[$webhook_processor]['send']);
+
         // Set the redirect url, so we can swap domains before sending the data.
-        if (isset($data['test_url']) && $data['test_url'] != '') {
-            $this->test_domain = $data['test_url'];
+        if ($config_url && $config_dev) {
+            $this->test_domain = $config['test_url'];
         }
     }
 

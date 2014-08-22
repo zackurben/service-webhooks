@@ -18,20 +18,17 @@ class Teamsnap extends WebhookProcessor
      *   The Subscriber variable provided by the Resque Job.
      * @param array $data
      *   The Event Data variable provided by the Resque Job.
-     * @param array $preprocess
-     *   Additional data used for pre-processing, defined in PostWebhooks.
      */
     public function __construct(
         array $subscriber = array(),
-        array $data = array(),
-        array $preprocess = array()
+        array $data = array()
     ) {
         // Create the TeamSnap specific webhook, if it is defined.
         $teamsnap_class = 'AllPlayers\\Webhooks\\Teamsnap\\'
             . Webhook::$classes[$data["webhook_type"]];
         if (array_key_exists("webhook_type", $data) && class_exists($teamsnap_class)) {
             $class = 'AllPlayers\\Webhooks\\Teamsnap\\' . Webhook::$classes[$data["webhook_type"]];
-            $this->webhook = new $class($subscriber, $data, $preprocess);
+            $this->webhook = new $class($subscriber, $data);
             $this->webhook->process();
         }
     }
