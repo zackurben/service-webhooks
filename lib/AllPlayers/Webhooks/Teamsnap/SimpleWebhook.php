@@ -250,11 +250,33 @@ class SimpleWebhook extends Webhook
     ) {
         include 'config/config.php';
         if (isset($config['teamsnap'])) {
+            // Determing if we have a defined organization.
+            $org = array_key_exists(
+                $data['group']['organization_id'][0],
+                $config['teamsnap']
+            );
+
+            // Define webhook specific variables for the organization.
+            if ($org) {
+                $group = $data['group']['organization_id'][0];
+                $group_token = $config['teamsnap'][$group]['token'];
+                $group_commissioner = $config['teamsnap'][$group]['commissioner_id'];
+                $group_division = $config['teamsnap'][$group]['division_id'];
+                $api_user = $config['teamsnap'][$group]['api_username'];
+                $api_pass = $config['teamsnap'][$group]['api_password'];
+            } else {
+                $group_token = $config['teamsnap']['default']['token'];
+                $group_commissioner = $config['teamsnap']['default']['commissioner_id'];
+                $group_division = $config['teamsnap']['default']['division_id'];
+                $api_user = $config['teamsnap']['default']['api_username'];
+                $api_pass = $config['teamsnap']['default']['api_password'];
+            }
+
             parent::__construct(
                 array(
-                    'token' => $config['teamsnap']['token'],
-                    'commissioner_id' => $config['teamsnap']['commissioner_id'],
-                    'division_id' => $config['teamsnap']['division_id'],
+                    'token' => $group_token,
+                    'commissioner_id' => $group_commissioner,
+                    'division_id' => $group_division,
                 ),
                 $data
             );
@@ -263,8 +285,8 @@ class SimpleWebhook extends Webhook
             $this->helper = new Helper();
             $this->partner_mapping = new PartnerMap(
                 'teamsnap',
-                $config['teamsnap']['api_username'],
-                $config['teamsnap']['api_password']
+                $api_user,
+                $api_pass
             );
             $this->headers['X-Teamsnap-Token'] = $this->webhook->subscriber['token'];
         }

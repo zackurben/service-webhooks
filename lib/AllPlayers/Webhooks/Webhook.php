@@ -326,9 +326,23 @@ class Webhook
         $webhook_processor = explode('\\', get_class($this));
         $webhook_processor = strtolower($webhook_processor[2]);
 
-        // Check if the send option was enabled.
-        $config_dev = (array_key_exists($webhook_processor, $config)
-            && !$config[$webhook_processor]['send']);
+        // Check if the webhook processor is defined in the config.
+        $config_dev = array_key_exists($webhook_processor, $config);
+
+        // Get the send settings for the partner.
+        if ($config_dev) {
+            $data = $this->getData();
+            if (array_key_exists($data['group']['organization_id'][0], $config[$webhook_processor])) {
+                // Use the send setting for the partner and organization.
+                $config_dev = !$config[$webhook_processor][$data['group']['organization_id'][0]]['send'];
+            } else {
+                // The organization was not set, default to partner settings.
+                $config_dev = !$config[$webhook_processor]['default']['send'];
+            }
+        } else {
+            // The partner was not defined, send to the test_url.
+            $config_dev = true;
+        }
 
         // Set the redirect url, so we can swap domains before sending the data.
         if ($config_url && $config_dev) {
