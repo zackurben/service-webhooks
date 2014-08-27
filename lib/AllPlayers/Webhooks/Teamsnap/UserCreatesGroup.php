@@ -74,6 +74,7 @@ class UserCreatesGroup extends SimpleWebhook implements ProcessInterface
             if ($temp->getSend() == self::WEBHOOK_SEND) {
                 $temp_response = $temp->send();
                 $temp->processResponse($temp_response);
+                $temp->setSend(self::WEBHOOK_CANCEL);
             }
         } else {
             $this->setSend(self::WEBHOOK_CANCEL);
