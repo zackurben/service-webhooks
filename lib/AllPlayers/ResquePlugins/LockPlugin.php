@@ -10,6 +10,7 @@ namespace AllPlayers\ResquePlugins;
 
 use \Resque as Php_Resque;
 use \Resque_Job;
+use \Resque_Job_DontPerform;
 
 /**
  * Provides semaphore-like behavior for Reque Jobs, by using the event hooks.
@@ -26,20 +27,21 @@ class LockPlugin {
    *
    * @return bool
    *   If the job was acquired.
+   *
+   * @throws Resque_Job_DontPerform
    */
   public static function beforePerform(Resque_Job $job) {
-    if (Php_Resque::redis()->exists($job->payload['args'][0]['drupal_unique_key'])) {
-      if ($job->payload['args'][0]['requeue']) {
-        Php_Resque::enqueue($job->queue, $job->payload['class'], $job->payload['args'][0], TRUE);
-        return FALSE;
-      }
-      else {
-        return FALSE;
-      }
+    if (Php_Resque::redis()->setnx($job->payload['args'][0]['drupal_unique_key'], '1')) {
+      return TRUE;
     }
     else {
-      Php_Resque::redis()->set($job->payload['args'][0]['drupal_unique_key'], '1');
-      return TRUE;
+      if ($job->payload['args'][0]['requeue']) {
+        Php_Resque::enqueue($job->queue, $job->payload['class'], $job->payload['args'][0], TRUE);
+        throw new Resque_Job_DontPerform();
+      }
+      else {
+        throw new Resque_Job_DontPerform();
+      }
     }
   }
 
