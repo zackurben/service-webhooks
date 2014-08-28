@@ -52,13 +52,31 @@ class SimpleWebhook extends Webhook implements WebhookInterface
         array $subscriber = array(),
         array $data = array()
     ) {
-        parent::__construct(
-            array(
-                'user' => $subscriber['user'],
-                'pass' => $subscriber['token']
-            ),
-            $data
-        );
+        include 'config/config.php';
+        if (isset($config['quickscores'])) {
+            parent::__construct(
+                array(
+                    'user' => $subscriber['user'],
+                    'pass' => $subscriber['token']
+                ),
+                $data
+            );
+
+            $org = array_key_exists(
+                $data['group']['organization_id'][0],
+                $config['quickscores']
+            );
+
+            // Determine send setting for an organization.
+            if ($org) {
+                $group = $data['group']['organization_id'][0];
+                $webhook_send = $config['quickscores'][$group]['send'];
+            } else {
+                $webhook_send = $config['quickscores']['default']['send'];
+            }
+
+            $this->setSend($webhook_send);
+        }
     }
 
     /**
