@@ -1,4 +1,4 @@
-app_root = ENV['WEBHOOKS_DIR'] || "/mnt/service-webhooks/resque"
+app_root = ENV['WEBHOOKS_DIR'] || "/mnt/apci/service-webhooks/resque"
 num_workers = 2
 
 num_workers.times do |num|
