@@ -259,12 +259,14 @@ class SimpleWebhook extends Webhook
             // Define webhook specific variables for the organization.
             if ($org) {
                 $group = $data['group']['organization_id'][0];
+                $webhook_send = $config['teamsnap'][$group]['send'];
                 $group_token = $config['teamsnap'][$group]['token'];
                 $group_commissioner = $config['teamsnap'][$group]['commissioner_id'];
                 $group_division = $config['teamsnap'][$group]['division_id'];
                 $api_user = $config['teamsnap'][$group]['api_username'];
                 $api_pass = $config['teamsnap'][$group]['api_password'];
             } else {
+                $webhook_send = $config['teamsnap']['default']['send'];
                 $group_token = $config['teamsnap']['default']['token'];
                 $group_commissioner = $config['teamsnap']['default']['commissioner_id'];
                 $group_division = $config['teamsnap']['default']['division_id'];
@@ -288,6 +290,7 @@ class SimpleWebhook extends Webhook
                 $api_user,
                 $api_pass
             );
+            $this->setSend($webhook_send);
             $this->headers['X-Teamsnap-Token'] = $this->webhook->subscriber['token'];
         }
     }

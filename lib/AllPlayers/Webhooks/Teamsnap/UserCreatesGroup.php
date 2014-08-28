@@ -49,10 +49,13 @@ class UserCreatesGroup extends SimpleWebhook implements ProcessInterface
             // Create a team on TeamSnap.
             $this->setData(array('team' => $send));
             parent::post();
-            $response = $this->send();
 
-            // Manually invoke the partner-mapping.
-            $this->processResponse($response);
+            if ($this->getSend() == self::WEBHOOK_SEND) {
+                $response = $this->send();
+
+                // Manually invoke the partner-mapping.
+                $this->processResponse($response);
+            }
 
             // Stop the call PostWebhooks#send() because the processing and
             // response processing for both the user_creates_group and
