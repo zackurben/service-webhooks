@@ -23,13 +23,34 @@ class Teamsnap extends WebhookProcessor
         array $subscriber = array(),
         array $data = array()
     ) {
-        // Create the TeamSnap specific webhook, if it is defined.
-        $teamsnap_class = 'AllPlayers\\Webhooks\\Teamsnap\\'
-            . Webhook::$classes[$data["webhook_type"]];
-        if (array_key_exists("webhook_type", $data) && class_exists($teamsnap_class)) {
-            $class = 'AllPlayers\\Webhooks\\Teamsnap\\' . Webhook::$classes[$data["webhook_type"]];
-            $this->webhook = new $class($subscriber, $data);
-            $this->webhook->process();
+        // Check if this webhook is enabled.
+        include 'config/config.php';
+        if (isset($config['teamsnap'])) {
+            // Determine if the organization is defined.
+            $organization = array_key_exists(
+                $data['group']['organization_id'][0],
+                $config['teamsnap']
+            );
+
+            // Determine send setting for an organization.
+            if ($organization) {
+                $organization = $data['group']['organization_id'][0];
+                $webhook_send = $config['teamsnap'][$organization]['send'];
+            } else {
+                $webhook_send = $config['teamsnap']['default']['send'];
+            }
+
+            if ($webhook_send) {
+                // Create the TeamSnap specific webhook, if it is defined.
+                $teamsnap_class = 'AllPlayers\\Webhooks\\Teamsnap\\'
+                    . Webhook::$classes[$data["webhook_type"]];
+                if (array_key_exists("webhook_type", $data) && class_exists($teamsnap_class)) {
+                    $class = 'AllPlayers\\Webhooks\\Teamsnap\\'
+                        . Webhook::$classes[$data["webhook_type"]];
+                    $this->webhook = new $class($subscriber, $data);
+                    $this->webhook->process();
+                }
+            }
         }
     }
 }
