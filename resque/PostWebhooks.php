@@ -57,8 +57,16 @@ class PostWebhooks
             $event_data
         );
 
+        // Check if our webhook was canceled at creation.
+        $defined = ($webhook->getWebhook() != null);
+        $send = false;
+
+        if ($defined) {
+            $send = ($webhook->getWebhook()->getSend() == \AllPlayers\Webhooks\Webhook::WEBHOOK_SEND);
+        }
+
         // Send the webhook if it was not canceled during its processing.
-        if ($webhook->getWebhook()->getSend() == \AllPlayers\Webhooks\Webhook::WEBHOOK_SEND) {
+        if ($defined && $send) {
             $response = $webhook->send();
 
             if ($webhook->getWebhook() instanceof \AllPlayers\Webhooks\ProcessInterface) {
