@@ -51,7 +51,7 @@ class PostWebhooks
         $event_data = $this->args['event_data'];
 
         // Create a new WebhookProcessor for the given partner.
-        $classname = 'AllPlayers\\Webhooks\\' . $hook['name'];
+        $classname = 'AllPlayers\\Webhooks\\' . $hook['name'] . '\\' . $hook['name'];
         $webhook = new $classname(
             $subscriber['variables'],
             $event_data

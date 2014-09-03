@@ -1,18 +1,17 @@
 <?php
 /**
  * @file
- * Contains /AllPlayers/Webhooks/Quickscores.
+ * Contains /AllPlayers/Webhooks/Custom/Custom.
  */
 
-namespace AllPlayers\Webhooks;
+namespace AllPlayers\Webhooks\Custom;
 
-use AllPlayers\Webhooks\Quickscores\SimpleWebhook;
+use AllPlayers\Webhooks\WebhookProcessor;
 
 /**
- * Quickscores WebhookProcessor which will send all webhooks to the designated
- * URL.
+ * Custom WebhookProcessor which will send any webhook to the specified URL.
  */
-class Quickscores extends WebhookProcessor
+class Custom extends WebhookProcessor
 {
     /**
      * Instantiate a SimpleWebhook using basic auth.
@@ -28,24 +27,24 @@ class Quickscores extends WebhookProcessor
     ) {
         // Check if this webhook is enabled.
         include 'config/config.php';
-        if (isset($config['quickscores'])) {
+        if (isset($config['custom'])) {
             // Determine if the organization is defined.
             $organization = array_key_exists(
                 $data['group']['organization_id'][0],
-                $config['quickscores']
+                $config['custom']
             );
 
             // Determine send setting for an organization.
             if ($organization) {
                 $organization = $data['group']['organization_id'][0];
-                $webhook_send = $config['quickscores'][$organization]['send'];
+                $webhook_send = $config['custom'][$organization]['send'];
             } else {
-                $webhook_send = $config['quickscores']['default']['send'];
+                $webhook_send = $config['custom']['default']['send'];
             }
 
             if ($webhook_send) {
-                // Create and process the SimpleWebhook defined for all Quickscores
-                //  Webhooks.
+                // Create and process the SimpleWebhook defined for all Custom
+                // Webhooks.
                 $this->webhook = new SimpleWebhook($subscriber, $data);
                 $this->webhook->process();
             }
