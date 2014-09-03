@@ -51,9 +51,6 @@ class Teamsnap extends WebhookProcessor
                 if (array_key_exists("webhook_type", $data) && class_exists($teamsnap_class)) {
                     $class = '\\AllPlayers\\Webhooks\\Teamsnap\\'
                         . Webhook::$classes[$data["webhook_type"]];
-
-                    echo "DBG: ", var_export($class, true), "\n\n";
-
                     $this->webhook = new $class($subscriber, $data);
                     $this->webhook->process();
                 }
