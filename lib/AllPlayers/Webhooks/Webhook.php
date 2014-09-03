@@ -271,7 +271,8 @@ class Webhook
         array $subscriber = array(),
         array $data = array()
     ) {
-        $this->webhook->subscriber = $subscriber;
+        $this->webhook = new \stdClass();
+        $this->setSubscriber($subscriber);
         $this->setData($data);
 
         $this->client = new Client($this->domain);
@@ -316,7 +317,7 @@ class Webhook
      */
     protected function preprocess()
     {
-        include 'config/config.php';
+        include __DIR__ . '/../../../resque/config/config.php';
 
         // Check if the test_url was defined.
         $config_url = (array_key_exists('test_url', $config)
@@ -348,6 +349,17 @@ class Webhook
         if ($config_url && $config_dev) {
             $this->test_domain = $config['test_url'];
         }
+    }
+
+    /**
+     * Get the webhook data from this webhook object.
+     *
+     * @return stdClass
+     *   The Webhook data of this webhook object.
+     */
+    public function getWebhook()
+    {
+        return $this->webhook;
     }
 
     /**
@@ -394,6 +406,17 @@ class Webhook
     public function getSend()
     {
         return $this->send;
+    }
+
+    /**
+     * Set the subscriber for the webhook.
+     *
+     * @param array $subscriber
+     *   The subscriber data from the Resque_Job.
+     */
+    public function setSubscriber(array $subscriber)
+    {
+        $this->webhook->subscriber = $subscriber;
     }
 
     /**
@@ -538,7 +561,7 @@ class Webhook
     public function send()
     {
         // Send an additional debug request if enabled.
-        include 'config/config.php';
+        include __DIR__ . '/../../../resque/config/config.php';
         if ($this->getSend() == self::WEBHOOK_SEND) {
             if (isset($config['debug']) && $config['debug']['active']) {
                 $dbg = new Client($config['debug']['url']);
