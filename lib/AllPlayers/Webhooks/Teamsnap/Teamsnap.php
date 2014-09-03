@@ -1,10 +1,13 @@
 <?php
 /**
  * @file
- * Contains /AllPlayers/Webhooks/Teamsnap.
+ * Contains /AllPlayers/Webhooks/Teamsnap/Teamsnap.
  */
 
-namespace AllPlayers\Webhooks;
+namespace AllPlayers\Webhooks\Teamsnap;
+
+use AllPlayers\Webhooks\Webhook;
+use AllPlayers\Webhooks\WebhookProcessor;
 
 /**
  * TeamSnap WebhookProcessor which will uniquely process each webhook.
@@ -44,8 +47,9 @@ class Teamsnap extends WebhookProcessor
                 // Create the TeamSnap specific webhook, if it is defined.
                 $teamsnap_class = 'AllPlayers\\Webhooks\\Teamsnap\\'
                     . Webhook::$classes[$data["webhook_type"]];
+
                 if (array_key_exists("webhook_type", $data) && class_exists($teamsnap_class)) {
-                    $class = 'AllPlayers\\Webhooks\\Teamsnap\\'
+                    $class = '\\AllPlayers\\Webhooks\\Teamsnap\\'
                         . Webhook::$classes[$data["webhook_type"]];
                     $this->webhook = new $class($subscriber, $data);
                     $this->webhook->process();
