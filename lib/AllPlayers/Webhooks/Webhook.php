@@ -409,6 +409,33 @@ class Webhook
     }
 
     /**
+     * Get the webhook authentication type.
+     *
+     * @return int
+     *
+     * @see AUTHENTICATION_NONE
+     * @see AUTHENTICATION_BASIC
+     * @see AUTHENTICATION_OAUTH
+     */
+    public function getAuthentication()
+    {
+        return $this->authentication;
+    }
+
+    /**
+     * Get the webhook transmission method.
+     *
+     * @return int
+     *
+     * @see TRANSMISSION_URLENCODED
+     * @see TRANSMISSION_JSON
+     */
+    public function getMethod()
+    {
+        return $this->method;
+    }
+
+    /**
      * Set the subscriber for the webhook.
      *
      * @param array $subscriber
