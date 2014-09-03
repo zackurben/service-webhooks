@@ -5,7 +5,9 @@
     "type": "library",
     "autoload": {
         "psr-0": {
-            "AllPlayers\\Webhooks": "lib/"
+            "AllPlayers\\Webhooks": "lib/",
+            "AllPlayers\\Utilities": "lib/",
+            "AllPlayers\\ResquePlugins": "lib/"
         }
     },
     "require": {

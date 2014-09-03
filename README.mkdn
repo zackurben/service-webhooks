@@ -1,88 +1,211 @@
-AllPlayers Services
-================
+# AllPlayers Service Webhooks
+The AllPlayers Service Webhooks act as a proxy between the defined
+[AllPlayers API](http://develop.allplayers.com/) and a pre-existing third party
+API. When specific events occur on the AllPlayers front-end, a webhook job will
+be queued for processing; Based on who is listening for an event and their
+settings, the webhooks can be used in a versatile way to stay updated on changes
+that occur in the AllPlayers system. To learn more about the AllPlayers
+Webhooks, checkout the [AllPlayers Developers Page](http://develop.allplayers.com/webhooks.html).
 
-How the services work
----------------------
+Check out the following for more information:<br>
+1. <a href="#how-the-services-work">How the services work</a><br>
+- <a href="#steps-to-contributing">Steps to contributing</a><br>
+  - <a href="#contributing">Contributing</a>
+- <a href="#making-your-custom-webhook-processor">Making your custom webhook processor</a><br>
+- <a href="#making-your-custom-webbhook-definitions">Making your custom webbhook definitions</a><br>
+  - <a href="#additional-processing">Additional Processing</a><br>
+- <a href="#credits">Credits</a><br>
 
-1.    A post-receive background job is submitted when someone creates a subgroup or adds a role to a member.
-2.    If the group has any "Service Hooks" set up, the job makes a request to `http://services-server` with the following data:
-        - `params[:event_data]` containing all of the group/user data
-        - `params[:event_name]` name of the webhook
-3.    Your external app does something with that data (sync users and groups, send emails, etc)
+<br>
+## <a name="how-the-services-work">How the services work</a>
+1. A service webhook job is submitted when a
+[Webhook](http://develop.allplayers.com/webhooks.html) is triggered on the
+[AllPlayers website](https://www.allplayers.com/).
+2. If the group has Webhooks enabled, the job makes a request to the specified
+url with the corresponding [hooks data](#).
+3. Your external app does something with that data (sync users and groups, send
+emails, etc).
 
-Steps to contributing
----------------------
+<br>
+## <a name="steps-to-contributing">Steps to contributing</a>
+AllPlayers will accept custom webhook processors for production web
+applications. The contributions should look like our template below. To provide
+additional quality service and support to our users, we would additionally ask
+that all contributions include:
+   - Documentation about what the hook does.
+   - Tested code, phpunit tests if possible.
+   - A URL to a logo for the service
 
-AllPlayers will accept service hooks for production web applications.
+*Tests are required for all patches*
 
-Additionally, we would like the following information to provide quality service and support to our users:
+<br>
+### <a name="contributing">Contributing</a>
+1. Fork the project
+2. Create a new file in `lib/AllPlayers/Webhooks/` called `Yourservice.php`
+along with a folder caled `Yourservice`, using the templates given below and
+following the [PSR-2 Codding Standards](http://www.php-fig.org/psr/psr-2/).
+Check out <a href="#making-your-custom-webhook-processor">Making your custom webhook processor</a>
+and <a href="#making-your-custom-webbhook-definitions">Making your custom webbhook definitions</a>
+for more information.
+  - `Yourservice.php` file is your WebhookProcessor; This is where your individual
+  webhooks are created.
+  - `Yourservice` folder is the collection of your uniquely defined webhooks and
+  their actions. The actual webhook classes should be named according to the
+  type of webhook using [PSR-1 StudlyCaps](http://www.php-fig.org/psr/psr-1/)
+  (e.g. the user_creates_group webhook should be named `UserCreatesGroup.php`).
+    - If you are defining a simplex webhook that does not correspond to a single
+  entity, it should be called `SimpleWebhook.php`.
+3. Send a pull request from your fork to
+[allplayers/service-webhooks](https://github.com/AllPlayers/service-webhooks).
+4. Once accepted, we'll add any necessary data fields to the AllPlayers
+front-end so people can start using your application.
 
-+   Documentation about what the hook does.
-+   Tested code, phpunit tests if possible.
-+   A URL for the service.
-+   A URL to a logo for the service
-
-You can annotate this directly in the hook like so:
-
+<br>
+## <a name="making-your-custom-webhook-processor">Making your custom webhook processor</a><br>
+A webhook processor must extend `WebhookProcessor` and only requires the
+`__construct()` method to function. The webhook that you choose to process
+should be assigned to the `$this->webhook` variable.
 ```php
-class MyService extends Webhook
-{
-    public $domain = 'http://your-service-domain.com';
-    public $service_logo = 'http://your-service-domain.com/logo.png';
-}
-```
-
-1.    Fork the project
-2.    Create a new file in lib/AllPlayers/Webhooks/ called `YourService.php`, using the following template:
-
-```php
+<?php
 /**
  * @file
- *
- * Every file must have a code block explaining what the file does.
+ * Contains /AllPlayers/Webhooks/Yourservice.
  */
 
 namespace AllPlayers\Webhooks;
 
 /**
- * Every class must have a code block detailing what the class does.
+ * Yourservice WebhookProcessor where you will define your webhook actions.
  */
-class MyService extends Webhook
+class Yourservice extends WebhookProcessor
 {
     /**
-     * Every property must have a codeblock detailing the reason for it.
-     */ 
-    public $domain = 'http://your-service-domain.com';
-
-    /**
-     * The url of the logo. (optional but desired for optimal user experience)
+     * Instantiate your webhooks and invoke the processing method.
+     *
+     * @param array $subscriber
+     *   The Subscriber variable provided by the Resque Job.
+     * @param array $data
+     *   The Event Data variable provided by the Resque Job.
      */
-    public $service_logo = 'http://your-service-domain.com/logo.png';
-
-    /**
-     * The authentication method, defaults to no_authentication.
-     * If basic auth, $auth_data['user'] and $auth_data['pass'] must be instantiated.
-     * If oauth, then consumer_key, consumer_secret, token and secret must
-     * be instatiated inside the $auth_data array.
-     */
-    public $authentication = 'no_authentication';
-
-    /**
-     * Before actually sending the data, you can do manipulation here.
-     */
-    public function send(array $data)
-    {
-        $this->request->addPostFields($data);
-        return $this->request->send();
+    public function __construct(
+        array $subscriber = array(),
+        array $data = array()
+    ) {
+        // If you have defined a SimpleWebhook, it should look like this.
+        $this->webhook = new SimpleWebhook($subscriber, $data);
+        $this->webhook->process();
     }
 }
 ```
 
-3.    Add documentation to `docs/service_name`
-4.    Send a pull request form your fork to [allplayers/service-webhooks](https://github.com/AllPlayers/service-webhooks)
-5.    Once accepted, we'll add any necessary data fields to the AllPlayers front-end so people can start using your application.
+<br>
+## <a name="#making-your-custom-webbhook-definitions">Making your custom webbhook definitions</a>
+A custom webhook definition must extend `Webhook` and implement the
+`WebhookInterface`. A webhook only requires the `__construct()` method to
+function, if the method signature is different from `Webhook::__construct()`.
+Below is a simple webhook example which does not uniquely process the different
+types of webhooks available.
+```php
+<?php
+/**
+ * @file
+ * Contains /AllPlayers/Webhooks/Yourservice/SimpleWebhook.
+ */
 
+namespace AllPlayers\Webhooks\Yourservice;
 
-*Tests are required for all patches*
+use AllPlayers\Webhooks\Webhook;
+use AllPlayers\Webhooks\WebhookInterface;
 
-This webhook implementation was modeled after github and a huge thanks goes out to github developers and to future AllPlayers developers that work on additions to our services.
+/**
+ * A simple webhook that doesnt require unique processing for each webhook type.
+ */
+class SimpleWebhook extends Webhook implements WebhookInterface
+{
+    // If your webhook requires authentication or an alternative method of data
+    // transmission, be sure to override the default values for Webhook.
+
+    /**
+     * Process the webhook data and set the domain to the appropriate URL.
+     */
+    public function process()
+    {
+        // Do no processing here, because this is a simplex webhook that dumps
+        // all raw data to a single URL.
+        parent::post();
+    }
+}
+
+```
+
+<br>
+### <a name="additional-processing">Additional Processing</a>
+Any webhook definition that requires processing of an API response, returned
+from calling the webhooks `process()` method, may implement the interface:
+`ProcessInterface.php`
+
+```php
+<?php
+/**
+ * @file
+ * Contains /AllPlayers/Webhooks/Yourservice/SimpleWebhook.
+ */
+
+namespace AllPlayers\Webhooks\Yourservice;
+
+use AllPlayers\Webhooks\Webhook;
+use AllPlayers\Webhooks\WebhookInterface;
+
+/**
+ * A simple webhook that doesnt require unique processing for each webhook type.
+ */
+class SimpleWebhook extends Webhook implements WebhookInterface, ProcessInterface
+{
+    ...
+}
+```
+
+By implementing the `ProcessInterface`, you must also include its
+`processResponse()` method inside your custom webhook definition:
+
+```php
+<?php
+/**
+ * @file
+ * Contains /AllPlayers/Webhooks/ProcessInterface.
+ *
+ * Provides the required method signatures for additional processing.
+ */
+
+namespace AllPlayers\Webhooks;
+
+use Guzzle\Http\Message\Response;
+
+/**
+ * The required functions for any webhook that implements the ProcessInterface.
+ */
+interface ProcessInterface
+{
+    /**
+     * Process the webhook data returned from sending the webhook.
+     *
+     * This function should relate a piece of AllPlayers data to a piece of
+     * third-party data; This information relationship will be made via the
+     * AllPlayers Public PHP API.
+     *
+     * @param \Guzzle\Http\Message\Response $response
+     *   Response from the webhook being processed/called.
+     */
+    public function processResponse(Response $response);
+}
+
+```
+Note that the `processResponse()` method is automatically called at the end of
+each webhook, if your webhook implements `ProcessInterface`.
+
+<br>
+## <a name="#credits">Credits</a>
+This webhook implementation is modeled after the
+[GitHub Webhooks API](http://developer.github.com/webhooks/). A huge thanks goes
+out to the GitHub developers and to future AllPlayers developers that work on
+additions to our services.

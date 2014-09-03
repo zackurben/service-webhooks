@@ -1,57 +1,78 @@
 <?php
 /**
  * @file
+ * Contains PostWebhooks.
  *
- * Provides definition of resque worker used to make post requests.
+ * Provides the definition for a resque worker with Webhook jobs.
  */
 
 /**
- * Class that uses basic perform function to process queued jobs.
+ * Resque object that uses basic perform function to process queued jobs.
  */
 class PostWebhooks
 {
     /**
-     * Rewrite the URL to this test URL for development.
-     *
-     * @var string
-     */
-    public $test_url;
-
-    /**
-     * Before processing, connect to correct instance of redis.
+     * Initiate a redis connection before processing.
      */
     public function __construct()
     {
         include __DIR__ . '/config/config.php';
-        if (isset($config['redis_password']) && !$config['redis_password'] == '') {
-            Resque::setBackend('redis://redis:' . $config['redis_password'] . '@' . $config['redis_host']);
+
+        $redis = (array_key_exists('redis_password', $config)
+            && !$config['redis_password'] == '');
+        if ($redis) {
+            Resque::setBackend(
+                'redis://redis:' . $config['redis_password'] . '@' . $config['redis_host']
+            );
         }
-        if (isset($config['test_url'])) {
-            $this->test_url = $config['test_url'];
-        }
+
+        // Listen for Perform events so that we can manage Unique Locks.
+        Resque_Event::listen(
+            'beforePerform',
+            array(new \AllPlayers\ResquePlugins\LockPlugin(), 'beforePerform')
+        );
+        Resque_Event::listen(
+            'onFailure',
+            array(new \AllPlayers\ResquePlugins\LockPlugin(), 'onFailure')
+        );
+        Resque_Event::listen(
+            'afterPerform',
+            array(new \AllPlayers\ResquePlugins\LockPlugin(), 'afterPerform')
+        );
     }
 
     /**
-     * Perform the post operations.
+     * Perform the Resque Job processing operation.
      */
     public function perform()
     {
         $hook = $this->args['hook'];
         $subscriber = $this->args['subscriber'];
         $event_data = $this->args['event_data'];
-        $url = (array_key_exists('url', $subscriber['variables'])) ? $subscriber['variables']['url'] : '';
 
-        $classname = 'AllPlayers\\Webhooks\\' . $hook['name'];
-        $webhook = new $classname($subscriber['variables']);
-        $webhook_data = array(
-          'event_name' => $hook['name'],
-          'event_data' => $event_data
+        // Create a new WebhookProcessor for the given partner.
+        $classname = 'AllPlayers\\Webhooks\\' . $hook['name'] . '\\' . $hook['name'];
+        $webhook = new $classname(
+            $subscriber['variables'],
+            $event_data
         );
-        if (!empty($this->test_url)) {
-          $webhook_data['original_url'] = $url;
-          $url = $this->test_url;
+
+        // Check if our webhook was canceled at creation.
+        $defined = ($webhook->getWebhook() != null);
+        $send = false;
+
+        if ($defined) {
+            $send = ($webhook->getWebhook()->getSend() == \AllPlayers\Webhooks\Webhook::WEBHOOK_SEND);
         }
-        $webhook->post($url);
-        $result = $webhook->send($webhook_data);
+
+        // Send the webhook if it was not canceled during its processing.
+        if ($defined && $send) {
+            $response = $webhook->send();
+
+            if ($webhook->getWebhook() instanceof \AllPlayers\Webhooks\ProcessInterface) {
+                // Process the response, according to each specific webhook.
+                $webhook->getWebhook()->processResponse($response);
+            }
+        }
     }
-}   
+}
