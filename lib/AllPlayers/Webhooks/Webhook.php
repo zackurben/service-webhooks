@@ -13,6 +13,8 @@
 namespace AllPlayers\Webhooks;
 
 use Guzzle\Http\Client;
+use Guzzle\Http\Plugin\CurlAuthPlugin;
+use Guzzle\Http\Plugin\OauthPlugin;
 
 /**
  * The base Webhook definition; provides structure to all child Webhooks.
