@@ -100,8 +100,11 @@ class WebhookTest extends \PHPUnit_Framework_TestCase
         $this->assertInternalType('int', $this->webhook->getMethod());
     }
 
+    /**
+     * Destroy the test webhook.
+     */
     public function tearDown()
     {
-        unset($this->webhook);
+        unset($this->webhook, $this->subscriber, $this->data);
     }
 }
