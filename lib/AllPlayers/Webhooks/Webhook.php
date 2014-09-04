@@ -333,7 +333,7 @@ class Webhook
         // Get the send settings for the partner.
         if ($config_dev) {
             $data = $this->getData();
-            if (array_key_exists($data['group']['organization_id'][0], $config[$webhook_processor])) {
+            if (isset($data['group']) && array_key_exists($data['group']['organization_id'][0], $config[$webhook_processor])) {
                 // Use the send setting for the partner and organization.
                 $config_dev = !$config[$webhook_processor][$data['group']['organization_id'][0]]['send'];
             } else {
@@ -433,6 +433,16 @@ class Webhook
     public function getMethod()
     {
         return $this->method;
+    }
+
+    /**
+     * Get the domain of the webhook.
+     *
+     * @return string
+     */
+    public function getDomain()
+    {
+        return $this->domain;
     }
 
     /**
