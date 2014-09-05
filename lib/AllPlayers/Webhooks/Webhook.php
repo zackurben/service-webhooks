@@ -448,6 +448,26 @@ class Webhook
     }
 
     /**
+     * Get the array of headers for the webhook.
+     *
+     * @return array
+     */
+    public function getHeaders()
+    {
+        return $this->headers;
+    }
+
+    /**
+     * Get the array of api headers for the api requests.
+     *
+     * @return array
+     */
+    public function getApiHeaders()
+    {
+        return $this->api_headers;
+    }
+
+    /**
      * Get the Guzzle request object for the webhook.
      *
      * @return \Guzzle\Http\Message\EntityEnclosingRequest

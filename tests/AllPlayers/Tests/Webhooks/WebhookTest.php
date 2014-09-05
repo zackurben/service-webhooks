@@ -103,14 +103,41 @@ class WebhookTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * Confirm that the webhook has valid headers for a Guzzle request object.
+     */
+    public function testWebhookHeaders()
+    {
+        $this->assertObjectHasAttribute('headers', $this->webhook);
+
+        // The webhook request headers.
+        $headers = $this->webhook->getHeaders();
+        $this->assertNotNull($headers);
+        $this->assertInternalType('array', $headers);
+    }
+
+    /**
+     * Confirm that the api request has valid headers for a Guzzle request object.
+     */
+    public function testWebhookApiHeaders()
+    {
+        $this->assertObjectHasAttribute('api_headers', $this->webhook);
+
+        // The webhook api request headers.
+        $headers = $this->webhook->getApiHeaders();
+        $this->assertNotNull($headers);
+        $this->assertInternalType('array', $headers);
+    }
+
+    /**
      * Confirm that the webhook POST function correctly prepares the request.
      */
     public function testWebhookPost()
     {
         $this->webhook->post();
-        $request = $this->webhook->getRequest();
-
         $this->assertObjectHasAttribute('request', $this->webhook);
+
+        // The webhook request object.
+        $request = $this->webhook->getRequest();
         $this->assertNotNull($request);
         $this->assertInstanceOf("\Guzzle\Http\Message\EntityEnclosingRequest", $request);
         $this->assertEquals($request->getMethod(), "POST");
@@ -122,9 +149,10 @@ class WebhookTest extends \PHPUnit_Framework_TestCase
     public function testWebhookPut()
     {
         $this->webhook->put();
-        $request = $this->webhook->getRequest();
-
         $this->assertObjectHasAttribute('request', $this->webhook);
+
+        // The webhook request object.
+        $request = $this->webhook->getRequest();
         $this->assertNotNull($request);
         $this->assertInstanceOf("\Guzzle\Http\Message\EntityEnclosingRequest", $request);
         $this->assertEquals($request->getMethod(), "PUT");
@@ -136,9 +164,10 @@ class WebhookTest extends \PHPUnit_Framework_TestCase
     public function testWebhookDelete()
     {
         $this->webhook->delete();
-        $request = $this->webhook->getRequest();
-
         $this->assertObjectHasAttribute('request', $this->webhook);
+
+        // The webhook request object.
+        $request = $this->webhook->getRequest();
         $this->assertNotNull($request);
         $this->assertInstanceOf("\Guzzle\Http\Message\EntityEnclosingRequest", $request);
         $this->assertEquals($request->getMethod(), "DELETE");
