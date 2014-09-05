@@ -103,6 +103,77 @@ class WebhookTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * Confirm that the webhook has valid headers for a Guzzle request object.
+     */
+    public function testWebhookHeaders()
+    {
+        $this->assertObjectHasAttribute('headers', $this->webhook);
+
+        // The webhook request headers.
+        $headers = $this->webhook->getHeaders();
+        $this->assertNotNull($headers);
+        $this->assertInternalType('array', $headers);
+    }
+
+    /**
+     * Confirm that the api request has valid headers for a Guzzle request object.
+     */
+    public function testWebhookApiHeaders()
+    {
+        $this->assertObjectHasAttribute('api_headers', $this->webhook);
+
+        // The webhook api request headers.
+        $headers = $this->webhook->getApiHeaders();
+        $this->assertNotNull($headers);
+        $this->assertInternalType('array', $headers);
+    }
+
+    /**
+     * Confirm that the webhook POST function correctly prepares the request.
+     */
+    public function testWebhookPost()
+    {
+        $this->webhook->post();
+        $this->assertObjectHasAttribute('request', $this->webhook);
+
+        // The webhook request object.
+        $request = $this->webhook->getRequest();
+        $this->assertNotNull($request);
+        $this->assertInstanceOf("\Guzzle\Http\Message\EntityEnclosingRequest", $request);
+        $this->assertEquals($request->getMethod(), "POST");
+    }
+
+    /**
+     * Confirm that the webhook PUT function correctly prepares the request.
+     */
+    public function testWebhookPut()
+    {
+        $this->webhook->put();
+        $this->assertObjectHasAttribute('request', $this->webhook);
+
+        // The webhook request object.
+        $request = $this->webhook->getRequest();
+        $this->assertNotNull($request);
+        $this->assertInstanceOf("\Guzzle\Http\Message\EntityEnclosingRequest", $request);
+        $this->assertEquals($request->getMethod(), "PUT");
+    }
+
+    /**
+     * Confirm that the webhook DELETE function correctly prepares the request.
+     */
+    public function testWebhookDelete()
+    {
+        $this->webhook->delete();
+        $this->assertObjectHasAttribute('request', $this->webhook);
+
+        // The webhook request object.
+        $request = $this->webhook->getRequest();
+        $this->assertNotNull($request);
+        $this->assertInstanceOf("\Guzzle\Http\Message\EntityEnclosingRequest", $request);
+        $this->assertEquals($request->getMethod(), "DELETE");
+    }
+
+    /**
      * Destroy the test webhook.
      */
     public function tearDown()
