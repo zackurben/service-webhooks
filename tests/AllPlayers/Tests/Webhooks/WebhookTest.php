@@ -103,6 +103,48 @@ class WebhookTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * Confirm that the webhook POST function correctly prepares the request.
+     */
+    public function testWebhookPost()
+    {
+        $this->webhook->post();
+        $request = $this->webhook->getRequest();
+
+        $this->assertObjectHasAttribute('request', $this->webhook);
+        $this->assertNotNull($request);
+        $this->assertInstanceOf("\Guzzle\Http\Message\EntityEnclosingRequest", $request);
+        $this->assertEquals($request->getMethod(), "POST");
+    }
+
+    /**
+     * Confirm that the webhook PUT function correctly prepares the request.
+     */
+    public function testWebhookPut()
+    {
+        $this->webhook->put();
+        $request = $this->webhook->getRequest();
+
+        $this->assertObjectHasAttribute('request', $this->webhook);
+        $this->assertNotNull($request);
+        $this->assertInstanceOf("\Guzzle\Http\Message\EntityEnclosingRequest", $request);
+        $this->assertEquals($request->getMethod(), "PUT");
+    }
+
+    /**
+     * Confirm that the webhook DELETE function correctly prepares the request.
+     */
+    public function testWebhookDelete()
+    {
+        $this->webhook->delete();
+        $request = $this->webhook->getRequest();
+
+        $this->assertObjectHasAttribute('request', $this->webhook);
+        $this->assertNotNull($request);
+        $this->assertInstanceOf("\Guzzle\Http\Message\EntityEnclosingRequest", $request);
+        $this->assertEquals($request->getMethod(), "DELETE");
+    }
+
+    /**
      * Destroy the test webhook.
      */
     public function tearDown()

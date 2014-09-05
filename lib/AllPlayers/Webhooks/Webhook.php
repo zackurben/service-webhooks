@@ -448,6 +448,16 @@ class Webhook
     }
 
     /**
+     * Get the Guzzle request object for the webhook.
+     *
+     * @return \Guzzle\Http\Message\EntityEnclosingRequest
+     */
+    public function getRequest()
+    {
+        return $this->request;
+    }
+
+    /**
      * Set the subscriber for the webhook.
      *
      * @param array $subscriber
@@ -516,7 +526,7 @@ class Webhook
      * @return \Guzzle\Http\Message\Request
      *   Returns the Guzzle request object, ready to send.
      */
-    protected function post()
+    public function post()
     {
         $this->setDomain();
 
@@ -543,7 +553,7 @@ class Webhook
      * @return \Guzzle\Http\Message\Request
      *   Returns the Guzzle request object, ready to send.
      */
-    protected function put()
+    public function put()
     {
         $this->setDomain();
 
@@ -570,7 +580,7 @@ class Webhook
      * @return \Guzzle\Http\Message\Request
      *   Returns the Guzzle request object, ready to send.
      */
-    protected function delete()
+    public function delete()
     {
         $this->setDomain();
 
