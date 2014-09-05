@@ -6,6 +6,8 @@
 
 namespace AllPlayers\Tests\Webhooks;
 
+use AllPlayers\Webhooks\Webhook;
+
 /**
  * The PHPUnit test cases for the AllPlayers service-webhooks class: Webhook.
  */
@@ -21,7 +23,7 @@ class WebhookTest extends \PHPUnit_Framework_TestCase
      */
     public function setUp()
     {
-        $this->webhook = new \AllPlayers\Webhooks\Webhook($this->subscriber, $this->data);
+        $this->webhook = new Webhook($this->subscriber, $this->data);
     }
 
     /**
@@ -30,8 +32,8 @@ class WebhookTest extends \PHPUnit_Framework_TestCase
     public function testWebhookClasses()
     {
         $this->assertObjectHasAttribute('classes', $this->webhook);
-        $this->assertNotNull(\AllPlayers\Webhooks\Webhook::$classes);
-        $this->assertInternalType('array', \AllPlayers\Webhooks\Webhook::$classes);
+        $this->assertNotNull(Webhook::$classes);
+        $this->assertInternalType('array', Webhook::$classes);
     }
 
     /**
@@ -91,7 +93,7 @@ class WebhookTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * Confirm that the webhook has an enumerated value for the method variable.
+     * Confirm that the webhook has an enumerated value for the transmission method variable.
      */
     public function testWebhookMethod()
     {
