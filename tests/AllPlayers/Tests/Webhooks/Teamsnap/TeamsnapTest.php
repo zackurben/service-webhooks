@@ -1,7 +1,7 @@
 <?php
 /**
  * @file
- * Contains /AllPlayers/Webhooks/Teamsnap/SimpleWebhookTest.
+ * Contains /AllPlayers/Tests/Webhooks/Teamsnap/TeamsnapTest.
  */
 
 namespace AllPlayers\Tests\Webhooks\Teamsnap;
@@ -10,9 +10,9 @@ use AllPlayers\Tests\Webhooks\WebhookTest;
 use AllPlayers\Webhooks\Teamsnap\SimpleWebhook;
 
 /**
- * The PHPUnit test cases for the AllPlayers service-webhooks class: SimpleWebhook.
+ * The base test cases for the TeamSnap implementation of service-webhooks.
  */
-class SimpleWebhookTest extends WebhookTest
+class TeamsnapTest extends WebhookTest
 {
     // Test Variables.
     public $webhook;
@@ -38,7 +38,10 @@ class SimpleWebhookTest extends WebhookTest
     {
         $this->assertObjectHasAttribute('helper', $this->webhook);
         $this->assertNotNull($this->webhook->getHelper());
-        $this->assertInstanceOf("AllPlayers\Utilities\Helper", $this->webhook->getHelper());
+        $this->assertInstanceOf(
+            "AllPlayers\Utilities\Helper",
+            $this->webhook->getHelper()
+        );
     }
 
     /**
@@ -48,11 +51,14 @@ class SimpleWebhookTest extends WebhookTest
     {
         $this->assertObjectHasAttribute('partner_mapping', $this->webhook);
         $this->assertNotNull($this->webhook->getPartnerMap());
-        $this->assertInstanceOf("AllPlayers\Utilities\PartnerMap", $this->webhook->getPartnerMap());
+        $this->assertInstanceOf(
+            "AllPlayers\Utilities\PartnerMap",
+            $this->webhook->getPartnerMap()
+        );
     }
 
     /**
-     * Confirm that the getSport function returns an integer.
+     * Confirm that getSport() returns an integer.
      */
     public function testWebhookGetSport()
     {
@@ -62,7 +68,7 @@ class SimpleWebhookTest extends WebhookTest
     }
 
     /**
-     * Confirm that the getRegion() method returns an array timezone and location.
+     * Confirm that getRegion() returns an array of timezone and location.
      */
     public function testWebhookGetRegion()
     {
@@ -76,7 +82,7 @@ class SimpleWebhookTest extends WebhookTest
     }
 
     /**
-     * Confirm that the getGameScores() returns an array of results.
+     * Confirm that getGameScores() returns an array of results.
      */
     public function testWebhookGetGameScores()
     {
@@ -116,6 +122,12 @@ class SimpleWebhookTest extends WebhookTest
      */
     public function tearDown()
     {
-        unset($this->webhook_processor, $this->webhook, $this->domain, $this->subscriber, $this->data);
+        unset(
+            $this->webhook_processor,
+            $this->webhook,
+            $this->domain,
+            $this->subscriber,
+            $this->data
+        );
     }
 }

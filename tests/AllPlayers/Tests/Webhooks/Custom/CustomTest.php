@@ -1,7 +1,7 @@
 <?php
 /**
  * @file
- * Contains /AllPlayers/Webhooks/Custom/CustomTest.
+ * Contains /AllPlayers/Tests/Webhooks/Custom/CustomTest.
  */
 
 namespace AllPlayers\Tests\Webhooks\Custom;
@@ -10,7 +10,7 @@ use AllPlayers\Webhooks\Custom\Custom;
 use AllPlayers\Tests\Webhooks\WebhookTest;
 
 /**
- * The PHPUnit test cases for the AllPlayers service-webhooks class: Custom.
+ * The base test cases for the Custom implementation of service-webhooks.
  */
 class CustomTest extends WebhookTest
 {
@@ -48,6 +48,12 @@ class CustomTest extends WebhookTest
      */
     public function tearDown()
     {
-        unset($this->webhook_processor, $this->webhook, $this->domain, $this->subscriber, $this->data);
+        unset(
+            $this->webhook_processor,
+            $this->webhook,
+            $this->domain,
+            $this->subscriber,
+            $this->data
+        );
     }
 }

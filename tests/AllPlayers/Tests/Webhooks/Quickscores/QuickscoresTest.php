@@ -1,7 +1,7 @@
 <?php
 /**
  * @file
- * Contains /AllPlayers/Webhooks/Custom/CustomTest.
+ * Contains /AllPlayers/Tests/Webhooks/Quickscores/QuickscoresTest.
  */
 
 namespace AllPlayers\Tests\Webhooks\Quickscores;
@@ -11,7 +11,7 @@ use AllPlayers\Webhooks\Quickscores\Quickscores;
 use AllPlayers\Tests\Webhooks\WebhookTest;
 
 /**
- * The PHPUnit test cases for the AllPlayers service-webhooks class: Quickscores.
+ * The base test cases for the QuickScores implementation of service-webhooks.
  */
 class QuickscoresTest extends WebhookTest
 {
@@ -26,7 +26,10 @@ class QuickscoresTest extends WebhookTest
      */
     public function setUp()
     {
-        $this->webhook_processor = new Quickscores($this->subscriber, $this->data);
+        $this->webhook_processor = new Quickscores(
+            $this->subscriber,
+            $this->data
+        );
         $this->webhook = $this->webhook_processor->getWebhook();
     }
 
@@ -73,6 +76,11 @@ class QuickscoresTest extends WebhookTest
      */
     public function tearDown()
     {
-        unset($this->webhook_processor, $this->webhook, $this->subscriber, $this->data);
+        unset(
+            $this->webhook_processor,
+            $this->webhook,
+            $this->subscriber,
+            $this->data
+        );
     }
 }
