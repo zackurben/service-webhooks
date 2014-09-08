@@ -251,7 +251,7 @@ class SimpleWebhook extends Webhook
         include __DIR__ . '/../../../../resque/config/config.php';
         if (isset($config['teamsnap'])) {
             // Determing if we have a defined organization.
-            $org = isset($data['group']) && array_key_exists(
+            $org = isset($data['group']['organization_id'][0]) && array_key_exists(
                 $data['group']['organization_id'][0],
                 $config['teamsnap']
             );
