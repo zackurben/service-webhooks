@@ -248,10 +248,10 @@ class SimpleWebhook extends Webhook
         array $subscriber = array(),
         array $data = array()
     ) {
-        include 'config/config.php';
+        include __DIR__ . '/../../../../resque/config/config.php';
         if (isset($config['teamsnap'])) {
             // Determing if we have a defined organization.
-            $org = array_key_exists(
+            $org = isset($data['group']) && array_key_exists(
                 $data['group']['organization_id'][0],
                 $config['teamsnap']
             );
@@ -290,6 +290,26 @@ class SimpleWebhook extends Webhook
             );
             $this->headers['X-Teamsnap-Token'] = $this->webhook->subscriber['token'];
         }
+    }
+
+    /**
+     * Get the Helper utility object.
+     *
+     * @return \AllPlayers\Utilities\Helper
+     */
+    public function getHelper()
+    {
+        return $this->helper;
+    }
+
+    /**
+     * Get the PartnerMap utility object.
+     *
+     * @return \AllPlayers\Utilities\PartnerMap.
+     */
+    public function getPartnerMap()
+    {
+        return $this->partner_mapping;
     }
 
     /**
