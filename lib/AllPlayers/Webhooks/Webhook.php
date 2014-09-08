@@ -337,8 +337,8 @@ class Webhook
             $data = $this->getData();
             if (isset($data['group']['organization_id'][0]) && array_key_exists(
                 $data['group']['organization_id'][0],
-                $config[$webhook_processor])
-            ) {
+                $config[$webhook_processor]
+            )) {
                 // Use the send setting for the partner and organization.
                 $config_dev = !$config[$webhook_processor][$data['group']['organization_id'][0]]['send'];
             } else {
