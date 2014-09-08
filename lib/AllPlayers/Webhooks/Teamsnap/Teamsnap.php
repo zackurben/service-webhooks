@@ -27,10 +27,10 @@ class Teamsnap extends WebhookProcessor
         array $data = array()
     ) {
         // Check if this webhook is enabled.
-        include 'config/config.php';
+        include __DIR__ . '/../../../../resque/config/config.php';
         if (isset($config['teamsnap'])) {
             // Determine if the organization is defined.
-            $organization = array_key_exists(
+            $organization = isset($data['group']) && array_key_exists(
                 $data['group']['organization_id'][0],
                 $config['teamsnap']
             );
@@ -43,16 +43,19 @@ class Teamsnap extends WebhookProcessor
                 $webhook_send = $config['teamsnap']['default']['send'];
             }
 
-            if ($webhook_send) {
+            if ($webhook_send || isset($data['unit_test'])) {
                 // Create the TeamSnap specific webhook, if it is defined.
                 $teamsnap_class = 'AllPlayers\\Webhooks\\Teamsnap\\'
-                    . Webhook::$classes[$data["webhook_type"]];
+                    . Webhook::$classes[$data['webhook_type']];
 
-                if (array_key_exists("webhook_type", $data) && class_exists($teamsnap_class)) {
+                if (array_key_exists('webhook_type', $data) && class_exists($teamsnap_class)) {
                     $class = '\\AllPlayers\\Webhooks\\Teamsnap\\'
-                        . Webhook::$classes[$data["webhook_type"]];
+                        . Webhook::$classes[$data['webhook_type']];
                     $this->webhook = new $class($subscriber, $data);
-                    $this->webhook->process();
+
+                    if (!isset($data['unit_test'])) {
+                        $this->webhook->process();
+                    }
                 }
             }
         }
