@@ -30,7 +30,7 @@ class Teamsnap extends WebhookProcessor
         include __DIR__ . '/../../../../resque/config/config.php';
         if (isset($config['teamsnap'])) {
             // Determine if the organization is defined.
-            $organization = isset($data['group']) && array_key_exists(
+            $organization = isset($data['group']['organization_id'][0]) && array_key_exists(
                 $data['group']['organization_id'][0],
                 $config['teamsnap']
             );
