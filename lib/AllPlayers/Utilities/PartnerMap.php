@@ -95,7 +95,7 @@ class PartnerMap
      *
      * @todo Change the APIv2 URL to pdup/prod server.
      */
-    const PARTNER_MAPPING_URL_BASE = 'https://api.zurben.apci.ws/api/v2/externalid';
+    const PARTNER_MAPPING_URL_BASE = 'https://www.allplayers.com/api/v2/externalid';
 
     /**
      * The AllPlayers APIv1 Authentication endpoint for cookie authentication.
@@ -104,7 +104,7 @@ class PartnerMap
      *
      * @todo Change the APIv1 URL to pdup/prod server.
      */
-    const ALLPLAYERS_AUTHENTICATION_URL = 'https://www.zurben.apci.ws/api/v1/rest/users/login.json';
+    const ALLPLAYERS_AUTHENTICATION_URL = 'https://www.allplayers.com/api/v1/rest/users/login.json';
 
     /**
      * The name of the cookie for AllPlayers Partner-Mapping API Authentication.
@@ -153,20 +153,12 @@ class PartnerMap
      *   The AllPlayers username for logging into APIv1.
      * @param string $password
      *   The AllPlayers password for logging into APIv1.
-     *
-     * @todo Remove cURL options (Used for self-signed certificates).
      */
     private function makeCookie($username, $password)
     {
         // Fetch the AllPlayers Authentication cookie.
         $this->cookie = new CookiePlugin(new ArrayCookieJar());
-        $cookie_client = new Client(
-            self::ALLPLAYERS_AUTHENTICATION_URL,
-            array(
-                'curl.CURLOPT_SSL_VERIFYPEER' => false,
-                'curl.CURLOPT_CERTINFO' => false,
-            )
-        );
+        $cookie_client = new Client(self::ALLPLAYERS_AUTHENTICATION_URL);
         $cookie_client->addSubscriber($this->cookie);
 
         $cookie_auth = $cookie_client->post(
@@ -210,8 +202,6 @@ class PartnerMap
      * @see PARTNER_MAP_SUBTYPE_USER_EMAIL
      * @see PARTNER_MAP_SUBTYPE_USER_CONTACT
      * @see PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
-     *
-     * @todo Remove cURL options (Used for self-signed certificates).
      */
     public function createPartnerMap(
         $external_resource_id,
@@ -220,13 +210,7 @@ class PartnerMap
         $group_uuid,
         $sub_item_type = null
     ) {
-        $client = new Client(
-            self::PARTNER_MAPPING_URL_BASE,
-            array(
-                'curl.CURLOPT_SSL_VERIFYPEER' => false,
-                'curl.CURLOPT_CERTINFO' => false,
-            )
-        );
+        $client = new Client(self::PARTNER_MAPPING_URL_BASE);
         $client->addSubscriber($this->cookie);
 
         // Set the required data fields.
@@ -281,8 +265,6 @@ class PartnerMap
      * @see PARTNER_MAP_SUBTYPE_USER_EMAIL
      * @see PARTNER_MAP_SUBTYPE_USER_CONTACT
      * @see PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
-     *
-     * @todo Remove cURL options (Used for self-signed certificates).
      */
     public function readPartnerMap(
         $item_type,
@@ -294,13 +276,7 @@ class PartnerMap
             . $item_uuid . '/' . $this->partner_id . '/' . $group_uuid
             . '?sub_item_type=' . $sub_item_type;
 
-        $client = new Client(
-            $url,
-            array(
-                'curl.CURLOPT_SSL_VERIFYPEER' => false,
-                'curl.CURLOPT_CERTINFO' => false,
-            )
-        );
+        $client = new Client($url);
         $client->addSubscriber($this->cookie);
 
         // Send an API request and return the response.
@@ -346,8 +322,6 @@ class PartnerMap
      * @see PARTNER_MAP_SUBTYPE_USER_EMAIL
      * @see PARTNER_MAP_SUBTYPE_USER_CONTACT
      * @see PARTNER_MAP_SUBTYPE_USER_CONTACT_EMAIL
-     *
-     * @todo Remove cURL options (Used for self-signed certificates).
      */
     public function deletePartnerMap(
         $item_type = null,
@@ -373,13 +347,7 @@ class PartnerMap
         }
 
         $url = self::PARTNER_MAPPING_URL_BASE . '?' . http_build_query($url);
-        $client = new Client(
-            $url,
-            array(
-                'curl.CURLOPT_SSL_VERIFYPEER' => false,
-                'curl.CURLOPT_CERTINFO' => false,
-            )
-        );
+        $client = new Client($url);
         $client->addSubscriber($this->cookie);
 
         // Send an API request and return the response.

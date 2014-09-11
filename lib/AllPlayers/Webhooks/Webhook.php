@@ -13,6 +13,8 @@
 namespace AllPlayers\Webhooks;
 
 use Guzzle\Http\Client;
+use Guzzle\Http\Plugin\CurlAuthPlugin;
+use Guzzle\Http\Plugin\OauthPlugin;
 
 /**
  * The base Webhook definition; provides structure to all child Webhooks.
@@ -271,7 +273,8 @@ class Webhook
         array $subscriber = array(),
         array $data = array()
     ) {
-        $this->webhook->subscriber = $subscriber;
+        $this->webhook = new \stdClass();
+        $this->setSubscriber($subscriber);
         $this->setData($data);
 
         $this->client = new Client($this->domain);
@@ -316,7 +319,7 @@ class Webhook
      */
     protected function preprocess()
     {
-        include 'config/config.php';
+        include __DIR__ . '/../../../resque/config/config.php';
 
         // Check if the test_url was defined.
         $config_url = (array_key_exists('test_url', $config)
@@ -332,7 +335,10 @@ class Webhook
         // Get the send settings for the partner.
         if ($config_dev) {
             $data = $this->getData();
-            if (array_key_exists($data['group']['organization_id'][0], $config[$webhook_processor])) {
+            if (isset($data['group']['organization_id'][0]) && array_key_exists(
+                $data['group']['organization_id'][0],
+                $config[$webhook_processor]
+            )) {
                 // Use the send setting for the partner and organization.
                 $config_dev = !$config[$webhook_processor][$data['group']['organization_id'][0]]['send'];
             } else {
@@ -348,6 +354,17 @@ class Webhook
         if ($config_url && $config_dev) {
             $this->test_domain = $config['test_url'];
         }
+    }
+
+    /**
+     * Get the webhook data from this webhook object.
+     *
+     * @return stdClass
+     *   The Webhook data of this webhook object.
+     */
+    public function getWebhook()
+    {
+        return $this->webhook;
     }
 
     /**
@@ -394,6 +411,84 @@ class Webhook
     public function getSend()
     {
         return $this->send;
+    }
+
+    /**
+     * Get the webhook authentication type.
+     *
+     * @return int
+     *
+     * @see AUTHENTICATION_NONE
+     * @see AUTHENTICATION_BASIC
+     * @see AUTHENTICATION_OAUTH
+     */
+    public function getAuthentication()
+    {
+        return $this->authentication;
+    }
+
+    /**
+     * Get the webhook transmission method.
+     *
+     * @return int
+     *
+     * @see TRANSMISSION_URLENCODED
+     * @see TRANSMISSION_JSON
+     */
+    public function getMethod()
+    {
+        return $this->method;
+    }
+
+    /**
+     * Get the domain of the webhook.
+     *
+     * @return string
+     */
+    public function getDomain()
+    {
+        return $this->domain;
+    }
+
+    /**
+     * Get the array of headers for the webhook.
+     *
+     * @return array
+     */
+    public function getHeaders()
+    {
+        return $this->headers;
+    }
+
+    /**
+     * Get the array of api headers for the api requests.
+     *
+     * @return array
+     */
+    public function getApiHeaders()
+    {
+        return $this->api_headers;
+    }
+
+    /**
+     * Get the Guzzle request object for the webhook.
+     *
+     * @return \Guzzle\Http\Message\EntityEnclosingRequest
+     */
+    public function getRequest()
+    {
+        return $this->request;
+    }
+
+    /**
+     * Set the subscriber for the webhook.
+     *
+     * @param array $subscriber
+     *   The subscriber data from the Resque_Job.
+     */
+    public function setSubscriber(array $subscriber)
+    {
+        $this->webhook->subscriber = $subscriber;
     }
 
     /**
@@ -454,7 +549,7 @@ class Webhook
      * @return \Guzzle\Http\Message\Request
      *   Returns the Guzzle request object, ready to send.
      */
-    protected function post()
+    public function post()
     {
         $this->setDomain();
 
@@ -481,7 +576,7 @@ class Webhook
      * @return \Guzzle\Http\Message\Request
      *   Returns the Guzzle request object, ready to send.
      */
-    protected function put()
+    public function put()
     {
         $this->setDomain();
 
@@ -508,7 +603,7 @@ class Webhook
      * @return \Guzzle\Http\Message\Request
      *   Returns the Guzzle request object, ready to send.
      */
-    protected function delete()
+    public function delete()
     {
         $this->setDomain();
 
@@ -538,7 +633,7 @@ class Webhook
     public function send()
     {
         // Send an additional debug request if enabled.
-        include 'config/config.php';
+        include __DIR__ . '/../../../resque/config/config.php';
         if ($this->getSend() == self::WEBHOOK_SEND) {
             if (isset($config['debug']) && $config['debug']['active']) {
                 $dbg = new Client($config['debug']['url']);
