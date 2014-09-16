@@ -92,19 +92,43 @@ class PartnerMap
      * The base url for the AllPlayers Partner-Mapping API.
      *
      * @var string
-     *
-     * @todo Change the APIv2 URL to pdup/prod server.
      */
-    const PARTNER_MAPPING_URL_BASE = 'https://www.allplayers.com/api/v2/externalid';
+    const PARTNER_MAPPING_URL_BASE = 'https://api.allplayers.com/api/v2/externalid';
+
+    /**
+     * The base url for the AllPlayers test Partner-Mapping API.
+     *
+     * @var string
+     */
+    const PARTNER_MAPPING_URL_BASE_TEST = 'https://api.pdup.allplayers.com/api/v2/externalid';
 
     /**
      * The AllPlayers APIv1 Authentication endpoint for cookie authentication.
      *
      * @var string
-     *
-     * @todo Change the APIv1 URL to pdup/prod server.
      */
     const ALLPLAYERS_AUTHENTICATION_URL = 'https://www.allplayers.com/api/v1/rest/users/login.json';
+
+    /**
+     * The AllPlayers test APIv1 Authentication endpoint for cookie authentication.
+     *
+     * @var string
+     */
+    const ALLPLAYERS_AUTHENTICATION_URL_TEST = 'https://www.pdup.allplayers.com/api/v1/rest/users/login.json';
+
+    /**
+     * An enumerated value for determining the current environment.
+     *
+     * @var integer
+     */
+    const ALLPLAYERS_ENV_TEST = 0;
+
+    /**
+     * An enumerated value for determining the current environment.
+     *
+     * @var integer
+     */
+    const ALLPLAYERS_ENV_PROD = 1;
 
     /**
      * The name of the cookie for AllPlayers Partner-Mapping API Authentication.
@@ -128,6 +152,16 @@ class PartnerMap
     protected $helper = null;
 
     /**
+     * An enumerated value to determine our current environment.
+     *
+     * @var int
+     *
+     * @see ALLPLAYERS_ENV_TEST
+     * @see ALLPLAYERS_ENV_PROD
+     */
+    protected $environment = self::ALLPLAYERS_ENV_TEST;
+
+    /**
      * Create the PartnerMap instance and create the AllPlayers auth Cookie.
      *
      * @param string $partner_id
@@ -139,6 +173,12 @@ class PartnerMap
      */
     public function __construct($partner_id, $username, $password)
     {
+        // Determine if we need to change the environment settings.
+        include __DIR__ . '/../../../resque/config/config.php';
+        if (isset($config['test_env']) && !$config['test_env']) {
+            $this->environment = self::ALLPLAYERS_ENV_PROD;
+        }
+
         $this->partner_id = $partner_id;
         $this->helper = new Helper();
         $this->makeCookie($username, $password);
@@ -158,9 +198,21 @@ class PartnerMap
     {
         // Fetch the AllPlayers Authentication cookie.
         $this->cookie = new CookiePlugin(new ArrayCookieJar());
-        $cookie_client = new Client(self::ALLPLAYERS_AUTHENTICATION_URL);
-        $cookie_client->addSubscriber($this->cookie);
 
+        // Set the client parameters for the current environment.
+        if ($this->environment == self::ALLPLAYERS_ENV_PROD) {
+            $url = self::ALLPLAYERS_AUTHENTICATION_URL;
+            $cookie_client = new Client($url);
+        } else {
+            $url = self::ALLPLAYERS_AUTHENTICATION_URL_TEST;
+            $headers = array(
+                'curl.CURLOPT_SSL_VERIFYPEER' => false,
+                'curl.CURLOPT_CERTINFO' => false,
+            );
+            $cookie_client = new Client($url, $headers);
+        }
+
+        $cookie_client->addSubscriber($this->cookie);
         $cookie_auth = $cookie_client->post(
             $cookie_client->getBaseUrl(),
             array('Content-Type' => 'application/x-www-form-urlencoded'),
@@ -210,7 +262,19 @@ class PartnerMap
         $group_uuid,
         $sub_item_type = null
     ) {
-        $client = new Client(self::PARTNER_MAPPING_URL_BASE);
+        // Set the client parameters for the current environment.
+        if ($this->environment == self::ALLPLAYERS_ENV_PROD) {
+            $url = self::PARTNER_MAPPING_URL_BASE;
+            $client = new Client($url);
+        } else {
+            $url = self::PARTNER_MAPPING_URL_BASE_TEST;
+            $headers = array(
+                'curl.CURLOPT_SSL_VERIFYPEER' => false,
+                'curl.CURLOPT_CERTINFO' => false,
+            );
+            $client = new Client($url, $headers);
+        }
+
         $client->addSubscriber($this->cookie);
 
         // Set the required data fields.
@@ -256,7 +320,7 @@ class PartnerMap
      *   The resource subtype to map.
      *
      * @return array
-     *   The AllPlayers response from reading a resouce mapping.
+     *   The AllPlayers response from reading a resource mapping.
      *
      * @see PARTNER_MAP_USER
      * @see PARTNER_MAP_EVENT
@@ -272,11 +336,22 @@ class PartnerMap
         $group_uuid,
         $sub_item_type = 'entity'
     ) {
-        $url = self::PARTNER_MAPPING_URL_BASE . '/' . $item_type . '/'
-            . $item_uuid . '/' . $this->partner_id . '/' . $group_uuid
-            . '?sub_item_type=' . $sub_item_type;
+        $url = '/' . $item_type . '/' . $item_uuid . '/' . $this->partner_id
+            . '/' . $group_uuid . '?sub_item_type=' . $sub_item_type;
 
-        $client = new Client($url);
+        // Set the client parameters for the current environment.
+        if ($this->environment == self::ALLPLAYERS_ENV_PROD) {
+            $url = self::PARTNER_MAPPING_URL_BASE . $url;
+            $client = new Client($url);
+        } else {
+            $url = self::PARTNER_MAPPING_URL_BASE_TEST . $url;
+            $headers = array(
+                'curl.CURLOPT_SSL_VERIFYPEER' => false,
+                'curl.CURLOPT_CERTINFO' => false,
+            );
+            $client = new Client($url, $headers);
+        }
+
         $client->addSubscriber($this->cookie);
 
         // Send an API request and return the response.
@@ -313,7 +388,7 @@ class PartnerMap
      *   The resource subtype to map.
      *
      * @return array
-     *   The AllPlayers response from deleting the resouce mapping.
+     *   The AllPlayers response from deleting the resource mapping.
      *
      * @see PARTNER_MAP_USER
      * @see PARTNER_MAP_EVENT
@@ -329,25 +404,37 @@ class PartnerMap
         $item_uuid = null,
         $sub_item_type = null
     ) {
-        $url = array();
+        $url_frag = array();
         if ($item_type != null) {
-            $url['item_type'] = $item_type;
+            $url_frag['item_type'] = $item_type;
         }
         if ($group_uuid != null) {
-            $url['group_uuid'] = $group_uuid;
+            $url_frag['group_uuid'] = $group_uuid;
         }
         if ($item_uuid != null) {
-            $url['item_uuid'] = $item_uuid;
+            $url_frag['item_uuid'] = $item_uuid;
         }
         if ($sub_item_type != null) {
-            $url['sub_item_type'] = $sub_item_type;
+            $url_frag['sub_item_type'] = $sub_item_type;
         }
         if ($this->partner_id != null) {
-            $url['partner'] = $this->partner_id;
+            $url_frag['partner'] = $this->partner_id;
+        }
+        $url = '?' . http_build_query($url_frag);
+
+        // Set the client parameters for the current environment.
+        if ($this->environment == self::ALLPLAYERS_ENV_PROD) {
+            $url = self::PARTNER_MAPPING_URL_BASE . $url;
+            $client = new Client($url);
+        } else {
+            $url = self::PARTNER_MAPPING_URL_BASE_TEST . $url;
+            $headers = array(
+                'curl.CURLOPT_SSL_VERIFYPEER' => false,
+                'curl.CURLOPT_CERTINFO' => false,
+            );
+            $client = new Client($url, $headers);
         }
 
-        $url = self::PARTNER_MAPPING_URL_BASE . '?' . http_build_query($url);
-        $client = new Client($url);
         $client->addSubscriber($this->cookie);
 
         // Send an API request and return the response.
