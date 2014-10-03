@@ -345,13 +345,10 @@ class Webhook
                 // The organization was not set, default to partner settings.
                 $config_dev = !$config[$webhook_processor]['default']['send'];
             }
-        } else {
-            // The partner was not defined, send to the test_url.
-            $config_dev = true;
         }
 
         // Set the redirect url, so we can swap domains before sending the data.
-        if ($config_url && $config_dev) {
+        if ($config_url && !$config_dev) {
             $this->test_domain = $config['test_url'];
         }
     }
@@ -520,8 +517,10 @@ class Webhook
      */
     protected function setDomain()
     {
-        // Swap the destination and add the original URL to the webhook payload.
-        if (isset($this->test_domain) && $this->test_domain != '') {
+        include __DIR__ . '/../../../resque/config/config.php';
+
+        // Redirect if we are in test env and we have a test domain.
+        if (isset($config['test_env'], $this->test_domain) && $config['test_env'] && $this->test_domain != '') {
             $this->webhook->data['original_url'] = $this->domain;
             $this->client->setBaseUrl($this->test_domain);
         } else {
