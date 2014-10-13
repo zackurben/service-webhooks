@@ -18,12 +18,13 @@ class PostWebhooks
     {
         include __DIR__ . '/config/config.php';
 
-        $redis = (array_key_exists('redis_password', $config)
-            && !$config['redis_password'] == '');
-        if ($redis) {
-            Resque::setBackend(
-                'redis://redis:' . $config['redis_password'] . '@' . $config['redis_host']
-            );
+        if (!empty($config['redis_password']) && !empty($config['redis_host'])) {
+            $REDIS_BACKEND = 'redis://redis:' . $config['redis_password'] . '@' . $config['redis_host'];
+            Resque::setBackend($REDIS_BACKEND);
+        }
+        elseif (!empty($config['redis_host']) && empty($config['redis_password'])) {
+            $REDIS_BACKEND = $config['redis_host'];
+            Resque::setBackend($REDIS_BACKEND);
         }
 
         // Listen for Perform events so that we can manage Unique Locks.
