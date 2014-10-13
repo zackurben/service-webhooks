@@ -32,10 +32,15 @@ if(empty($QUEUE)) {
     die("Set QUEUE env var containing the list of queues to work.\n");
 }
 
-if (isset($config['redis_password']) && !$config['redis_password'] == '') {
+if (!empty($config['redis_password']) && !empty($config['redis_host'])) {
     $REDIS_BACKEND = 'redis://redis:' . $config['redis_password'] . '@' . $config['redis_host'];
     Resque::setBackend($REDIS_BACKEND);
 }
+elseif (!empty($config['redis_host']) && empty($config['redis_password'])) {
+    $REDIS_BACKEND = $config['redis_host'];
+    Resque::setBackend($REDIS_BACKEND);
+}
+
 $logLevel = 0;
 $LOGGING = getenv('LOGGING');
 $VERBOSE = getenv('VERBOSE');
