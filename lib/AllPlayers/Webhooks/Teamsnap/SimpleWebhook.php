@@ -319,6 +319,12 @@ class SimpleWebhook extends Webhook
     {
         // Set the original webhook data.
         $this->setOriginalData($this->getData());
+
+        // Determine if the current webhook is for a Team, cancel it otherwise.
+        $data = $this->getData();
+        if ($data['group']['group_type'] != 'Team') {
+            $this->setSend(self::WEBHOOK_CANCEL);
+        }
     }
 
     /**
@@ -384,7 +390,7 @@ class SimpleWebhook extends Webhook
      * Get the scores for a given group, for an event.
      *
      * @param string $group_uuid
-     *   The group recieving an event update from the webhook.
+     *   The group receiving an event update from the webhook.
      * @param array $competitors
      *   The list of competitors from the AllPlayers Webhook.
      *
@@ -562,7 +568,7 @@ class SimpleWebhook extends Webhook
             $response = $this->helper->processJsonResponse($response);
 
             if (isset($event_location['uuid']) && !empty($event_location['uuid'])) {
-                // Associate an AllPlayers resouce UUID with the TeamSnap
+                // Associate an AllPlayers resource UUID with the TeamSnap
                 // LocationID.
                 $this->partner_mapping->createPartnerMap(
                     $response['location']['id'],
@@ -595,7 +601,7 @@ class SimpleWebhook extends Webhook
      * This will create the resource if it does not already exist.
      *
      * @param string $group_uuid
-     *   The group recieving an event update from the webhook.
+     *   The group receiving an event update from the webhook.
      * @param string $group_partner_id
      *   The Team ID for the corresponding TeamSnap team.
      * @param array $competitors
@@ -649,10 +655,10 @@ class SimpleWebhook extends Webhook
 
                     parent::post();
                     $response = $this->send();
-                    $response = $this->processJsonResponse($response);
+                    $response = $this->getHelper()->processJsonResponse($response);
 
                     if (isset($competitor['uuid']) && !empty($competitor['uuid'])) {
-                        // Assiciate an AllPlayers group UUID with a TeamSnap
+                        // Associate an AllPlayers group UUID with a TeamSnap
                         // TeamID.
                         $this->partner_mapping->createPartnerMap(
                             $response['opponent']['id'],
