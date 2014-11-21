@@ -8,6 +8,7 @@ namespace AllPlayers\Webhooks\Teamsnap;
 
 use AllPlayers\Webhooks\ProcessInterface;
 use AllPlayers\Utilities\PartnerMap;
+use AllPlayers\Webhooks\Webhook;
 use Guzzle\Http\Message\Response;
 
 /**
@@ -21,6 +22,12 @@ class UserUpdatesEvent extends SimpleWebhook implements ProcessInterface
     public function process()
     {
         parent::process();
+
+        // Cancel the continued processing of this webhook, if this was canceled
+        // in the parent:process() call.
+        if ($this->getSend() != \AllPlayers\Webhooks\Webhook::WEBHOOK_SEND) {
+            return;
+        }
 
         // Get the data from the AllPlayers webhook.
         $data = $this->getData();
