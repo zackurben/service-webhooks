@@ -57,6 +57,21 @@ class UserCreatesEvent extends SimpleWebhook implements ProcessInterface
             $original_send = $send;
 
             foreach ($data['event']['competitor'] as $group) {
+                // Check if the event already exists.
+                $event = $this->partner_mapping->readPartnerMap(
+                    PartnerMap::PARTNER_MAP_EVENT,
+                    $data['event']['uuid'],
+                    $group['uuid']
+                );
+                $event = $event['external_resource_id'];
+
+                // Skip creating this event because it already exists, it is not
+                // applicable to update here because the event was just made in
+                // another webhook (this is the other teams webhook event).
+                if (isset($event)) {
+                    continue;
+                }
+
                 // Get TeamID from the partner-mapping API.
                 $team = $this->partner_mapping->readPartnerMap(
                     PartnerMap::PARTNER_MAP_GROUP,
