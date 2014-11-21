@@ -60,51 +60,75 @@ class UserUpdatesEvent extends SimpleWebhook implements ProcessInterface
                 );
                 $event = $event['external_resource_id'];
 
-                // Make/get the location resource.
-                $event_location = isset($data['event']['location']) ? $data['event']['location'] : null;
-                $location = $this->getLocationResource(
-                    $group['uuid'],
-                    $event_location
-                );
+                // The event does not exist, cancel this webhook and create it.
+                if (!isset($event)) {
+                    // Stop the call PostWebhooks#send() because this is an
+                    // incorrect webhook.
+                    $this->setSend(self::WEBHOOK_CANCEL);
 
-                // Get the opponent resource.
-                $opponent = $this->getOpponentResource(
-                    $group['uuid'],
-                    $team,
-                    $data['event']['competitor']
-                );
+                    // Create a UserCreatesEvent webhook with the contents given.
+                    $temp_data = $data;
+                    $temp_data['webhook_type'] = self::WEBHOOK_CREATE_EVENT;
 
-                // Get the score data from webhook.
-                $score = $this->getGameScores(
-                    $group['uuid'],
-                    $data['event']['competitor']
-                );
+                    $temp = new \AllPlayers\Webhooks\Teamsnap\UserCreatesEvent(
+                        array(),
+                        $temp_data
+                    );
+                    $temp->process();
 
-                // Add additional information to the payload.
-                $send['location_id'] = $location;
-                $send['opponent_id'] = $opponent;
-                if (isset($score['score_for']) && !empty($score['score_for'])) {
-                    $send['score_for'] = $score['score_for'];
+                    if ($temp->getSend() == self::WEBHOOK_SEND) {
+                        $temp_response = $temp->send();
+                        $temp->processResponse($temp_response);
+                        $temp->setSend(self::WEBHOOK_CANCEL);
+                    }
+                } else {
+                    // Continue processing the UserUpdatesEvent webhook,
+                    // make/get the location resource.
+                    $event_location = isset($data['event']['location']) ? $data['event']['location'] : null;
+                    $location = $this->getLocationResource(
+                        $group['uuid'],
+                        $event_location
+                    );
+
+                    // Get the opponent resource.
+                    $opponent = $this->getOpponentResource(
+                        $group['uuid'],
+                        $team,
+                        $data['event']['competitor']
+                    );
+
+                    // Get the score data from webhook.
+                    $score = $this->getGameScores(
+                        $group['uuid'],
+                        $data['event']['competitor']
+                    );
+
+                    // Add additional information to the payload.
+                    $send['location_id'] = $location;
+                    $send['opponent_id'] = $opponent;
+                    if (isset($score['score_for']) && !empty($score['score_for'])) {
+                        $send['score_for'] = $score['score_for'];
+                    }
+                    if (isset($score['score_against']) && !empty($score['score_against'])) {
+                        $send['score_against'] = $score['score_against'];
+                    }
+                    if (isset($score['home_or_away']) && !empty($score['home_or_away'])) {
+                        $send['home_or_away'] = $score['home_or_away'];
+                    }
+
+                    // Update the request payload and send.
+                    $this->domain = $original_domain . '/teams/' . $team
+                        . '/as_roster/'
+                        . $this->webhook->subscriber['commissioner_id']
+                        . '/games/' . $event;
+                    $this->setData(array('game' => $send));
+                    parent::put();
+                    $this->send();
+
+                    // Reset the temp variables for the next iteration.
+                    $this->domain = $original_domain;
+                    $send = $original_send;
                 }
-                if (isset($score['score_against']) && !empty($score['score_against'])) {
-                    $send['score_against'] = $score['score_against'];
-                }
-                if (isset($score['home_or_away']) && !empty($score['home_or_away'])) {
-                    $send['home_or_away'] = $score['home_or_away'];
-                }
-
-                // Update the request payload and send.
-                $this->domain = $original_domain . '/teams/' . $team
-                    . '/as_roster/'
-                    . $this->webhook->subscriber['commissioner_id']
-                    . '/games/' . $event;
-                $this->setData(array('game' => $send));
-                parent::put();
-                $this->send();
-
-                // Reset the temp variables for the next iteration.
-                $this->domain = $original_domain;
-                $send = $original_send;
             }
 
             // Cancel the webhook for game events (manually processed).
@@ -126,20 +150,44 @@ class UserUpdatesEvent extends SimpleWebhook implements ProcessInterface
             );
             $event = $event['external_resource_id'];
 
-            // Make/get the location resource.
-            $event_location = isset($data['event']['location']) ? $data['event']['location'] : null;
-            $location = $this->getLocationResource(
-                $data['group']['uuid'],
-                $event_location
-            );
+            // The event does not exist, cancel this webhook and create it.
+            if (!isset($event)) {
+                // Stop the call PostWebhooks#send() because this is an
+                // incorrect webhook.
+                $this->setSend(self::WEBHOOK_CANCEL);
 
-            // Update the request and let PostWebhooks complete.
-            $send['location_id'] = $location;
-            $this->domain .= '/teams/' . $team . '/as_roster/'
-                . $this->webhook->subscriber['commissioner_id']
-                . '/practices/' . $event;
-            $this->setData(array('practice' => $send));
-            parent::put();
+                // Create a UserCreatesEvent webhook with the contents given.
+                $temp_data = $data;
+                $temp_data['webhook_type'] = self::WEBHOOK_CREATE_EVENT;
+
+                $temp = new \AllPlayers\Webhooks\Teamsnap\UserCreatesEvent(
+                    array(),
+                    $temp_data
+                );
+                $temp->process();
+
+                if ($temp->getSend() == self::WEBHOOK_SEND) {
+                    $temp_response = $temp->send();
+                    $temp->processResponse($temp_response);
+                    $temp->setSend(self::WEBHOOK_CANCEL);
+                }
+            } else {
+                // Continue processing the UserUpdatesEvent webhook,
+                // make/get the location resource.
+                $event_location = isset($data['event']['location']) ? $data['event']['location'] : null;
+                $location = $this->getLocationResource(
+                    $data['group']['uuid'],
+                    $event_location
+                );
+
+                // Update the request and let PostWebhooks complete.
+                $send['location_id'] = $location;
+                $this->domain .= '/teams/' . $team . '/as_roster/'
+                    . $this->webhook->subscriber['commissioner_id']
+                    . '/practices/' . $event;
+                $this->setData(array('practice' => $send));
+                parent::put();
+            }
         }
     }
 
