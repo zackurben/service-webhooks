@@ -8,7 +8,6 @@ namespace AllPlayers\Webhooks\Teamsnap;
 
 use AllPlayers\Webhooks\ProcessInterface;
 use AllPlayers\Utilities\PartnerMap;
-use AllPlayers\Webhooks\Webhook;
 use Guzzle\Http\Message\Response;
 
 /**

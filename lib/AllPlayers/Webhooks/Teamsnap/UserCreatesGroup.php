@@ -31,9 +31,6 @@ class UserCreatesGroup extends SimpleWebhook implements ProcessInterface
         // Get the data from the AllPlayers webhook.
         $data = $this->getData();
 
-        // Cancel the webhook if this is not a team being registered.
-        $this->domain .= '/teams';
-
         // Build the webhook payload.
         $geographical = $this->getRegion($data['group']['timezone']);
         $send = array(
@@ -53,6 +50,7 @@ class UserCreatesGroup extends SimpleWebhook implements ProcessInterface
 
         // Create a team on TeamSnap.
         $this->setData(array('team' => $send));
+        $this->domain .= '/teams';
         parent::post();
 
         if ($this->getSend() == self::WEBHOOK_SEND) {

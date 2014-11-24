@@ -318,10 +318,11 @@ class SimpleWebhook extends Webhook
     public function process()
     {
         // Set the original webhook data.
-        $this->setOriginalData($this->getData());
-
-        // Determine if the current webhook is for a Team, cancel it otherwise.
         $data = $this->getData();
+        $this->setOriginalData($data);
+
+        // Determine if the current webhook is for a Team, cancel it otherwise,
+        // because TeamSnap does not currently support any hierarchy of groups.
         if ($data['group']['group_type'] != 'Team') {
             $this->setSend(self::WEBHOOK_CANCEL);
         }
