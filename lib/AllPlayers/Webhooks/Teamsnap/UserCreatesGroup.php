@@ -22,65 +22,65 @@ class UserCreatesGroup extends SimpleWebhook implements ProcessInterface
     {
         parent::process();
 
+        // Cancel the continued processing of this webhook, if this was canceled
+        // in the parent:process() call.
+        if ($this->getSend() != \AllPlayers\Webhooks\Webhook::WEBHOOK_SEND) {
+            return;
+        }
+
         // Get the data from the AllPlayers webhook.
         $data = $this->getData();
 
-        // Cancel the webhook if this is not a team being registered.
-        if ($data['group']['group_type'] == 'Team') {
-            $this->domain .= '/teams';
+        // Build the webhook payload.
+        $geographical = $this->getRegion($data['group']['timezone']);
+        $send = array(
+            'team_name' => $data['group']['name'],
+            'team_league' => 'All Players',
+            'division_id' => intval($this->webhook->subscriber['division_id']),
+            'sport_id' => $this->getSport($data['group']['group_category']),
+            'timezone' => $geographical['timezone'],
+            'country' => $geographical['location'],
+            'zipcode' => $data['group']['postalcode'],
+        );
 
-            // Build the webhook payload.
-            $geographical = $this->getRegion($data['group']['timezone']);
-            $send = array(
-                'team_name' => $data['group']['name'],
-                'team_league' => 'All Players',
-                'division_id' => intval($this->webhook->subscriber['division_id']),
-                'sport_id' => $this->getSport($data['group']['group_category']),
-                'timezone' => $geographical['timezone'],
-                'country' => $geographical['location'],
-                'zipcode' => $data['group']['postalcode'],
-            );
+        // Add additional information to the payload.
+        if (isset($data['group']['logo'])) {
+            $send['logo_url'] = $data['group']['logo'];
+        }
 
-            // Add additional information to the payload.
-            if (isset($data['group']['logo'])) {
-                $send['logo_url'] = $data['group']['logo'];
-            }
+        // Create a team on TeamSnap.
+        $this->setData(array('team' => $send));
+        $this->domain .= '/teams';
+        parent::post();
 
-            // Create a team on TeamSnap.
-            $this->setData(array('team' => $send));
-            parent::post();
+        if ($this->getSend() == self::WEBHOOK_SEND) {
+            $response = $this->send();
 
-            if ($this->getSend() == self::WEBHOOK_SEND) {
-                $response = $this->send();
+            // Manually invoke the partner-mapping.
+            $this->processResponse($response);
+        }
 
-                // Manually invoke the partner-mapping.
-                $this->processResponse($response);
-            }
+        // Stop the call PostWebhooks#send() because the processing and
+        // response processing for both the user_creates_group and
+        // user_adds_role was handled above.
+        $this->setSend(self::WEBHOOK_CANCEL);
 
-            // Stop the call PostWebhooks#send() because the processing and
-            // response processing for both the user_creates_group and
-            // user_adds_role was handled above.
-            $this->setSend(self::WEBHOOK_CANCEL);
+        // Create a UserAddsRole webhook with modified contents to force
+        // the creation of the group creator.
+        $temp_data = $data;
+        $temp_data['webhook_type'] = self::WEBHOOK_ADD_ROLE;
+        $temp_data['member']['role_name'] = 'Owner';
 
-            // Create a UserAddsRole webhook with modified contents to force
-            // the creation of the group creator.
-            $temp_data = $data;
-            $temp_data['webhook_type'] = self::WEBHOOK_ADD_ROLE;
-            $temp_data['member']['role_name'] = 'Owner';
+        $temp = new \AllPlayers\Webhooks\Teamsnap\UserAddsRole(
+            array(),
+            $temp_data
+        );
+        $temp->process();
 
-            $temp = new \AllPlayers\Webhooks\Teamsnap\UserAddsRole(
-                array(),
-                $temp_data
-            );
-            $temp->process();
-
-            if ($temp->getSend() == self::WEBHOOK_SEND) {
-                $temp_response = $temp->send();
-                $temp->processResponse($temp_response);
-                $temp->setSend(self::WEBHOOK_CANCEL);
-            }
-        } else {
-            $this->setSend(self::WEBHOOK_CANCEL);
+        if ($temp->getSend() == self::WEBHOOK_SEND) {
+            $temp_response = $temp->send();
+            $temp->processResponse($temp_response);
+            $temp->setSend(self::WEBHOOK_CANCEL);
         }
     }
 
