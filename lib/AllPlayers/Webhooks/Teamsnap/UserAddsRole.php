@@ -53,7 +53,11 @@ class UserAddsRole extends SimpleWebhook implements ProcessInterface
             $data['group']['uuid'],
             $data['group']['uuid']
         );
-        $team = $team['external_resource_id'];
+        if (isset($team['external_resource_id'])) {
+            $team = $team['external_resource_id'];
+        } else {
+            $team = null;
+        }
 
         // Build the webhook payload.
         $send = array();
@@ -209,9 +213,14 @@ class UserAddsRole extends SimpleWebhook implements ProcessInterface
                 $original_data['group']['uuid'],
                 $original_data['group']['uuid']
             );
+            if (isset($team['external_resource_id'])) {
+                $team = $team['external_resource_id'];
+            } else {
+                $team = null;
+            }
 
             $this->domain = 'https://api.teamsnap.com/v2/teams/'
-                . $team['external_resource_id'] . '/as_roster/'
+                . $team . '/as_roster/'
                 . $this->webhook->subscriber['commissioner_id']
                 . '/invitations';
             $send = array(

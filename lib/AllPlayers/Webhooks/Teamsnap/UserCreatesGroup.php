@@ -174,7 +174,7 @@ class UserCreatesGroup extends SimpleWebhook implements ProcessInterface
      */
     private function createTeamsnapGroupAdmin() {
         // Get the data from the AllPlayers webhook.
-        $data = $this->getData();
+        $data = $this->getOriginalData();
 
         // Create a UserAddsRole webhook with modified contents to force the
         // creation of the group creator.

@@ -8,6 +8,7 @@ namespace AllPlayers\Webhooks\Teamsnap;
 
 use AllPlayers\Webhooks\ProcessInterface;
 use AllPlayers\Utilities\PartnerMap;
+use AllPlayers\Webhooks\Webhook;
 use Guzzle\Http\Message\Response;
 
 /**
@@ -202,6 +203,12 @@ class UserAddsSubmission extends SimpleWebhook implements ProcessInterface
         }
         if (isset($webform['profile__field_home_address_country__profile'])) {
             $send['country'] = $webform['profile__field_home_address_country__profile'];
+        }
+
+        // Cancel webhook if data is not present.
+        if (empty($send)) {
+            $this->setSend(Webhook::WEBHOOK_CANCEL);
+            return;
         }
 
         // Update the request and let PostWebhooks complete.
