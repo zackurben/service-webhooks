@@ -411,6 +411,20 @@ class Webhook
     }
 
     /**
+     * Confirm that the webhook is supposed to be sent.
+     *
+     * @return bool
+     *   Whether to send the webhook or not.
+     */
+    public function checkSend() {
+        if ($this->getSend() != \AllPlayers\Webhooks\Webhook::WEBHOOK_SEND) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    /**
      * Get the webhook authentication type.
      *
      * @return int

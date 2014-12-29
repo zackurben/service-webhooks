@@ -22,11 +22,16 @@ class UserAddsRole extends SimpleWebhook implements ProcessInterface
     {
         parent::process();
 
-        // Cancel the continued processing of this webhook, if this was canceled
-        // in the parent:process() call.
-        if ($this->getSend() != \AllPlayers\Webhooks\Webhook::WEBHOOK_SEND) {
+        // Stop processing if this webhook isn't being sent.
+        $send = $this->checkSend();
+        if (!$send) {
             return;
         }
+
+        // Get the data from the AllPlayers webhook.
+        $data = $this->getData();
+        // Get the data from the AllPlayers webhook.
+        $data = $this->getData();
 
         // Get the data from the AllPlayers webhook.
         $data = $this->getData();

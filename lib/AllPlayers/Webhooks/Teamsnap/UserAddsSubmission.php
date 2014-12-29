@@ -23,9 +23,9 @@ class UserAddsSubmission extends SimpleWebhook implements ProcessInterface
     {
         parent::process();
 
-        // Cancel the continued processing of this webhook, if this was canceled
-        // in the parent:process() call.
-        if ($this->getSend() != \AllPlayers\Webhooks\Webhook::WEBHOOK_SEND) {
+        // Stop processing if this webhook isn't being sent.
+        $send = $this->checkSend();
+        if (!$send) {
             return;
         }
 

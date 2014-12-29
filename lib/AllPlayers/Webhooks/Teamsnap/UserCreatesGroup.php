@@ -64,20 +64,6 @@ class UserCreatesGroup extends SimpleWebhook implements ProcessInterface
     }
 
     /**
-     * Confirm that the webhook is supposed to be sent.
-     *
-     * @return bool
-     *   Whether to send the webhook or not.
-     */
-    private function checkSend() {
-        if ($this->getSend() != \AllPlayers\Webhooks\Webhook::WEBHOOK_SEND) {
-            return false;
-        } else {
-            return true;
-        }
-    }
-
-    /**
      * Confirm that this webhook was not triggered by a webhook sync.
      *
      * If the group already exists, this webhook was triggered by a webhook
