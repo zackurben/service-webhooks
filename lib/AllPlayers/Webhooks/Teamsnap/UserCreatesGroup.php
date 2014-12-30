@@ -51,16 +51,8 @@ class UserCreatesGroup extends SimpleWebhook implements ProcessInterface
     {
         $response = $this->helper->processJsonResponse($response);
 
-        // Get the original data sent from the AllPlayers webhook.
-        $original_data = $this->getOriginalData();
-
-        // Associate an AllPlayers group UUID with a TeamSnap TeamID.
-        $this->partner_mapping->createPartnerMap(
-            $response['team']['id'],
-            PartnerMap::PARTNER_MAP_GROUP,
-            $original_data['group']['uuid'],
-            $original_data['group']['uuid']
-        );
+        // Partner map the new group.
+        $this->mapGroup($response);
     }
 
     /**
@@ -73,7 +65,8 @@ class UserCreatesGroup extends SimpleWebhook implements ProcessInterface
      * @return bool
      *   If this is not a sync webhook.
      */
-    private function checkNotWebhookSync() {
+    private function checkNotWebhookSync()
+    {
         // Get the data from the AllPlayers webhook.
         $data = $this->getData();
 
@@ -115,7 +108,8 @@ class UserCreatesGroup extends SimpleWebhook implements ProcessInterface
     /**
      * Create a group on the TeamSnap website.
      */
-    private function createTeamsnapGroup() {
+    private function createTeamsnapGroup()
+    {
         // Get the data from the AllPlayers webhook.
         $data = $this->getData();
 
@@ -158,7 +152,8 @@ class UserCreatesGroup extends SimpleWebhook implements ProcessInterface
     /**
      * Create the group admin for the newly created group, using the response.
      */
-    private function createTeamsnapGroupAdmin() {
+    private function createTeamsnapGroupAdmin()
+    {
         // Get the data from the AllPlayers webhook.
         $data = $this->getOriginalData();
 
@@ -181,5 +176,25 @@ class UserCreatesGroup extends SimpleWebhook implements ProcessInterface
             $temp->processResponse($temp_response);
             $temp->setSend(self::WEBHOOK_CANCEL);
         }
+    }
+
+    /**
+     * Add the group partner mapping for TeamSnap.
+     *
+     * @param array $response
+     *   An array representation of the response data.
+     */
+    private function mapGroup(array $response)
+    {
+        // Get the original data sent from the AllPlayers webhook.
+        $original_data = $this->getOriginalData();
+
+        // Associate an AllPlayers group UUID with a TeamSnap TeamID.
+        $this->partner_mapping->createPartnerMap(
+            $response['team']['id'],
+            PartnerMap::PARTNER_MAP_GROUP,
+            $original_data['group']['uuid'],
+            $original_data['group']['uuid']
+        );
     }
 }
