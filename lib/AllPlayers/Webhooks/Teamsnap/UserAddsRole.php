@@ -28,11 +28,35 @@ class UserAddsRole extends SimpleWebhook implements ProcessInterface
             return;
         }
 
-        // Get the data from the AllPlayers webhook.
-        $data = $this->getData();
-        // Get the data from the AllPlayers webhook.
-        $data = $this->getData();
+        // Add the role for the user defined in the webhook contents.
+        $this->addTeamsnapRole();
+    }
 
+    /**
+     * Process the payload response and manage the partner-mapping API calls.
+     *
+     * @param \Guzzle\Http\Message\Response $response
+     *   Response from the webhook being processed/called.
+     */
+    public function processResponse(Response $response)
+    {
+        // Convert the raw Guzzle Response object to an array.
+        $response = $this->helper->processJsonResponse($response);
+
+        // Partner map the user..
+        $this->mapRoster($response);
+
+        // Partner map the users Phone.
+        $this->mapRosterPhone($response);
+    }
+
+    /**
+     * Add a role for the given user.
+     *
+     * Note: This will create the user on TeamSnap, if they don't already exist.
+     */
+    private function addTeamsnapRole()
+    {
         // Get the data from the AllPlayers webhook.
         $data = $this->getData();
 
@@ -61,6 +85,7 @@ class UserAddsRole extends SimpleWebhook implements ProcessInterface
         if (isset($team['external_resource_id'])) {
             $team = $team['external_resource_id'];
         } else {
+            // @TODO: If the team is null, requeue this webhook.
             $team = null;
         }
 
@@ -137,15 +162,15 @@ class UserAddsRole extends SimpleWebhook implements ProcessInterface
     }
 
     /**
-     * Process the payload response and manage the partner-mapping API calls.
+     * Add or Update the users Roster mapping for TeamSnap.
      *
-     * @param \Guzzle\Http\Message\Response $response
-     *   Response from the webhook being processed/called.
+     * Note: If the Email mapping is created, send an email invitation.
+     *
+     * @param array $response
+     *   An array representation of the response data.
      */
-    public function processResponse(Response $response)
+    private function mapRoster(array $response)
     {
-        $response = $this->helper->processJsonResponse($response);
-
         // Get the original data sent from the AllPlayers webhook.
         $original_data = $this->getOriginalData();
 
@@ -164,6 +189,54 @@ class UserAddsRole extends SimpleWebhook implements ProcessInterface
             $original_data['group']['uuid'],
             PartnerMap::PARTNER_MAP_SUBTYPE_USER_EMAIL
         );
+
+        // If the partner map was just created, send an email invite.
+        if (isset($query['message'])) {
+            // Add a mapping of the user UUID with a TeamSnap RosterID.
+            $this->partner_mapping->createPartnerMap(
+                $response['roster']['id'],
+                PartnerMap::PARTNER_MAP_USER,
+                $original_data['member']['uuid'],
+                $original_data['group']['uuid']
+            );
+
+            // Send the TeamSnap account invite.
+            $team = $this->partner_mapping->readPartnerMap(
+                PartnerMap::PARTNER_MAP_GROUP,
+                $original_data['group']['uuid'],
+                $original_data['group']['uuid']
+            );
+            if (isset($team['external_resource_id'])) {
+                $team = $team['external_resource_id'];
+            } else {
+                $team = null;
+            }
+
+            $this->domain = 'https://api.teamsnap.com/v2/teams/'
+                . $team . '/as_roster/'
+                . $this->webhook->subscriber['commissioner_id']
+                . '/invitations';
+            $send = array(
+                $response['roster']['id'],
+            );
+
+            // Update the request and send.
+            $this->setData(array('rosters' => $send));
+            parent::post();
+            $this->send();
+        }
+    }
+
+    /**
+     * Add or Update the users Roster phone mapping for TeamSnap.
+     *
+     * @param array $response
+     *   An array representation of the response data.
+     */
+    private function mapRosterPhone($response)
+    {
+        // Get the original data sent from the AllPlayers webhook.
+        $original_data = $this->getOriginalData();
 
         // Add/update the mapping of phones with a Roster.
         $phones = $response['roster']['roster_telephone_numbers'];
@@ -200,42 +273,6 @@ class UserAddsRole extends SimpleWebhook implements ProcessInterface
                         break;
                 }
             }
-        }
-
-        // The user is registering, send an email invite.
-        if (isset($query['message'])) {
-            // Add a mapping of the user UUID with a TeamSnap RosterID.
-            $this->partner_mapping->createPartnerMap(
-                $response['roster']['id'],
-                PartnerMap::PARTNER_MAP_USER,
-                $original_data['member']['uuid'],
-                $original_data['group']['uuid']
-            );
-
-            // Send the TeamSnap account invite.
-            $team = $this->partner_mapping->readPartnerMap(
-                PartnerMap::PARTNER_MAP_GROUP,
-                $original_data['group']['uuid'],
-                $original_data['group']['uuid']
-            );
-            if (isset($team['external_resource_id'])) {
-                $team = $team['external_resource_id'];
-            } else {
-                $team = null;
-            }
-
-            $this->domain = 'https://api.teamsnap.com/v2/teams/'
-                . $team . '/as_roster/'
-                . $this->webhook->subscriber['commissioner_id']
-                . '/invitations';
-            $send = array(
-                $response['roster']['id'],
-            );
-
-            // Update the request and send.
-            $this->setData(array('rosters' => $send));
-            parent::post();
-            $this->send();
         }
     }
 }
