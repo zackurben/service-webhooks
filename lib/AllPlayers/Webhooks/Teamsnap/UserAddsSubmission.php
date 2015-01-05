@@ -40,7 +40,7 @@ class UserAddsSubmission extends SimpleWebhook implements ProcessInterface
             $data['group']['uuid']
         );
 
-        // Create a new user on TeamSnap, if the resource was not found.
+        // Determine if we are making a new resource or updating an existing.
         if (isset($roster['message'])) {
             $method = self::HTTP_POST;
         } elseif (isset($roster['external_resource_id'])) {
@@ -56,154 +56,8 @@ class UserAddsSubmission extends SimpleWebhook implements ProcessInterface
         );
         $team = $team['external_resource_id'];
 
-        // Build the webhook payload; defaults to account information
-        // for missing elements that are required.
-        $send = array();
-        $webform = $data['webform']['data'];
-        if (isset($webform['profile__field_firstname__profile'])) {
-            $send['first'] = $webform['profile__field_firstname__profile'];
-        } elseif ($method == self::HTTP_POST && !isset($webform['profile__field_firstname__profile'])) {
-            // Required element missing, use profile info.
-            $send['first'] = $data['member']['first_name'];
-        }
-        if (isset($webform['profile__field_lastname__profile'])) {
-            $send['last'] = $webform['profile__field_lastname__profile'];
-        } elseif ($method == self::HTTP_POST && !isset($webform['profile__field_lastname__profile'])) {
-            // Required element missing, use profile info.
-            $send['last'] = $data['member']['last_name'];
-        }
-
-        // Override email address with guardians email, if present.
-        if (isset($data['member']['guardian'])) {
-            $send['roster_email_addresses_attributes'] = $this->getEmailResource(
-                $data['member']['guardian']['email'],
-                $data['member']['uuid'],
-                $data['group']['uuid']
-            );
-        } else {
-            if (isset($webform['profile__field_email__profile'])) {
-                $send['roster_email_addresses_attributes'] = $this->getEmailResource(
-                    $webform['profile__field_email__profile'],
-                    $data['member']['uuid'],
-                    $data['group']['uuid']
-                );
-            } elseif ($method == self::HTTP_POST && !isset($webform['profile__field_email__profile'])) {
-                // Required element missing, use profile info.
-                $send['roster_email_addresses_attributes'] = $this->getEmailResource(
-                    $data['member']['email'],
-                    $data['member']['uuid'],
-                    $data['group']['uuid']
-                );
-            }
-        }
-
-        if (isset($webform['profile__field_birth_date__profile'])) {
-            $send['birthdate'] = $webform['profile__field_birth_date__profile'];
-        }
-        if (isset($webform['profile__field_user_gender__profile'])) {
-            $send['gender'] = $webform['profile__field_user_gender__profile'] == 1 ? 'Male' : 'Female';
-        }
-
-        // Add roster phone numbers, if present.
-        $roster_telephones_attributes = array();
-        if (isset($webform['profile__field_phone__profile'])) {
-            // Check for an existing phone number.
-            $query = $this->partner_mapping->readPartnerMap(
-                PartnerMap::PARTNER_MAP_USER,
-                $data['member']['uuid'],
-                $data['group']['uuid'],
-                PartnerMap::PARTNER_MAP_SUBTYPE_USER_PHONE
-            );
-
-            // Dynamically adjust payload label/id.
-            $key = $value = null;
-            if (array_key_exists('external_resource_id', $query)) {
-                $key = 'id';
-                $value = $query['external_resource_id'];
-            } else {
-                $key = 'label';
-                $value = 'Home';
-            }
-
-            // Add home phone info to payload.
-            $roster_telephones_attributes[] = array(
-                $key => $value,
-                'phone_number' => $webform['profile__field_phone__profile'],
-            );
-        }
-        if (isset($webform['profile__field_phone_cell__profile'])) {
-            // Check for existing cell phone number.
-            $query = $this->partner_mapping->readPartnerMap(
-                PartnerMap::PARTNER_MAP_USER,
-                $data['member']['uuid'],
-                $data['group']['uuid'],
-                PartnerMap::PARTNER_MAP_SUBTYPE_USER_PHONE_CELL
-            );
-
-            // Dynamically adjust payload label/id.
-            $key = $value = null;
-            if (array_key_exists('external_resource_id', $query)) {
-                $key = 'id';
-                $value = $query['external_resource_id'];
-            } else {
-                $key = 'label';
-                $value = 'Cell';
-            }
-
-            // Add cell phone info to payload.
-            $roster_telephones_attributes[] = array(
-                $key => $value,
-                'phone_number' => $webform['profile__field_phone_cell__profile'],
-            );
-        }
-        if (isset($webform['profile__field_work_number__profile'])) {
-            // Check for existing work phone number.
-            $query = $this->partner_mapping->readPartnerMap(
-                PartnerMap::PARTNER_MAP_USER,
-                $data['member']['uuid'],
-                $data['group']['uuid'],
-                PartnerMap::PARTNER_MAP_SUBTYPE_USER_PHONE_WORK
-            );
-
-            // Dynamically adjust payload label/id.
-            $key = $value = null;
-            if (array_key_exists('external_resource_id', $query)) {
-                $key = 'id';
-                $value = $query['external_resource_id'];
-            } else {
-                $key = 'label';
-                $value = 'Work';
-            }
-
-            // Add work phone info to payload.
-            $roster_telephones_attributes[] = array(
-                $key => $value,
-                'phone_number' => $webform['profile__field_work_number__profile'],
-            );
-        }
-        if (count($roster_telephones_attributes) > 0) {
-            $send['roster_telephones_attributes'] = $roster_telephones_attributes;
-        }
-
-        // Add address fields, if present.
-        if (isset($webform['profile__field_home_address_street__profile'])) {
-            $send['address'] = $webform['profile__field_home_address_street__profile'];
-        }
-        if (isset($webform['profile__field_home_address_additional__profile'])) {
-            $send['address2'] = $webform['profile__field_home_address_additional__profile'];
-        }
-        if (isset($webform['profile__field_home_address_city__profile'])) {
-            $send['city'] = $webform['profile__field_home_address_city__profile'];
-        }
-        if (isset($webform['profile__field_home_address_province__profile'])) {
-            $send['state'] = $webform['profile__field_home_address_province__profile'];
-        }
-        if (isset($webform['profile__field_home_address_postal_code__profile'])) {
-            $send['zip'] = $webform['profile__field_home_address_postal_code__profile'];
-        }
-        if (isset($webform['profile__field_home_address_country__profile'])) {
-            $send['country'] = $webform['profile__field_home_address_country__profile'];
-        }
+        // Build the webhook payload.
+        $send = $this->addTeamsnapUserData($method);
 
         // Cancel webhook if data is not present.
         if (empty($send)) {
@@ -320,6 +174,270 @@ class UserAddsSubmission extends SimpleWebhook implements ProcessInterface
             $this->setData(array('rosters' => $send));
             parent::post();
             $this->send();
+        }
+    }
+
+    /**
+     * Build the webhook payload to update/create the user account.
+     *
+     * @param integer $method
+     *   The HTTP verb for this webhook as defined in Webhook.
+     *
+     * @see Webhook::HTTP_POST
+     * @see Webhook::HTTP_PUT
+     *
+     * @return array
+     *   The user data to send to update/create the user account.
+     */
+    protected function addTeamsnapUserData($method)
+    {
+        // Build the webhook payload; defaults to account information
+        // for missing elements that are required.
+        $send = array();
+        $this->addName($send, $method);
+        $this->addEmailAddress($send, $method);
+        $this->addBirthday($send);
+        $this->addGender($send);
+        $this->addPhoneNumber($send);
+        $this->addAddress($send);
+
+        return $send;
+    }
+
+    /**
+     * Add the Users Name to their TeamSnap profile.
+     *
+     * @param array $send
+     *   The array to append the new user data.
+     * @param integer $method
+     *   The HTTP verb for this webhook as defined in Webhook.
+     *
+     * @see Webhook::HTTP_POST
+     * @see Webhook::HTTP_PUT
+     */
+    protected function addName(&$send, $method)
+    {
+        $data = $this->getData();
+        $webform = $data['webform']['data'];
+
+        // Update/Add the users First Name.
+        if (isset($webform['profile__field_firstname__profile'])) {
+            $send['first'] = $webform['profile__field_firstname__profile'];
+        } elseif ($method == self::HTTP_POST && !isset($webform['profile__field_firstname__profile'])) {
+            // Required element missing, use profile info.
+            $send['first'] = $data['member']['first_name'];
+        }
+
+        // Update/Add the users Last Name.
+        if (isset($webform['profile__field_lastname__profile'])) {
+            $send['last'] = $webform['profile__field_lastname__profile'];
+        } elseif ($method == self::HTTP_POST && !isset($webform['profile__field_lastname__profile'])) {
+            // Required element missing, use profile info.
+            $send['last'] = $data['member']['last_name'];
+        }
+    }
+
+    /**
+     * Add the Users Email Address to their TeamSnap profile.
+     *
+     * @param array $send
+     *   The array to append the new user data.
+     * @param integer $method
+     *   The HTTP verb for this webhook as defined in Webhook.
+     *
+     * @see Webhook::HTTP_POST
+     * @see Webhook::HTTP_PUT
+     */
+    protected function addEmailAddress(&$send, $method)
+    {
+        $data = $this->getData();
+        $webform = $data['webform']['data'];
+
+        // Override email address with guardians email, if present.
+        if (isset($data['member']['guardian'])) {
+            $send['roster_email_addresses_attributes'] = $this->getEmailResource(
+                $data['member']['guardian']['email'],
+                $data['member']['uuid'],
+                $data['group']['uuid']
+            );
+        } else {
+            if (isset($webform['profile__field_email__profile'])) {
+                $send['roster_email_addresses_attributes'] = $this->getEmailResource(
+                    $webform['profile__field_email__profile'],
+                    $data['member']['uuid'],
+                    $data['group']['uuid']
+                );
+            } elseif ($method == self::HTTP_POST && !isset($webform['profile__field_email__profile'])) {
+                // Required element missing, use profile info.
+                $send['roster_email_addresses_attributes'] = $this->getEmailResource(
+                    $data['member']['email'],
+                    $data['member']['uuid'],
+                    $data['group']['uuid']
+                );
+            }
+        }
+    }
+
+    /**
+     * Add the Users Birthday to their TeamSnap profile.
+     *
+     * @param array $send
+     *   The array to append the new user data.
+     */
+    protected function addBirthday(&$send)
+    {
+        $data = $this->getData();
+        $webform = $data['webform']['data'];
+
+        if (isset($webform['profile__field_birth_date__profile'])) {
+            $send['birthdate'] = $webform['profile__field_birth_date__profile'];
+        }
+    }
+
+    /**
+     * Add the Users Gender to their TeamSnap profile.
+     *
+     * @param array $send
+     *   The array to append the new user data.
+     */
+    protected function addGender(&$send)
+    {
+        $data = $this->getData();
+        $webform = $data['webform']['data'];
+
+        if (isset($webform['profile__field_user_gender__profile'])) {
+            $send['gender'] = $webform['profile__field_user_gender__profile'] == 1 ? 'Male' : 'Female';
+        }
+    }
+
+    /**
+     * Add the Users Phone Numbers to their TeamSnap profile.
+     *
+     * @param array $send
+     *   The array to append the new user data.
+     */
+    protected function addPhoneNumber(&$send)
+    {
+        $roster_telephones_attributes = array();
+        $data = $this->getData();
+        $webform = $data['webform']['data'];
+
+        // Add the Home Phone if present.
+        if (isset($webform['profile__field_phone__profile'])) {
+            // Check for an existing phone number.
+            $query = $this->partner_mapping->readPartnerMap(
+                PartnerMap::PARTNER_MAP_USER,
+                $data['member']['uuid'],
+                $data['group']['uuid'],
+                PartnerMap::PARTNER_MAP_SUBTYPE_USER_PHONE
+            );
+
+            // Dynamically adjust payload label/id.
+            $key = $value = null;
+            if (array_key_exists('external_resource_id', $query)) {
+                $key = 'id';
+                $value = $query['external_resource_id'];
+            } else {
+                $key = 'label';
+                $value = 'Home';
+            }
+
+            // Add home phone info to payload.
+            $roster_telephones_attributes[] = array(
+                $key => $value,
+                'phone_number' => $webform['profile__field_phone__profile'],
+            );
+        }
+
+        // Add the Cell Phone if present.
+        if (isset($webform['profile__field_phone_cell__profile'])) {
+            // Check for existing cell phone number.
+            $query = $this->partner_mapping->readPartnerMap(
+                PartnerMap::PARTNER_MAP_USER,
+                $data['member']['uuid'],
+                $data['group']['uuid'],
+                PartnerMap::PARTNER_MAP_SUBTYPE_USER_PHONE_CELL
+            );
+
+            // Dynamically adjust payload label/id.
+            $key = $value = null;
+            if (array_key_exists('external_resource_id', $query)) {
+                $key = 'id';
+                $value = $query['external_resource_id'];
+            } else {
+                $key = 'label';
+                $value = 'Cell';
+            }
+
+            // Add cell phone info to payload.
+            $roster_telephones_attributes[] = array(
+                $key => $value,
+                'phone_number' => $webform['profile__field_phone_cell__profile'],
+            );
+        }
+
+        // Add the Work Phone if present.
+        if (isset($webform['profile__field_work_number__profile'])) {
+            // Check for existing work phone number.
+            $query = $this->partner_mapping->readPartnerMap(
+                PartnerMap::PARTNER_MAP_USER,
+                $data['member']['uuid'],
+                $data['group']['uuid'],
+                PartnerMap::PARTNER_MAP_SUBTYPE_USER_PHONE_WORK
+            );
+
+            // Dynamically adjust payload label/id.
+            $key = $value = null;
+            if (array_key_exists('external_resource_id', $query)) {
+                $key = 'id';
+                $value = $query['external_resource_id'];
+            } else {
+                $key = 'label';
+                $value = 'Work';
+            }
+
+            // Add work phone info to payload.
+            $roster_telephones_attributes[] = array(
+                $key => $value,
+                'phone_number' => $webform['profile__field_work_number__profile'],
+            );
+        }
+
+        // Only include the Phone Numbers, if one exists.
+        if (count($roster_telephones_attributes) > 0) {
+            $send['roster_telephones_attributes'] = $roster_telephones_attributes;
+        }
+    }
+
+    /**
+     * Add the Users Address to their TeamSnap profile.
+     *
+     * @param array $send
+     *   The array to append the new user data.
+     */
+    protected function addAddress(&$send)
+    {
+        $data = $this->getData();
+        $webform = $data['webform']['data'];
+
+        // Add address fields, if present.
+        if (isset($webform['profile__field_home_address_street__profile'])) {
+            $send['address'] = $webform['profile__field_home_address_street__profile'];
+        }
+        if (isset($webform['profile__field_home_address_additional__profile'])) {
+            $send['address2'] = $webform['profile__field_home_address_additional__profile'];
+        }
+        if (isset($webform['profile__field_home_address_city__profile'])) {
+            $send['city'] = $webform['profile__field_home_address_city__profile'];
+        }
+        if (isset($webform['profile__field_home_address_province__profile'])) {
+            $send['state'] = $webform['profile__field_home_address_province__profile'];
+        }
+        if (isset($webform['profile__field_home_address_postal_code__profile'])) {
+            $send['zip'] = $webform['profile__field_home_address_postal_code__profile'];
+        }
+        if (isset($webform['profile__field_home_address_country__profile'])) {
+            $send['country'] = $webform['profile__field_home_address_country__profile'];
         }
     }
 }
