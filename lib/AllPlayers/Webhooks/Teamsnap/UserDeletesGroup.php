@@ -28,21 +28,7 @@ class UserDeletesGroup extends SimpleWebhook implements ProcessInterface
             return;
         }
 
-        // Get the data from the AllPlayers webhook.
-        $data = $this->getData();
-
-        // Get TeamID from partner-mapping API.
-        $team = $this->partner_mapping->readPartnerMap(
-            PartnerMap::PARTNER_MAP_GROUP,
-            $data['group']['uuid'],
-            $data['group']['uuid']
-        );
-        $team = $team['external_resource_id'];
-        $this->domain .= '/teams/' . $team;
-
-        // Update the request and let PostWebhooks complete.
-        $this->headers['X-Teamsnap-Features'] = '{"partner.delete_team": 1}';
-        parent::delete();
+        $this->deleteGroup();
     }
 
     /**
@@ -63,5 +49,27 @@ class UserDeletesGroup extends SimpleWebhook implements ProcessInterface
             null,
             $original_data['group']['uuid']
         );
+    }
+
+    /**
+     * Deletes all the resources on TeamSnap/AllPlayers for a group.
+     */
+    private function deleteGroup()
+    {
+        // Get the data from the AllPlayers webhook.
+        $data = $this->getData();
+
+        // Get TeamID from partner-mapping API.
+        $team = $this->partner_mapping->readPartnerMap(
+            PartnerMap::PARTNER_MAP_GROUP,
+            $data['group']['uuid'],
+            $data['group']['uuid']
+        );
+        $team = $team['external_resource_id'];
+        $this->domain .= '/teams/' . $team;
+
+        // Update the request and let PostWebhooks complete.
+        $this->headers['X-Teamsnap-Features'] = '{"partner.delete_team": 1}';
+        parent::delete();
     }
 }
