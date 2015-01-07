@@ -28,30 +28,8 @@ class UserRemovedFromGroup extends SimpleWebhook implements ProcessInterface
             return;
         }
 
-        // Get the data from the AllPlayers webhook.
-        $data = $this->getData();
-
-        // Get TeamID from the partner-mapping API.
-        $team = $this->partner_mapping->readPartnerMap(
-            PartnerMap::PARTNER_MAP_GROUP,
-            $data['group']['uuid'],
-            $data['group']['uuid']
-        );
-        $team = $team['external_resource_id'];
-
-        $roster = $this->partner_mapping->readPartnerMap(
-            PartnerMap::PARTNER_MAP_USER,
-            $data['member']['uuid'],
-            $data['group']['uuid']
-        );
-        $roster = $roster['external_resource_id'];
-
-        // Delete the user from the team.
-        $this->domain .= '/teams/' . $team . '/as_roster/'
-            . $this->webhook->subscriber['commissioner_id']
-            . '/rosters/' . $roster;
-
-        parent::delete();
+        // Delete the given user from TeamSnap.
+        $this->removeUser();
     }
 
     /**
@@ -67,19 +45,51 @@ class UserRemovedFromGroup extends SimpleWebhook implements ProcessInterface
         // Get the original data sent from the AllPlayers webhook.
         $original_data = $this->getOriginalData();
 
-        // Delete the partner-mapping for a user.
+        // Delete the User from the partner-mapping API.
         $this->partner_mapping->deletePartnerMap(
             PartnerMap::PARTNER_MAP_USER,
             $original_data['group']['uuid'],
             $original_data['member']['uuid']
         );
 
-        // Delete the partner-mapping for a user email id.
+        // Delete the Users Email from the partner-mapping API.
         $this->partner_mapping->deletePartnerMap(
             PartnerMap::PARTNER_MAP_RESOURCE,
             $original_data['group']['uuid'],
             $original_data['member']['uuid'],
             PartnerMap::PARTNER_MAP_SUBTYPE_USER_EMAIL
         );
+    }
+
+    /**
+     * Deletes the users resources on TeamSnap.
+     */
+    private function removeUser()
+    {
+        // Get the data from the AllPlayers webhook.
+        $data = $this->getData();
+
+        // Get the TeamID from the partner-mapping API.
+        $team = $this->partner_mapping->readPartnerMap(
+            PartnerMap::PARTNER_MAP_GROUP,
+            $data['group']['uuid'],
+            $data['group']['uuid']
+        );
+        $team = $team['external_resource_id'];
+
+        // Get the RosterID from the partner-mapping API.
+        $roster = $this->partner_mapping->readPartnerMap(
+            PartnerMap::PARTNER_MAP_USER,
+            $data['member']['uuid'],
+            $data['group']['uuid']
+        );
+        $roster = $roster['external_resource_id'];
+
+        // Delete the user from the team.
+        $this->domain .= '/teams/' . $team . '/as_roster/'
+            . $this->webhook->subscriber['commissioner_id']
+            . '/rosters/' . $roster;
+
+        parent::delete();
     }
 }
