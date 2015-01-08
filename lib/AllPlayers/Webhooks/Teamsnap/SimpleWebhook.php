@@ -8,7 +8,7 @@ namespace AllPlayers\Webhooks\Teamsnap;
 
 use AllPlayers\Webhooks\Webhook;
 use AllPlayers\Utilities\Helper;
-use AllPlayers\Utilities\PartnerMap;
+use AllPlayers\Utilities\TeamsnapPartnerMap;
 
 /**
  * A simple webhook that provides common structure to each webhook type.
@@ -225,7 +225,7 @@ class SimpleWebhook extends Webhook
     /**
      * The PartnerMapping object to make Partner-Mapping API calls with.
      *
-     * @var PartnerMap|null
+     * @var TeamsnapPartnerMap|null
      */
     protected $partner_mapping = null;
 
@@ -283,8 +283,7 @@ class SimpleWebhook extends Webhook
 
             // Set the TeamSnap webhook variables.
             $this->helper = new Helper();
-            $this->partner_mapping = new PartnerMap(
-                'teamsnap',
+            $this->partner_mapping = new TeamsnapPartnerMap(
                 $api_user,
                 $api_pass
             );

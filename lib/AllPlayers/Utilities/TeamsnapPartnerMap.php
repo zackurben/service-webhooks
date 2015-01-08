@@ -190,4 +190,56 @@ class TeamsnapPartnerMap extends PartnerMap
             PartnerMap::PARTNER_MAP_SUBTYPE_USER_PHONE_WORK
         );
     }
+
+    /**
+     * Delete all the Partner Mapping resources for the given AllPlayers group.
+     *
+     * @param string $group
+     *   The AllPlayers UUID for the Group.
+     */
+    public function deleteGroup($group)
+    {
+        // Delete all partner mappings associated with the group.
+        $this->partner_mapping->deletePartnerMap(
+            null,
+            $group
+        );
+    }
+
+    /**
+     * Delete the Partner Mapping resource for the user in the given group.
+     *
+     * @param string $user
+     *   The AllPlayers UUID for the User.
+     * @param string $group
+     *   The AllPlayers UUID for the Group.
+     */
+    public function deleteUser($user, $group)
+    {
+        // Delete the partner-mapping for a user.
+        $this->partner_mapping->deletePartnerMap(
+            PartnerMap::PARTNER_MAP_USER,
+            $group,
+            $user
+        );
+    }
+
+    /**
+     * Delete the Partner Mapping resource for the users email address.
+     *
+     * @param string $user
+     *   The AllPlayers UUID for the User.
+     * @param string $group
+     *   The AllPlayers UUID for the Group.
+     */
+    public function deleteUserEmail($user, $group)
+    {
+        // Delete the partner-mapping for a user email id.
+        $this->partner_mapping->deletePartnerMap(
+            PartnerMap::PARTNER_MAP_RESOURCE,
+            $group,
+            $user,
+            PartnerMap::PARTNER_MAP_SUBTYPE_USER_EMAIL
+        );
+    }
 }
