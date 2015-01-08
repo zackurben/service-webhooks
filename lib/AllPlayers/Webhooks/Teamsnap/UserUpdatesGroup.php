@@ -38,25 +38,13 @@ class UserUpdatesGroup extends SimpleWebhook implements ProcessInterface
             $data['group']['uuid']
         );
         $team = $team['external_resource_id'];
-        $this->domain .= '/teams/' . $team;
 
         // Build the webhook payload.
-        $geographical = $this->getRegion($data['group']['timezone']);
-        $send = array(
-            'team_name' => $data['group']['name'],
-            'sport_id' => $this->getSport($data['group']['group_category']),
-            'timezone' => $geographical['timezone'],
-            'country' => $geographical['location'],
-            'zipcode' => $data['group']['postalcode'],
-        );
-
-        // Add additional information to the payload.
-        if (isset($data['group']['logo'])) {
-            $send['logo_url'] = $data['group']['logo'];
-        }
+        $send = $this->updateTeamsnapGroup();
 
         // Update the request and let PostWebhooks complete.
-        $this->setData(array('team' =>$send));
+        $this->domain .= '/teams/' . $team;
+        $this->setData(array('team' => $send));
         parent::put();
     }
 
@@ -69,5 +57,81 @@ class UserUpdatesGroup extends SimpleWebhook implements ProcessInterface
     public function processResponse(Response $response)
     {
 
+    }
+
+    /**
+     * Build the webhook payload to update a TeamSnap group.
+     *
+     * @return array
+     *   The group data to send to make an update.
+     */
+    private function updateTeamsnapGroup()
+    {
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getOriginalData();
+
+        // Build the initial payload information.
+        $send = array(
+            'team_name' => $data['group']['name'],
+            'zipcode' => $data['group']['postalcode'],
+        );
+
+        // Add additional information if present.
+        $this->addSport($send);
+        $this->addGeographical($send);
+        $this->addLogo($send);
+
+        return $send;
+    }
+
+    /**
+     * Add the TeamSnap SportID to the update payload.
+     *
+     * @param array $send
+     *   The array to append update data.
+     */
+    private function addSport(&$send)
+    {
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getOriginalData();
+
+        // Convert the AllPlayers sport to the supported TeamSnap SportID.
+        $send['sport_id'] = $this->getSport($data['group']['group_category']);
+    }
+
+    /**
+     * Add the TeamSnap Timezone and Location data to the update payload.
+     *
+     * @param array $send
+     *   The array to append update data.
+     */
+    private function addGeographical(&$send)
+    {
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getOriginalData();
+
+        // Get the geographical information based on the timezone.
+        $geographical = $this->getRegion($data['group']['timezone']);
+
+        // Update the timezone and location for the determined region.
+        $send['timezone'] = $geographical['timezone'];
+        $send['location'] = $geographical['location'];
+    }
+
+    /**
+     * Add the AllPlayers group logo url to the update payload.
+     *
+     * @param array $send
+     *   The array to append update data.
+     */
+    private function addLogo(&$send)
+    {
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getOriginalData();
+
+        // Add the logo from AllPlayers, if present.
+        if (isset($data['group']['logo'])) {
+            $send['logo_url'] = $data['group']['logo'];
+        }
     }
 }
