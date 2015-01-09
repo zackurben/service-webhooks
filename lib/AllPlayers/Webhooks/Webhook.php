@@ -77,14 +77,14 @@ class Webhook
     const HTTP_PUT = 6;
 
     /**
-     * An enumerated value to confirm sending the webhook.
+     * An enumerated value to confirm sending the request.
      *
      * @var integer
      */
     const WEBHOOK_SEND = 7;
 
     /**
-     * An enumerated value to cancel sending the webhook.
+     * An enumerated value to cancel sending the request.
      *
      * @var integer
      */
@@ -186,14 +186,14 @@ class Webhook
     protected $webhook;
 
     /**
-     * The URL to post the webhook.
+     * The URL to send the request to.
      *
      * @var string
      */
     protected $domain;
 
     /**
-     * The URL to redirect webhook data, if testing.
+     * The URL to redirect request data, if testing.
      *
      * @var string
      */
@@ -228,7 +228,7 @@ class Webhook
     protected $request;
 
     /**
-     * Determines if the webhook should be sent or not.
+     * Determines if the request should be sent or not.
      *
      * @var integer
      *
@@ -252,7 +252,7 @@ class Webhook
      * The method of data transmission.
      *
      * This establishes the method of transmission between the AllPlayers
-     * webhook and the third-party webhook.
+     * webhook and the third-party request.
      *
      * @var string
      *
@@ -275,7 +275,7 @@ class Webhook
     ) {
         $this->webhook = new \stdClass();
         $this->setSubscriber($subscriber);
-        $this->setData($data);
+        $this->setRequestData($data);
 
         $this->client = new Client($this->domain);
         if ($this->authentication != self::AUTHENTICATION_NONE) {
@@ -285,7 +285,7 @@ class Webhook
     }
 
     /**
-     * Authenticate client based on the webhooks authentication method.
+     * Authenticate client based on the request authentication method.
      *
      * This function is not abstract due to the possibility that many partners
      * will need to use either basic_auth or oauth; those who do not can have a
@@ -315,10 +315,11 @@ class Webhook
     }
 
     /**
-     * Perform processing on the webhook before preparing to send it.
+     * Perform processing on the webhook before preparing to send requests.
      */
     protected function preprocess()
     {
+        $config = null;
         include __DIR__ . '/../../../resque/config/config.php';
 
         // Check if the test_url was defined.
@@ -334,7 +335,7 @@ class Webhook
 
         // Get the send settings for the partner.
         if ($config_dev) {
-            $data = $this->getData();
+            $data = $this->getRequestData();
             if (isset($data['group']['organization_id'][0]) && array_key_exists(
                 $data['group']['organization_id'][0],
                 $config[$webhook_processor]
@@ -370,20 +371,20 @@ class Webhook
      * @return array
      *   The data from the original AllPlayers Webhook.
      */
-    public function getOriginalData()
+    public function getAllplayersData()
     {
-        return $this->webhook->original_data;
+        return $this->webhook->allplayers_data;
     }
 
     /**
-     * Get the data to be transmitted for the webhook.
+     * Get the data that will be sent in the request.
      *
      * @return array
      *   Returns the data to be transmitted in the post request.
      */
-    public function getData()
+    public function getRequestData()
     {
-        return $this->webhook->data;
+        return $this->webhook->request_data;
     }
 
     /**
@@ -398,9 +399,10 @@ class Webhook
     }
 
     /**
-     * Get the webhook send flag.
+     * Get the request send flag.
      *
      * @return integer
+     *   The Webhook constant for send status.
      *
      * @see WEBHOOK_SEND
      * @see WEBHOOK_CANCEL
@@ -411,13 +413,14 @@ class Webhook
     }
 
     /**
-     * Confirm that the webhook is supposed to be sent.
+     * Confirm that the request is supposed to be sent.
      *
      * @return bool
-     *   Whether to send the webhook or not.
+     *   Whether to send the request or not.
      */
-    public function checkSend() {
-        if ($this->getSend() != \AllPlayers\Webhooks\Webhook::WEBHOOK_SEND) {
+    public function checkSend()
+    {
+        if ($this->getSend() != self::WEBHOOK_SEND) {
             return false;
         } else {
             return true;
@@ -425,7 +428,7 @@ class Webhook
     }
 
     /**
-     * Get the webhook authentication type.
+     * Get the request authentication type.
      *
      * @return int
      *
@@ -439,7 +442,7 @@ class Webhook
     }
 
     /**
-     * Get the webhook transmission method.
+     * Get the request transmission method.
      *
      * @return int
      *
@@ -452,7 +455,7 @@ class Webhook
     }
 
     /**
-     * Get the domain of the webhook.
+     * Get the domain of the request.
      *
      * @return string
      */
@@ -462,7 +465,7 @@ class Webhook
     }
 
     /**
-     * Get the array of headers for the webhook.
+     * Get the array of headers for the request.
      *
      * @return array
      */
@@ -503,31 +506,29 @@ class Webhook
     }
 
     /**
-     * Set the data in the webhook.
-     *
-     * This function will set the data that is to be transmitted in the Webhook.
+     * Set the data that will be sent in the request.
      *
      * @param array $data
      *   The data to send in the Guzzle request.
      */
-    protected function setData(array $data)
+    protected function setRequestData(array $data)
     {
-        $this->webhook->data = $data;
+        $this->webhook->request_data = $data;
     }
 
     /**
-     * Store the original AllPlayers webhook data.
+     * Store the data from the AllPlayers webhook.
      *
      * @param array $data
-     *   Set the original webhook data, for use in processing.
+     *   Set the original webhook data, used in processing and making requests.
      */
-    protected function setOriginalData(array $data)
+    protected function setAllplayersData(array $data)
     {
-        $this->webhook->original_data = $data;
+        $this->webhook->allplayers_data = $data;
     }
 
     /**
-     * Wrapper function to redirect the webhook if testing is enabled.
+     * Wrapper function to redirect the request if testing is enabled.
      */
     protected function setDomain()
     {
@@ -535,7 +536,7 @@ class Webhook
 
         // Redirect if we are in test env and we have a test domain.
         if (isset($config['test_env'], $this->test_domain) && $config['test_env'] && $this->test_domain != '') {
-            $this->webhook->data['original_url'] = $this->domain;
+            $this->webhook->request_data['original_url'] = $this->domain;
             $this->client->setBaseUrl($this->test_domain);
         } else {
             $this->client->setBaseUrl($this->domain);
@@ -543,7 +544,7 @@ class Webhook
     }
 
     /**
-     * Set the webhook send flag.
+     * Set the request send flag.
      *
      * @param integer $send
      *   The send value to set.
@@ -557,10 +558,7 @@ class Webhook
     }
 
     /**
-     * Makes a POST request to send to the external service.
-     *
-     * @return \Guzzle\Http\Message\Request
-     *   Returns the Guzzle request object, ready to send.
+     * Update the request type to be a POST request.
      */
     public function post()
     {
@@ -572,22 +570,19 @@ class Webhook
                 $this->client->getBaseUrl(),
                 $this->headers
             );
-            $this->request->addPostFields($this->getData());
+            $this->request->addPostFields($this->getRequestData());
         } else {
             $this->headers['Content-Type'] = 'application/json';
             $this->request = $this->client->post(
                 $this->client->getBaseUrl(),
                 $this->headers,
-                json_encode($this->getData())
+                json_encode($this->getRequestData())
             );
         }
     }
 
     /**
-     * Makes a PUT request to send to the external service.
-     *
-     * @return \Guzzle\Http\Message\Request
-     *   Returns the Guzzle request object, ready to send.
+     * Update the request type to be a PUT request.
      */
     public function put()
     {
@@ -599,22 +594,19 @@ class Webhook
                 $this->client->getBaseUrl(),
                 $this->headers
             );
-            $this->request->addPostFields($this->getData());
+            $this->request->addPostFields($this->getRequestData());
         } else {
             $this->headers['Content-Type'] = 'application/json';
             $this->request = $this->client->put(
                 $this->client->getBaseUrl(),
                 $this->headers,
-                json_encode($this->getData())
+                json_encode($this->getRequestData())
             );
         }
     }
 
     /**
-     * Makes a DELETE request to send to the external service.
-     *
-     * @return \Guzzle\Http\Message\Request
-     *   Returns the Guzzle request object, ready to send.
+     * Update the request type to be a DELETE request.
      */
     public function delete()
     {
@@ -626,13 +618,13 @@ class Webhook
                 $this->client->getBaseUrl(),
                 $this->headers
             );
-            $this->request->addPostFields($this->getData());
+            $this->request->addPostFields($this->getRequestData());
         } else {
             $this->headers['Content-Type'] = 'application/json';
             $this->request = $this->client->delete(
                 $this->client->getBaseUrl(),
                 $this->headers,
-                json_encode($this->getData())
+                json_encode($this->getRequestData())
             );
         }
     }
@@ -640,7 +632,7 @@ class Webhook
     /**
      * Send the prepared Guzzle request to the external service.
      *
-     * @return \Guzzle\Http\Message\Response
+     * @return \Guzzle\Http\Message\Response|null
      *   The Guzzle response object with data about the request.
      */
     public function send()
@@ -664,6 +656,8 @@ class Webhook
             }
 
             return $this->request->send();
+        } else {
+            return null;
         }
     }
 }
