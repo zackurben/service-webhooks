@@ -24,6 +24,27 @@ class TeamsnapPartnerMap extends PartnerMap
     }
 
     /**
+     * Fetch the TeamSnap LocationID for an event without a location.
+     *
+     * @param string $group
+     *   The AllPlayers UUID for the Group.
+     *
+     * @return array
+     *   The Partner Mapping response from the AllPlayers Partner Mapping API.
+     */
+    public function getDefaultLocationId($group)
+    {
+        $id = $this->readPartnerMap(
+            PartnerMap::PARTNER_MAP_GROUP,
+            $group,
+            $group,
+            'default_location'
+        );
+
+        return $id;
+    }
+
+    /**
      * Fetch the TeamSnap Event ID for the given event and group.
      *
      * @param string $event
@@ -36,13 +57,57 @@ class TeamsnapPartnerMap extends PartnerMap
      */
     public function getEventId($event, $group)
     {
-        $event = $this->readPartnerMap(
+        $id = $this->readPartnerMap(
             PartnerMap::PARTNER_MAP_EVENT,
             $event,
             $group
         );
 
-        return $event;
+        return $id;
+    }
+
+    /**
+     * Fetch the TeamSnap LocationID for the given location resource and group.
+     *
+     * @param string $location
+     *   The AllPlayers UUID for the event location.
+     * @param string $group
+     *   The AllPlayers UUID for the Group.
+     *
+     * @return array
+     *   The Partner Mapping response from the AllPlayers Partner Mapping API.
+     */
+    public function getLocationId($location, $group)
+    {
+        $id = $this->readPartnerMap(
+            PartnerMap::PARTNER_MAP_RESOURCE,
+            $location,
+            $group
+        );
+
+        return $id;
+    }
+
+    /**
+     * Fetch the TeamSnap OpponentID for the given competitor and group.
+     *
+     * @param string $competitor
+     *   The AllPlayers UUID for the Competitor group.
+     * @param string $group
+     *   The AllPlayers UUID for the Group.
+     *
+     * @return array
+     *   The Partner Mapping response from the AllPlayers Partner Mapping API.
+     */
+    public function getOpponentId($competitor, $group)
+    {
+        $id = $this->readPartnerMap(
+            PartnerMap::PARTNER_MAP_GROUP,
+            $competitor,
+            $group
+        );
+
+        return $id;
     }
 
     /**
@@ -58,13 +123,13 @@ class TeamsnapPartnerMap extends PartnerMap
      */
     public function getRosterId($user, $group)
     {
-        $roster = $this->readPartnerMap(
+        $id = $this->readPartnerMap(
             PartnerMap::PARTNER_MAP_USER,
             $user,
             $group
         );
 
-        return $roster;
+        return $id;
     }
 
     /**
@@ -78,13 +143,34 @@ class TeamsnapPartnerMap extends PartnerMap
      */
     public function getTeamId($group)
     {
-        $team = $this->readPartnerMap(
+        $id = $this->readPartnerMap(
             PartnerMap::PARTNER_MAP_GROUP,
             $group,
             $group
         );
 
-        return $team;
+        return $id;
+    }
+
+    /**
+     * Add or Update the Default TeamSnap Event Location ID.
+     *
+     * Note: This is a fix for game events without a location on AllPlayers.
+     *
+     * @param integer $id
+     *   The TeamSnap Location ID to link with the given group.
+     * @param string $group
+     *   The AllPlayers UUID for the Group.
+     */
+    public function setDefaultLocationId($id, $group)
+    {
+        $this->createPartnerMap(
+            $id,
+            PartnerMap::PARTNER_MAP_GROUP,
+            $group,
+            $group,
+            'default_location'
+        );
     }
 
     /**
@@ -103,6 +189,66 @@ class TeamsnapPartnerMap extends PartnerMap
             $id,
             PartnerMap::PARTNER_MAP_EVENT,
             $event,
+            $group
+        );
+    }
+
+    /**
+     * Add or Update the TeamSnap Event Location.
+     *
+     * @param integer $id
+     *   The TeamSnap Location ID to link with the given group.
+     * @param string $event
+     *   The AllPlayers UUID for the Event.
+     * @param string $group
+     *   The AllPlayers UUID for the Group.
+     */
+    public function setLocationId($id, $event, $group)
+    {
+        $this->partner_mapping->createPartnerMap(
+            $id,
+            PartnerMap::PARTNER_MAP_RESOURCE,
+            $event,
+            $group
+        );
+    }
+
+    /**
+     * Add or Update the TeamSnap Opponent.
+     *
+     * @param integer $id
+     *   The TeamSnap Opponent ID to link with the given competitor and group.
+     * @param string $competitor
+     *   The AllPlayers UUID for the Competitor group.
+     * @param string $group
+     *   The AllPlayers UUID for the Group.
+     */
+    public function setOpponentId($id, $competitor, $group)
+    {
+        $this->createPartnerMap(
+            $id,
+            PartnerMap::PARTNER_MAP_GROUP,
+            $competitor,
+            $group
+        );
+    }
+
+    /**
+     * Add or Update the TeamSnap Roster.
+     *
+     * @param integer $id
+     *   The TeamSnap RosterID to link the given user.
+     * @param string $user
+     *   The AllPlayers UUID for the User.
+     * @param string $group
+     *   The AllPlayers UUID for the Group.
+     */
+    public function setRoster($id, $user, $group)
+    {
+        $this->createPartnerMap(
+            $id,
+            PartnerMap::PARTNER_MAP_USER,
+            $user,
             $group
         );
     }
@@ -138,7 +284,7 @@ class TeamsnapPartnerMap extends PartnerMap
      * @param string $group
      *   The AllPlayers UUID for the Group.
      */
-    public function setRosterEmailId($id, $user, $group)
+    public function setRosterEmail($id, $user, $group)
     {
         $this->createPartnerMap(
             $id,
