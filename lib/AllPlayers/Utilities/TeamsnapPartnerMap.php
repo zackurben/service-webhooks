@@ -45,6 +45,29 @@ class TeamsnapPartnerMap extends PartnerMap
     }
 
     /**
+     * Fetch the TeamSnap Email ID for the given user and group.
+     *
+     * @param string $user
+     *   The AllPlayers UUID for the User.
+     * @param string $group
+     *   The AllPlayers UUID for the Group.
+     *
+     * @return array
+     *   The Partner Mapping response from the AllPlayers Partner Mapping API.
+     */
+    public function getEmailId($user, $group)
+    {
+        $id = $this->readPartnerMap(
+            PartnerMap::PARTNER_MAP_USER,
+            $user,
+            $group,
+            PartnerMap::PARTNER_MAP_SUBTYPE_USER_EMAIL
+        );
+
+        return $id;
+    }
+
+    /**
      * Fetch the TeamSnap Event ID for the given event and group.
      *
      * @param string $event
