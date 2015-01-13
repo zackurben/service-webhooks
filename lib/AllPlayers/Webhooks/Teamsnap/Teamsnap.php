@@ -30,12 +30,14 @@ class Teamsnap extends WebhookProcessor
         include __DIR__ . '/../../../../resque/config/config.php';
         if (isset($config['teamsnap'])) {
             // Determine if the organization is defined.
-            $organization = isset($data['group']['organization_id'][0]) && array_key_exists(
-                $data['group']['organization_id'][0],
-                $config['teamsnap']
-            );
+            $organization = isset($data['group']['organization_id'][0])
+                && array_key_exists(
+                    $data['group']['organization_id'][0],
+                    $config['teamsnap']
+                );
 
-            // Determine send setting for an organization.
+            // Determine send setting for an organization. If the organization
+            // is not defined, use the default AllPlayers org on TeamSnap.
             if ($organization) {
                 $organization = $data['group']['organization_id'][0];
                 $webhook_send = $config['teamsnap'][$organization]['send'];
@@ -48,7 +50,9 @@ class Teamsnap extends WebhookProcessor
                 $teamsnap_class = 'AllPlayers\\Webhooks\\Teamsnap\\'
                     . Webhook::$classes[$data['webhook_type']];
 
-                if (array_key_exists('webhook_type', $data) && class_exists($teamsnap_class)) {
+                if (array_key_exists('webhook_type', $data)
+                    && class_exists($teamsnap_class)
+                ) {
                     $class = '\\AllPlayers\\Webhooks\\Teamsnap\\'
                         . Webhook::$classes[$data['webhook_type']];
                     $this->webhook = new $class($subscriber, $data);
