@@ -181,7 +181,7 @@ class Webhook
     /**
      * The top object of a webhook.
      *
-     * @var stdClass
+     * @var \stdClass
      */
     protected $webhook;
 
@@ -357,7 +357,7 @@ class Webhook
     /**
      * Get the webhook data from this webhook object.
      *
-     * @return stdClass
+     * @return \stdClass
      *   The Webhook data of this webhook object.
      */
     public function getWebhook()

@@ -223,7 +223,7 @@ class SimpleWebhook extends Webhook
     protected $domain = 'https://api.teamsnap.com/v2';
 
     /**
-     * The PartnerMapping object to make Partner-Mapping API calls with.
+     * The TeamsnapPartnerMapping object to make Partner-Mapping API calls with.
      *
      * @var TeamsnapPartnerMap|null
      */
@@ -295,8 +295,9 @@ class SimpleWebhook extends Webhook
      * Get the Helper utility object.
      *
      * @return \AllPlayers\Utilities\Helper
+     *   The Helper object used to format response data.
      */
-    public function getHelper()
+    protected function getHelper()
     {
         return $this->helper;
     }
@@ -304,9 +305,10 @@ class SimpleWebhook extends Webhook
     /**
      * Get the PartnerMap utility object.
      *
-     * @return \AllPlayers\Utilities\PartnerMap.
+     * @return \AllPlayers\Utilities\TeamsnapPartnerMap.
+     *   The Teamsnap abstraction for the partner-mapping API.
      */
-    public function getPartnerMap()
+    protected function getPartnerMap()
     {
         return $this->partner_mapping;
     }
@@ -317,8 +319,8 @@ class SimpleWebhook extends Webhook
     public function process()
     {
         // Set the original webhook data.
-        $data = $this->getData();
-        $this->setOriginalData($data);
+        $data = $this->getRequestData();
+        $this->setAllplayersData($data);
 
         // Determine if the current webhook is for a Team, cancel it otherwise,
         // because TeamSnap does not currently support any hierarchy of groups.
@@ -334,21 +336,20 @@ class SimpleWebhook extends Webhook
      *   Name of the sport selected on AllPlayers.
      *
      * @return integer
-     *   The sport id corresponding to the available sports in the TeamSnap API.
+     *   The SportID corresponding to the available sports on TeamSnap.
      */
-    public function getSport($data)
+    protected function getSport($data)
     {
+        // Return the TeamSnap SportID or the 'Non-Sport Group' default.
         if (isset(self::$sports[$data])) {
-            // The sport is supported and present.
             return self::$sports[$data];
         } else {
-            // Return 'Non-Sport Group' for the TeamSnap group type.
             return 52;
         }
     }
 
     /**
-     * Get the TeamSnap supported location and timezone.
+     * Convert the timezone to the TeamSnap supported location and timezone.
      *
      * @param string $timezone
      *   A PHP supported timezone: http://php.net/manual/en/timezones.php
@@ -356,29 +357,28 @@ class SimpleWebhook extends Webhook
      * @return array
      *   An associative keyed array with the location and timezone information.
      */
-    public function getRegion($timezone)
+    protected function getRegion($timezone)
     {
+        // Calculate the users timezone from UTC.
         $user_timezone = timezone_offset_get(
             new \DateTimeZone($timezone),
-            (new \DateTime(null, new \DateTimeZone('UTC')))
+            new \DateTime(null, new \DateTimeZone('UTC'))
         )/(3600);
+
+        // Adjust time for DST.
         if (date_format(new \DateTime($timezone), 'I') == 1) {
-            // Adjust time for DST.
             $user_timezone += -1;
         }
 
         // Convert to UTC (non-DST) format.
-        $user_timezone = str_replace(
-            '.',
-            ':',
-            number_format((floor($user_timezone) + ($user_timezone - floor($user_timezone)) * 60), 2)
-        );
+        $floor = floor($user_timezone);
+        $offset = (($floor + ($user_timezone - $floor)) * 60);
+        $user_timezone = str_replace('.', ':', number_format($offset, 2));
 
+        // Return the TeamSnap timezone and region, or the UTC default.
         if (isset(self::$regions[$user_timezone])) {
-            // The region is supported and present.
             return self::$regions[$user_timezone];
         } else {
-            // return default UTC region for the region information.
             return array(
                 'timezone' => 'UTC',
                 'location' => 'United Kingdom',
@@ -387,42 +387,7 @@ class SimpleWebhook extends Webhook
     }
 
     /**
-     * Get the scores for a given group, for an event.
-     *
-     * @param string $group_uuid
-     *   The group receiving an event update from the webhook.
-     * @param array $competitors
-     *   The list of competitors from the AllPlayers Webhook.
-     *
-     * @return array
-     *   The score specifics for a game event, keyed by TeamSnap qualities.
-     */
-    public function getGameScores($group_uuid, array $competitors)
-    {
-        $score = array();
-
-        foreach ($competitors as $competitor) {
-            if ($competitor['uuid'] == $group_uuid) {
-                $score['score_for'] = $competitor['score'];
-
-                // Determine team status.
-                if (strcasecmp($competitor['label'], 'Home') == 0) {
-                    // The group is home.
-                    $score['home_or_away'] = 1;
-                } elseif (strcasecmp($competitor['label'], 'Away') == 0) {
-                    // The group is away.
-                    $score['home_or_away'] = 2;
-                }
-            } else {
-                $score['score_against'] = $competitor['score'];
-            }
-        }
-
-        return $score;
-    }
-
-    /**
-     * Dynamically build the email data to send for a TeamSnap user/contact.
+     * Build the payload for updating or creating a TeamSnap users email.
      *
      * @param string $email_address
      *   The email address to map.
@@ -432,23 +397,18 @@ class SimpleWebhook extends Webhook
      *   The AllPlayers Group UUID to make/search the partner-mapping.
      *
      * @return array
-     *   The data to send to create/update the TeamSnap email resource.
+     *   The payload to send to create/update the TeamSnap email resource.
      */
-    public function getEmailResource(
+    protected function getEmailResource(
         $email_address,
         $user_uuid,
         $group_uuid
     ) {
-        $email = '';
-        $email_id = $this->partner_mapping->readPartnerMap(
-            PartnerMap::PARTNER_MAP_USER,
-            $user_uuid,
-            $group_uuid,
-            PartnerMap::PARTNER_MAP_SUBTYPE_USER_EMAIL
-        );
+        // Get the EmailID from the partner-mapping API.
+        $email_id = $this->partner_mapping->getEmailId($user_uuid, $group_uuid);
 
         // Build the email payload.
-        if (is_array($email_id) && array_key_exists('external_resource_id', $email_id)) {
+        if (is_array($email_id) && isset($email_id['external_resource_id'])) {
             // Partner mapping exists, build the PUT request data.
             $email = array(
                 array(
@@ -470,91 +430,62 @@ class SimpleWebhook extends Webhook
     }
 
     /**
-     * Get the partner-mapped location resource ID for TeamSnap.
+     * Convert an AllPlayers location resource to a TeamSnap LocationID.
      *
-     * This will create the resource if it does not already exist.
+     *   If the location resource exists in the partner-mapping API, it will use
+     * that id.
+     *   If the location resource does not exist in the partner-mapping API, but
+     * a location resource is given, it will be added to the partner-mapping API
+     * and return the correct payload for attaching a location to an event.
+     *   If no resource is given, it will use or create the default location,
+     * unique to each TeamSnap group; AllPlayers events do not require a
+     * location, while TeamSnap events do.
      *
-     * @param string $group_uuid
+     * @param string $group
      *   The Group UUID to make the location mapping with.
-     * @param array $event_location
+     * @param array $location
      *   The Event location information from the AllPlayers Webhook.
      *
      * @return string
-     *   The resource ID for TeamSnap API calls.
+     *   The LocationID for TeamSnap API calls.
      */
-    public function getLocationResource($group_uuid, array $event_location = null)
-    {
+    protected function getLocationResource(
+        $group,
+        array $location = array()
+    ) {
         // Store the old domain.
         $original_domain = $this->domain;
-        $location = '';
 
         // Get TeamID from the partner-mapping API.
-        $team = $this->partner_mapping->readPartnerMap(
-            PartnerMap::PARTNER_MAP_GROUP,
-            $group_uuid,
-            $group_uuid
-        );
+        $team = $this->partner_mapping->getTeamId($group);
         $team = $team['external_resource_id'];
 
-        if (isset($event_location) && !empty($event_location)) {
+        // Get the LocationID for the event or the default LocationID for the
+        // Team on TeamSnap.
+        if (!empty($location)) {
             // Get LocationID from the partner-mapping API.
-            $location = $this->partner_mapping->readPartnerMap(
-                PartnerMap::PARTNER_MAP_RESOURCE,
-                $event_location['uuid'],
-                $group_uuid
+            $id = $this->partner_mapping->getLocationId(
+                $location['uuid'],
+                $group
             );
         } else {
-            $event_location = array();
-
             // Read the default location mapping if the location isnt specified.
-            $location = $this->partner_mapping->readPartnerMap(
-                PartnerMap::PARTNER_MAP_GROUP,
-                $group_uuid,
-                $group_uuid,
-                'default_location'
-            );
+            $id = $this->partner_mapping->getDefaultLocationId($group);
         }
 
-        // Set the default data, if required information is missing.
-        if (!isset($event_location['title']) || empty($event_location['title'])) {
-            $event_location['title'] = '(TBD)';
-        }
-        if (!isset($event_location['street']) || empty($event_location['street'])) {
-            $event_location['street'] = '(TBD)';
-        }
-
-        // Build the webhook payload.
-        $send = array(
-            'location_name' => $event_location['title'],
-            'address' => $event_location['street'],
-        );
-
-        // Add additional information to the payload.
-        if (isset($event_location['additional']) && !empty($event_location['additional'])) {
-            $send['address'] .= ', ' . $event_location['additional'];
-        }
-        if (isset($event_location['city']) && !empty($event_location['city'])) {
-            $send['address'] .= '. ' . $event_location['city'];
-        }
-        if (isset($event_location['province']) && !empty($event_location['province'])) {
-            $send['address'] .= ', ' . $event_location['province'];
-        }
-        if (isset($event_location['postal_code']) && !empty($event_location['postal_code'])) {
-            $send['address'] .= '. ' . $event_location['postal_code'];
-        }
-        if (isset($event_location['country']) && !empty($event_location['country'])) {
-            $send['address'] .= '. ' . strtoupper($event_location['country']) . '.';
-        }
+        // Build the request payload for making a location resource.
+        $send = array();
+        $this->addLocation($send, $location);
 
         // Update the webhook request.
-        $this->setData(array('location' => $send));
+        $this->setRequestData(array('location' => $send));
 
-        if (array_key_exists('external_resource_id', $location)) {
+        if (isset($id['external_resource_id'])) {
             // Update the existing partner-mapping resource.
-            $location = $location['external_resource_id'];
+            $id = $id['external_resource_id'];
             $this->domain = $original_domain . '/teams/' . $team . '/as_roster/'
                 . $this->webhook->subscriber['commissioner_id'] . '/locations/'
-                . $location;
+                . $id;
 
             parent::put();
             $this->send();
@@ -567,62 +498,70 @@ class SimpleWebhook extends Webhook
             $response = $this->send();
             $response = $this->helper->processJsonResponse($response);
 
-            if (isset($event_location['uuid']) && !empty($event_location['uuid'])) {
+            if (isset($location['uuid']) && !empty($location['uuid'])) {
                 // Associate an AllPlayers resource UUID with the TeamSnap
                 // LocationID.
-                $this->partner_mapping->createPartnerMap(
+                $this->partner_mapping->setLocationId(
                     $response['location']['id'],
-                    PartnerMap::PARTNER_MAP_RESOURCE,
-                    $event_location['uuid'],
-                    $group_uuid
+                    $location['uuid'],
+                    $group
                 );
             } else {
-                // Create the default location, work around for above.
-                $this->partner_mapping->createPartnerMap(
+                // Create the default location, a work around for the AllPlayers
+                // event not having a location (TeamSnap requires an event
+                // location for a new game event).
+                $this->partner_mapping->setDefaultLocationId(
                     $response['location']['id'],
-                    PartnerMap::PARTNER_MAP_GROUP,
-                    $group_uuid,
-                    $group_uuid,
-                    'default_location'
+                    $group
                 );
             }
 
-            $location = $response['location']['id'];
+            $id = $response['location']['id'];
         }
 
         // Restore the old domain, return the LocationID.
         $this->domain = $original_domain;
-        return $location;
+        return $id;
     }
 
     /**
-     * Get the partner-mapped opponent resource ID for TeamSnap.
+     * Convert an AllPlayers competitor to a TeamSnap OpponentID.
      *
-     * This will create the resource if it does not already exist.
+     * Note: This is made to only handle events with 1 competitor (TeamSnap).
      *
-     * @param string $group_uuid
-     *   The group receiving an event update from the webhook.
-     * @param string $group_partner_id
-     *   The Team ID for the corresponding TeamSnap team.
+     *   If the opponent resource exists in the partner-mapping API, it will use
+     * that id.
+     *   If the opponent resource does not exist in the partner-mapping api, but
+     * is given, it will be added to the partner-mapping API and return the
+     * OpponentID
+     *
+     * @param string $group
+     *   The Group UUID for the team on AllPlayers.
+     * @param string $team_id
+     *   The TeamID for team on TeamSnap.
      * @param array $competitors
      *   The list of competitors from the AllPlayers Webhook.
      *
      * @return string
-     *   The resource ID for TeamSnap API calls.
+     *   The OpponentID for TeamSnap API calls.
      */
-    public function getOpponentResource($group_uuid, $group_partner_id, array $competitors)
-    {
+    protected function getOpponentResource(
+        $group,
+        $team_id,
+        array $competitors
+    ) {
         // Store the old domain.
         $original_domain = $this->domain;
-        $opponent = '';
+        $id = '';
 
+        // Iterate each available competitor and only process the groups that
+        // dont share a uuid with the given AllPlayers group.
         foreach ($competitors as $competitor) {
-            if ($competitor['uuid'] != $group_uuid) {
+            if ($competitor['uuid'] != $group) {
                 // Get OpponentID from the partner-mapping API.
-                $opponent = $this->partner_mapping->readPartnerMap(
-                    PartnerMap::PARTNER_MAP_GROUP,
+                $id = $this->partner_mapping->getOpponentId(
                     $competitor['uuid'],
-                    $group_uuid
+                    $group
                 );
 
                 // Set the default data, if required information is missing.
@@ -630,26 +569,28 @@ class SimpleWebhook extends Webhook
                     $competitor['name'] = '(TBD)';
                 }
 
-                // Build the webhook payload.
-                $send = array('opponent_name' => $competitor['name']);
+                // Build the request payload to Update/Create a resource.
+                $send = array(
+                    'opponent' => array('opponent_name' => $competitor['name']),
+                );
 
-                // Update the webhook request.
-                $this->setData(array('opponent' => $send));
+                // Update the request payload.
+                $this->setRequestData($send);
 
-                if (isset($opponent['external_resource_id'])) {
+                if (isset($id['external_resource_id'])) {
                     // Update the existing partner-mapping resource.
-                    $opponent = $opponent['external_resource_id'];
-                    $this->domain = $original_domain . '/teams/'
-                        . $group_partner_id . '/as_roster/'
+                    $id = $id['external_resource_id'];
+                    $this->domain = $original_domain . '/teams/' . $team_id
+                        . '/as_roster/'
                         . $this->webhook->subscriber['commissioner_id']
-                        . '/opponents/' . $opponent;
+                        . '/opponents/' . $id;
 
                     parent::put();
                     $this->send();
                 } else {
-                    // Create a partner-mapping resource.
-                    $this->domain = $original_domain . '/teams/'
-                        . $group_partner_id . '/as_roster/'
+                    // Create a new partner-mapping resource.
+                    $this->domain = $original_domain . '/teams/' . $team_id
+                        . '/as_roster/'
                         . $this->webhook->subscriber['commissioner_id']
                         . '/opponents';
 
@@ -657,18 +598,18 @@ class SimpleWebhook extends Webhook
                     $response = $this->send();
                     $response = $this->getHelper()->processJsonResponse($response);
 
+                    // If an Opponent resource was just created, map it here.
                     if (isset($competitor['uuid']) && !empty($competitor['uuid'])) {
-                        // Associate an AllPlayers group UUID with a TeamSnap
-                        // TeamID.
-                        $this->partner_mapping->createPartnerMap(
+                        // Associate an AllPlayers Group UUID with the
+                        // Competitor UUID and its TeamSnap TeamID.
+                        $this->partner_mapping->setOpponentId(
                             $response['opponent']['id'],
-                            PartnerMap::PARTNER_MAP_GROUP,
                             $competitor['uuid'],
-                            $group_uuid
+                            $group
                         );
                     }
 
-                    $opponent = $response['opponent']['id'];
+                    $id = $response['opponent']['id'];
                 }
             }
 
@@ -678,6 +619,297 @@ class SimpleWebhook extends Webhook
 
         // Restore the old domain, return the OpponentID.
         $this->domain = $original_domain;
-        return $opponent;
+        return $id;
+    }
+
+    /**
+     * Add the Users email address, using the given webhook data.
+     *
+     * Note: If a guardian is present, their email will be used.
+     *
+     * @param array $send
+     *   The array to append the new user data.
+     */
+    protected function addEmail(&$send)
+    {
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getAllplayersData();
+
+        // Determine if we are using the guardian or users email address.
+        $email_address = isset($data['member']['guardian'])
+            ? $data['member']['guardian']['email']
+            : $data['member']['email'];
+
+        // Set the email information for this roster based on the given data.
+        $send['roster_email_addresses_attributes'] = $this->getEmailResource(
+            $email_address,
+            $data['member']['uuid'],
+            $data['group']['uuid']
+        );
+    }
+
+    /**
+     * Add the Event location, using the given webhook data.
+     *
+     * @param array $send
+     *   The array to append the new event data.
+     * @param array $location
+     *   The Event location information from the AllPlayers Webhook.
+     */
+    protected function addLocation(&$send, array $location)
+    {
+        // Set the default data, if required information is missing.
+        if (!isset($location['title']) || empty($location['title'])) {
+            $location['title'] = '(TBD)';
+        }
+        if (!isset($location['street']) || empty($location['street'])) {
+            $location['street'] = '(TBD)';
+        }
+
+        // Build the request payload for making a location resource.
+        $send['location_name'] = $location['title'];
+        $send['address'] = $location['street'];
+
+        // Add additional information to the payload.
+        if (isset($location['additional']) && !empty($location['additional'])) {
+            $send['address'] .= ', ' . $location['additional'];
+        }
+        if (isset($location['city']) && !empty($location['city'])) {
+            $send['address'] .= '. ' . $location['city'];
+        }
+        if (isset($location['province']) && !empty($location['province'])) {
+            $send['address'] .= ', ' . $location['province'];
+        }
+        if (isset($location['postal_code']) && !empty($location['postal_code'])) {
+            $send['address'] .= '. ' . $location['postal_code'];
+        }
+        if (isset($location['country']) && !empty($location['country'])) {
+            $send['address'] .= '. ' . strtoupper($location['country']) . '.';
+        }
+    }
+
+    /**
+     * Add the Users Name to their TeamSnap profile.
+     *
+     * Note: This will use webform data over the profile, if present.
+     *
+     * @param array $send
+     *   The array to append the new user data.
+     * @param integer $method
+     *   The HTTP verb for this webhook as defined in Webhook.
+     *
+     * @see Webhook::HTTP_POST
+     * @see Webhook::HTTP_PUT
+     */
+    protected function addName(&$send, $method)
+    {
+        $data = $this->getAllplayersData();
+        $webform = isset($data['webform']['data']) ? $data['webform']['data'] : null;
+
+        // Update/Add the users First Name.
+        if (isset($webform['profile__field_firstname__profile'])) {
+            $send['first'] = $webform['profile__field_firstname__profile'];
+        } elseif ($method == self::HTTP_POST && !isset($webform['profile__field_firstname__profile'])) {
+            // Required element missing, use profile info.
+            $send['first'] = $data['member']['first_name'];
+        }
+
+        // Update/Add the users Last Name.
+        if (isset($webform['profile__field_lastname__profile'])) {
+            $send['last'] = $webform['profile__field_lastname__profile'];
+        } elseif ($method == self::HTTP_POST && !isset($webform['profile__field_lastname__profile'])) {
+            // Required element missing, use profile info.
+            $send['last'] = $data['member']['last_name'];
+        }
+    }
+
+    /**
+     * Add the scores of an event, if present, in reference to a specific group.
+     *
+     * @param $send
+     *   The array to append new score data.
+     * @param array $group
+     *   The group to add the scores in reference to.
+     */
+    protected function addScores(&$send, array $group)
+    {
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getAllplayersData();
+
+        // Add additional information to the payload.
+        foreach ($data['event']['competitor'] as $competitor) {
+            if ($competitor['uuid'] == $group['uuid']) {
+                $send['score_for'] = $competitor['score'];
+
+                // Determine the teams status.
+                if (strcasecmp($competitor['label'], 'Home') == 0) {
+                    // The group is home.
+                    $send['home_or_away'] = 1;
+                } elseif (strcasecmp($competitor['label'], 'Away') == 0) {
+                    // The group is away.
+                    $send['home_or_away'] = 2;
+                }
+            } else {
+                $send['score_against'] = $competitor['score'];
+            }
+        }
+    }
+
+    /**
+     * Add the Users roles, using the given webhook data.
+     *
+     * @param array $send
+     *   The array to append the new user data.
+     * @param integer $method
+     *   The HTTP verb for this webhook as defined in Webhook.
+     *
+     * @see Webhook::HTTP_POST
+     * @see Webhook::HTTP_PUT
+     */
+    protected function addRole(&$send, $method)
+    {
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getAllplayersData();
+
+        // Update the roles by using the data sent in the webhook.
+        switch ($data['member']['role_name']) {
+            case 'Owner':
+                // Owner role does not exist by default, but it is injected when
+                // the UserAddsRole webhook is created during the
+                // UserCreatesGroup webhook. This is used to avoid further hacks
+                // inside the UserCreatesGroup webhook for adding the creator.
+                $send['non_player'] = 1;
+                $send['is_manager'] = 1;
+                $send['is_commissioner'] = 0;
+                $send['is_owner'] = 1;
+                break;
+            case 'Player':
+                $send['non_player'] = 0;
+                break;
+            case 'Admin':
+            case 'Manager':
+            case 'Coach':
+                $send['is_manager'] = 1;
+                break;
+            case 'Fan':
+                // If the user is being created, specify non-player
+                // role, otherwise disregard to avoid overwriting
+                // a pre-existing player status.
+                if ($method == self::HTTP_POST) {
+                    $send['non_player'] = 1;
+                }
+                break;
+            case 'Guardian':
+                // Ignore AllPlayers guardian changes.
+                $this->setSend(self::WEBHOOK_CANCEL);
+                break;
+        }
+    }
+
+    /**
+     * Add or Update the users Roster mapping for TeamSnap.
+     *
+     * Note: If the mapping is created, this will send an email invitation.
+     *
+     * @param array $response
+     *   An array representation of the response data.
+     */
+    protected function mapRoster(array $response)
+    {
+        // Get the original data sent from the AllPlayers webhook.
+        $original_data = $this->getAllplayersData();
+
+        // Get RosterID from the partner-mapping API.
+        $query = $this->partner_mapping->getRosterId(
+            $original_data['member']['uuid'],
+            $original_data['group']['uuid']
+        );
+
+        // Add/update the mapping of an email with a Roster.
+        $this->partner_mapping->setRosterEmail(
+            $response['roster']['roster_email_addresses'][0]['id'],
+            $original_data['member']['uuid'],
+            $original_data['group']['uuid']
+        );
+
+        // If the partner mapping resource does not exist, create the user
+        // partner mapping, and send an email invitation.
+        if (isset($query['message'])) {
+            // Add the users RosterID to the partner-mapping API.
+            $this->partner_mapping->setRoster(
+                $response['roster']['id'],
+                $original_data['member']['uuid'],
+                $original_data['group']['uuid']
+            );
+
+            // Get the users TeamID.
+            $team = $this->partner_mapping->getTeamId(
+                $original_data['group']['uuid']
+            );
+            if (isset($team['external_resource_id'])) {
+                $team = $team['external_resource_id'];
+            } else {
+                $team = null;
+            }
+
+            // Build the request payload.
+            $send = array('rosters' => array($response['roster']['id']));
+
+            // Update the payload domain, to send an email invite.
+            $this->domain = 'https://api.teamsnap.com/v2/teams/'
+                . $team . '/as_roster/'
+                . $this->webhook->subscriber['commissioner_id']
+                . '/invitations';
+
+            // Set the payload data.
+            $this->setRequestData($send);
+
+            // Update the request and send the TeamSnap account an invitation.
+            parent::post();
+            $this->send();
+        }
+    }
+
+    /**
+     * Add or Update the users Roster phone mapping for TeamSnap, if present.
+     *
+     * @param array $response
+     *   An array representation of the response data.
+     */
+    protected function mapRosterPhone(array $response)
+    {
+        // Get the original data sent from the AllPlayers webhook.
+        $original_data = $this->getAllplayersData();
+
+        // Add/update the mapping of phones with a Roster.
+        $phones = $response['roster']['roster_telephone_numbers'];
+        if (count($phones) > 0) {
+            // Determine which phones are present.
+            foreach ($phones as $entry) {
+                switch ($entry['label']) {
+                    case 'Home':
+                        $this->partner_mapping->setRosterHomePhone(
+                            $entry['id'],
+                            $original_data['member']['uuid'],
+                            $original_data['group']['uuid']
+                        );
+                        break;
+                    case 'Cell':
+                        $this->partner_mapping->setRosterCellPhone(
+                            $entry['id'],
+                            $original_data['member']['uuid'],
+                            $original_data['group']['uuid']
+                        );
+                        break;
+                    case 'Work':
+                        $this->partner_mapping->setRosterWorkPhone(
+                            $entry['id'],
+                            $original_data['member']['uuid'],
+                            $original_data['group']['uuid']
+                        );
+                        break;
+                }
+            }
+        }
     }
 }
