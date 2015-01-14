@@ -405,7 +405,10 @@ class SimpleWebhook extends Webhook
         $group_uuid
     ) {
         // Get the EmailID from the partner-mapping API.
-        $email_id = $this->partner_mapping->getEmailId($user_uuid, $group_uuid);
+        $email_id = $this->partner_mapping->getRosterEmailId(
+            $user_uuid,
+            $group_uuid
+        );
 
         // Build the email payload.
         if (is_array($email_id) && isset($email_id['external_resource_id'])) {
@@ -623,6 +626,61 @@ class SimpleWebhook extends Webhook
     }
 
     /**
+     * Add the Users Address, using the given webhook data.
+     *
+     * @param array $send
+     *   The array to append the new user data.
+     */
+    protected function addAddress(&$send)
+    {
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getAllplayersData();
+
+        // Use the webform data.
+        $webform = $data['webform']['data'];
+
+        // Add address fields, if defined in the AllPlayers webform.
+        if (isset($webform['profile__field_home_address_street__profile'])) {
+            $send['address'] = $webform['profile__field_home_address_street__profile'];
+        }
+        if (isset($webform['profile__field_home_address_additional__profile'])) {
+            $send['address2'] = $webform['profile__field_home_address_additional__profile'];
+        }
+        if (isset($webform['profile__field_home_address_city__profile'])) {
+            $send['city'] = $webform['profile__field_home_address_city__profile'];
+        }
+        if (isset($webform['profile__field_home_address_province__profile'])) {
+            $send['state'] = $webform['profile__field_home_address_province__profile'];
+        }
+        if (isset($webform['profile__field_home_address_postal_code__profile'])) {
+            $send['zip'] = $webform['profile__field_home_address_postal_code__profile'];
+        }
+        if (isset($webform['profile__field_home_address_country__profile'])) {
+            $send['country'] = $webform['profile__field_home_address_country__profile'];
+        }
+    }
+
+    /**
+     * Add the Users Birthday, using the given webhook data.
+     *
+     * @param array $send
+     *   The array to append the new user data.
+     */
+    protected function addBirthday(&$send)
+    {
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getAllplayersData();
+
+        // Use the webform data.
+        $webform = $data['webform']['data'];
+
+        // Set the users birthday, if defined in the AllPlayers webform.
+        if (isset($webform['profile__field_birth_date__profile'])) {
+            $send['birthdate'] = $webform['profile__field_birth_date__profile'];
+        }
+    }
+
+    /**
      * Add the Users email address, using the given webhook data.
      *
      * Note: If a guardian is present, their email will be used.
@@ -646,6 +704,29 @@ class SimpleWebhook extends Webhook
             $data['member']['uuid'],
             $data['group']['uuid']
         );
+    }
+
+    /**
+     * Add the Users Gender, using the given webhook data.
+     *
+     * @param array $send
+     *   The array to append the new user data.
+     */
+    protected function addGender(&$send)
+    {
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getAllplayersData();
+
+        // Use the webform data.
+        $webform = $data['webform']['data'];
+
+        // Set the users gender, if defined in the AllPlayers webform.
+        if (isset($webform['profile__field_user_gender__profile'])) {
+            $send['gender']
+                = $webform['profile__field_user_gender__profile'] == 1
+                ? 'Male'
+                : 'Female';
+        }
     }
 
     /**
@@ -689,7 +770,7 @@ class SimpleWebhook extends Webhook
     }
 
     /**
-     * Add the Users Name to their TeamSnap profile.
+     * Add the Users Name, using the given webhook data.
      *
      * Note: This will use webform data over the profile, if present.
      *
@@ -703,13 +784,18 @@ class SimpleWebhook extends Webhook
      */
     protected function addName(&$send, $method)
     {
+        // Get the original data sent from the AllPlayers webhook.
         $data = $this->getAllplayersData();
-        $webform = isset($data['webform']['data']) ? $data['webform']['data'] : null;
+
+        // Use the webform data.
+        $webform = $data['webform']['data'];
 
         // Update/Add the users First Name.
         if (isset($webform['profile__field_firstname__profile'])) {
             $send['first'] = $webform['profile__field_firstname__profile'];
-        } elseif ($method == self::HTTP_POST && !isset($webform['profile__field_firstname__profile'])) {
+        } elseif ($method == self::HTTP_POST
+            && !isset($webform['profile__field_firstname__profile'])
+        ) {
             // Required element missing, use profile info.
             $send['first'] = $data['member']['first_name'];
         }
@@ -717,9 +803,106 @@ class SimpleWebhook extends Webhook
         // Update/Add the users Last Name.
         if (isset($webform['profile__field_lastname__profile'])) {
             $send['last'] = $webform['profile__field_lastname__profile'];
-        } elseif ($method == self::HTTP_POST && !isset($webform['profile__field_lastname__profile'])) {
+        } elseif ($method == self::HTTP_POST
+            && !isset($webform['profile__field_lastname__profile'])
+        ) {
             // Required element missing, use profile info.
             $send['last'] = $data['member']['last_name'];
+        }
+    }
+
+    /**
+     * Add the Users Phone Numbers, using the given webhook data.
+     *
+     * @param array $send
+     *   The array to append the new user data.
+     */
+    protected function addPhoneNumber(&$send)
+    {
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getAllplayersData();
+
+        // Use the webform data.
+        $webform = $data['webform']['data'];
+
+        // Store phone numbers to add.
+        $payload = array();
+
+        // Add the Home Phone if present.
+        if (isset($webform['profile__field_phone__profile'])) {
+            // Check for an existing phone number.
+            $query = $this->partner_mapping->getRosterHomePhoneId(
+                $data['member']['uuid'],
+                $data['group']['uuid']
+            );
+
+            // Dynamically adjust payload label/id.
+            if (isset($query['external_resource_id'])) {
+                $key = 'id';
+                $value = $query['external_resource_id'];
+            } else {
+                $key = 'label';
+                $value = 'Home';
+            }
+
+            // Add home phone info to payload.
+            $payload[] = array(
+                $key => $value,
+                'phone_number' => $webform['profile__field_phone__profile'],
+            );
+        }
+
+        // Add the Cell Phone if present.
+        if (isset($webform['profile__field_phone_cell__profile'])) {
+            // Check for existing cell phone number.
+            $query = $this->partner_mapping->getRosterCellPhoneId(
+                $data['member']['uuid'],
+                $data['group']['uuid']
+            );
+
+            // Dynamically adjust payload label/id.
+            if (isset($query['external_resource_id'])) {
+                $key = 'id';
+                $value = $query['external_resource_id'];
+            } else {
+                $key = 'label';
+                $value = 'Cell';
+            }
+
+            // Add cell phone info to payload.
+            $payload[] = array(
+                $key => $value,
+                'phone_number' => $webform['profile__field_phone_cell__profile'],
+            );
+        }
+
+        // Add the Work Phone if present.
+        if (isset($webform['profile__field_work_number__profile'])) {
+            // Check for existing work phone number.
+            $query = $this->partner_mapping->getRosterWorkPhoneId(
+                $data['member']['uuid'],
+                $data['group']['uuid']
+            );
+
+            // Dynamically adjust payload label/id.
+            if (isset($query['external_resource_id'])) {
+                $key = 'id';
+                $value = $query['external_resource_id'];
+            } else {
+                $key = 'label';
+                $value = 'Work';
+            }
+
+            // Add work phone info to payload.
+            $payload[] = array(
+                $key => $value,
+                'phone_number' => $webform['profile__field_work_number__profile'],
+            );
+        }
+
+        // Only include the Phone Numbers, if one exists.
+        if (count($payload) > 0) {
+            $send['roster_telephones_attributes'] = $payload;
         }
     }
 
@@ -826,7 +1009,7 @@ class SimpleWebhook extends Webhook
         );
 
         // Add/update the mapping of an email with a Roster.
-        $this->partner_mapping->setRosterEmail(
+        $this->partner_mapping->setRosterEmailId(
             $response['roster']['roster_email_addresses'][0]['id'],
             $original_data['member']['uuid'],
             $original_data['group']['uuid']
@@ -836,7 +1019,7 @@ class SimpleWebhook extends Webhook
         // partner mapping, and send an email invitation.
         if (isset($query['message'])) {
             // Add the users RosterID to the partner-mapping API.
-            $this->partner_mapping->setRoster(
+            $this->partner_mapping->setRosterId(
                 $response['roster']['id'],
                 $original_data['member']['uuid'],
                 $original_data['group']['uuid']
@@ -888,21 +1071,21 @@ class SimpleWebhook extends Webhook
             foreach ($phones as $entry) {
                 switch ($entry['label']) {
                     case 'Home':
-                        $this->partner_mapping->setRosterHomePhone(
+                        $this->partner_mapping->setRosterHomePhoneId(
                             $entry['id'],
                             $original_data['member']['uuid'],
                             $original_data['group']['uuid']
                         );
                         break;
                     case 'Cell':
-                        $this->partner_mapping->setRosterCellPhone(
+                        $this->partner_mapping->setRosterCellPhoneId(
                             $entry['id'],
                             $original_data['member']['uuid'],
                             $original_data['group']['uuid']
                         );
                         break;
                     case 'Work':
-                        $this->partner_mapping->setRosterWorkPhone(
+                        $this->partner_mapping->setRosterWorkPhoneId(
                             $entry['id'],
                             $original_data['member']['uuid'],
                             $original_data['group']['uuid']

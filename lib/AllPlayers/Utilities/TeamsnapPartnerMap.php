@@ -45,29 +45,6 @@ class TeamsnapPartnerMap extends PartnerMap
     }
 
     /**
-     * Fetch the TeamSnap Email ID for the given user and group.
-     *
-     * @param string $user
-     *   The AllPlayers UUID for the User.
-     * @param string $group
-     *   The AllPlayers UUID for the Group.
-     *
-     * @return array
-     *   The Partner Mapping response from the AllPlayers Partner Mapping API.
-     */
-    public function getEmailId($user, $group)
-    {
-        $id = $this->readPartnerMap(
-            PartnerMap::PARTNER_MAP_USER,
-            $user,
-            $group,
-            PartnerMap::PARTNER_MAP_SUBTYPE_USER_EMAIL
-        );
-
-        return $id;
-    }
-
-    /**
      * Fetch the TeamSnap Event ID for the given event and group.
      *
      * @param string $event
@@ -134,6 +111,75 @@ class TeamsnapPartnerMap extends PartnerMap
     }
 
     /**
+     * Fetch the TeamSnap Cell Phone ID for the given user and group.
+     *
+     * @param string $user
+     *   The AllPlayers UUID for the User.
+     * @param string $group
+     *   The AllPlayers UUID for the Group.
+     *
+     * @return array
+     *   The Partner Mapping response from the AllPlayers Partner Mapping API.
+     */
+    public function getRosterCellPhoneId($user, $group)
+    {
+        $id = $this->readPartnerMap(
+            PartnerMap::PARTNER_MAP_USER,
+            $user,
+            $group,
+            PartnerMap::PARTNER_MAP_SUBTYPE_USER_PHONE_CELL
+        );
+
+        return $id;
+    }
+
+    /**
+     * Fetch the TeamSnap Email ID for the given user and group.
+     *
+     * @param string $user
+     *   The AllPlayers UUID for the User.
+     * @param string $group
+     *   The AllPlayers UUID for the Group.
+     *
+     * @return array
+     *   The Partner Mapping response from the AllPlayers Partner Mapping API.
+     */
+    public function getRosterEmailId($user, $group)
+    {
+        $id = $this->readPartnerMap(
+            PartnerMap::PARTNER_MAP_USER,
+            $user,
+            $group,
+            PartnerMap::PARTNER_MAP_SUBTYPE_USER_EMAIL
+        );
+
+        return $id;
+    }
+
+    /**
+     * Fetch the TeamSnap Home Phone ID for the given user and group.
+     *
+     * @param string $user
+     *   The AllPlayers UUID for the User.
+     * @param string $group
+     *   The AllPlayers UUID for the Group.
+     *
+     * @return array
+     *   The Partner Mapping response from the AllPlayers Partner Mapping API.
+     */
+    public function getRosterHomePhoneId($user, $group)
+    {
+        $id = $this->readPartnerMap(
+            PartnerMap::PARTNER_MAP_USER,
+            $user,
+            $group,
+            PartnerMap::PARTNER_MAP_SUBTYPE_USER_PHONE
+        );
+
+        return $id;
+    }
+
+    /**
      * Fetch the TeamSnap Roster ID for the given user and group.
      *
      * @param string $user
@@ -150,6 +196,29 @@ class TeamsnapPartnerMap extends PartnerMap
             PartnerMap::PARTNER_MAP_USER,
             $user,
             $group
+        );
+
+        return $id;
+    }
+
+    /**
+     * Fetch the TeamSnap Work Phone ID for the given user and group.
+     *
+     * @param string $user
+     *   The AllPlayers UUID for the User.
+     * @param string $group
+     *   The AllPlayers UUID for the Group.
+     *
+     * @return array
+     *   The Partner Mapping response from the AllPlayers Partner Mapping API.
+     */
+    public function getRosterWorkPhoneId($user, $group)
+    {
+        $id = $this->readPartnerMap(
+            PartnerMap::PARTNER_MAP_USER,
+            $user,
+            $group,
+            PartnerMap::PARTNER_MAP_SUBTYPE_USER_PHONE_WORK
         );
 
         return $id;
@@ -197,7 +266,7 @@ class TeamsnapPartnerMap extends PartnerMap
     }
 
     /**
-     * Add or Update the TeamSnap Event.
+     * Add or Update the TeamSnap Event ID.
      *
      * @param integer $id
      *   The TeamSnap Event ID to link with the given event and group.
@@ -206,7 +275,7 @@ class TeamsnapPartnerMap extends PartnerMap
      * @param string $group
      *   The AllPlayers UUID for the Group.
      */
-    public function setEvent($id, $event, $group)
+    public function setEventId($id, $event, $group)
     {
         $this->createPartnerMap(
             $id,
@@ -217,7 +286,7 @@ class TeamsnapPartnerMap extends PartnerMap
     }
 
     /**
-     * Add or Update the TeamSnap Event Location.
+     * Add or Update the TeamSnap Event Location ID.
      *
      * @param integer $id
      *   The TeamSnap Location ID to link with the given group.
@@ -228,7 +297,7 @@ class TeamsnapPartnerMap extends PartnerMap
      */
     public function setLocationId($id, $event, $group)
     {
-        $this->partner_mapping->createPartnerMap(
+        $this->createPartnerMap(
             $id,
             PartnerMap::PARTNER_MAP_RESOURCE,
             $event,
@@ -237,7 +306,7 @@ class TeamsnapPartnerMap extends PartnerMap
     }
 
     /**
-     * Add or Update the TeamSnap Opponent.
+     * Add or Update the TeamSnap Opponent ID.
      *
      * @param integer $id
      *   The TeamSnap Opponent ID to link with the given competitor and group.
@@ -257,7 +326,7 @@ class TeamsnapPartnerMap extends PartnerMap
     }
 
     /**
-     * Add or Update the TeamSnap Roster.
+     * Add or Update the TeamSnap Roster ID.
      *
      * @param integer $id
      *   The TeamSnap RosterID to link the given user.
@@ -266,7 +335,7 @@ class TeamsnapPartnerMap extends PartnerMap
      * @param string $group
      *   The AllPlayers UUID for the Group.
      */
-    public function setRoster($id, $user, $group)
+    public function setRosterId($id, $user, $group)
     {
         $this->createPartnerMap(
             $id,
@@ -286,7 +355,7 @@ class TeamsnapPartnerMap extends PartnerMap
      * @param string $group
      *   The AllPlayers UUID for the Group.
      */
-    public function setRosterCellPhone($id, $user, $group)
+    public function setRosterCellPhoneId($id, $user, $group)
     {
         $this->createPartnerMap(
             $id,
@@ -307,7 +376,7 @@ class TeamsnapPartnerMap extends PartnerMap
      * @param string $group
      *   The AllPlayers UUID for the Group.
      */
-    public function setRosterEmail($id, $user, $group)
+    public function setRosterEmailId($id, $user, $group)
     {
         $this->createPartnerMap(
             $id,
@@ -328,7 +397,7 @@ class TeamsnapPartnerMap extends PartnerMap
      * @param string $group
      *   The AllPlayers UUID for the Group.
      */
-    public function setRosterHomePhone($id, $user, $group)
+    public function setRosterHomePhoneId($id, $user, $group)
     {
         $this->createPartnerMap(
             $id,
@@ -349,7 +418,7 @@ class TeamsnapPartnerMap extends PartnerMap
      * @param string $group
      *   The AllPlayers UUID for the Group.
      */
-    public function setRosterWorkPhone($id, $user, $group)
+    public function setRosterWorkPhoneId($id, $user, $group)
     {
         $this->createPartnerMap(
             $id,
@@ -369,7 +438,7 @@ class TeamsnapPartnerMap extends PartnerMap
     public function deleteGroup($group)
     {
         // Delete all partner mappings associated with the group.
-        $this->partner_mapping->deletePartnerMap(
+        $this->deletePartnerMap(
             null,
             $group
         );
@@ -386,7 +455,7 @@ class TeamsnapPartnerMap extends PartnerMap
     public function deleteUser($user, $group)
     {
         // Delete the partner-mapping for a user.
-        $this->partner_mapping->deletePartnerMap(
+        $this->deletePartnerMap(
             PartnerMap::PARTNER_MAP_USER,
             $group,
             $user
@@ -404,7 +473,7 @@ class TeamsnapPartnerMap extends PartnerMap
     public function deleteUserEmail($user, $group)
     {
         // Delete the partner-mapping for a user email id.
-        $this->partner_mapping->deletePartnerMap(
+        $this->deletePartnerMap(
             PartnerMap::PARTNER_MAP_RESOURCE,
             $group,
             $user,
