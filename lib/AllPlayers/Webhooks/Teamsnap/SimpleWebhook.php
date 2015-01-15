@@ -1069,6 +1069,77 @@ class SimpleWebhook extends Webhook
     }
 
     /**
+     * Add the Teams details, using the given webhook data.
+     *
+     * @param array $send
+     *   The array to append the new user data.
+     */
+    protected function addTeam(&$send)
+    {
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getAllplayersData();
+
+        // Set the Team information contained in the webhook payload.
+        $send['team_name'] = $data['group']['name'];
+        $send['team_league'] = 'All Players';
+        $send['division_id'] = intval(
+            $this->webhook->subscriber['division_id']
+        );
+        $send['zipcode'] = $data['group']['postalcode'];
+    }
+
+    /**
+     * Add the Teams logo, using the given webhook data, if present.
+     *
+     * @param array $send
+     *   The array to append the new user data.
+     */
+    protected function addTeamLogo(&$send)
+    {
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getAllplayersData();
+
+        // Add additional information to the payload.
+        if (isset($data['group']['logo'])) {
+            $send['logo_url'] = $data['group']['logo'];
+        }
+    }
+
+    /**
+     * Add the Teams Region information, using the given webhook data.
+     *
+     * @param array $send
+     *   The array to append the new user data.
+     */
+    protected function addTeamRegion(&$send)
+    {
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getAllplayersData();
+
+        // Get the region information for the given timezone.
+        $region = $this->getRegion($data['group']['timezone']);
+
+        // Set the region information using the timezone.
+        $send['timezone'] = $region['timezone'];
+        $send['country'] = $region['location'];
+    }
+
+    /**
+     * Add the Teams Sport information, using the given webhook data.
+     *
+     * @param array $send
+     *   The array to append the new user data.
+     */
+    protected function addTeamSport(&$send)
+    {
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getAllplayersData();
+
+        // Set the Sport ID, using the AllPlayers group category.
+        $send['sport_id'] = $this->getSport($data['group']['group_category']);
+    }
+
+    /**
      * Add or Update the users Roster mapping for TeamSnap.
      *
      * Note: If the mapping is created, this will send an email invitation.
