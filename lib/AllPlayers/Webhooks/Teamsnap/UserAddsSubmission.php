@@ -56,12 +56,12 @@ class UserAddsSubmission extends SimpleWebhook implements ProcessInterface
 
         // Build the request payload.
         $send = array();
-        $this->addName($send, $method);
-        $this->addEmail($send);
-        $this->addBirthday($send);
-        $this->addGender($send);
-        $this->addPhoneNumber($send);
-        $this->addAddress($send);
+        $this->addRosterName($send, $method);
+        $this->addRosterEmail($send);
+        $this->addRosterBirthday($send);
+        $this->addRosterGender($send);
+        $this->addRosterPhoneNumber($send);
+        $this->addRosterAddress($send);
         $send = array('roster' => $send);
 
         // Cancel this request if payload is empty.

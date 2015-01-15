@@ -108,7 +108,7 @@ class UserCreatesEvent extends SimpleWebhook implements ProcessInterface
             $this->addEventOpponent($send, $team, $group);
 
             // Attach the scores to the event if they are present.
-            $this->addScores($send, $group);
+            $this->addEventScores($send, $group);
 
             // Update the domain to make a game event.
             $this->domain = $original_domain . '/teams/' . $team . '/as_roster/'

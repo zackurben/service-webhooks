@@ -55,9 +55,9 @@ class UserAddsRole extends SimpleWebhook implements ProcessInterface
 
         // Build the request payload.
         $send = array();
-        $this->addName($send, $method);
-        $this->addRole($send, $method);
-        $this->addEmail($send);
+        $this->addRosterName($send, $method);
+        $this->addRosterRole($send, $method);
+        $this->addRosterEmail($send);
         $send = array('roster' => $send);
 
         // Update the payload domain.

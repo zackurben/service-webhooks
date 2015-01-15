@@ -476,31 +476,70 @@ class SimpleWebhook extends Webhook
             $id = $this->partner_mapping->getDefaultLocationId($group);
         }
 
+        // Set the default data, if required information is missing.
+        if (!isset($location['title']) || empty($location['title'])) {
+            $location['title'] = '(TBD)';
+        }
+        if (!isset($location['street']) || empty($location['street'])) {
+            $location['street'] = '(TBD)';
+        }
+
         // Build the request payload for making a location resource.
-        $send = array();
-        $this->addLocation($send, $location);
+        $send = array(
+            'location_name' => $location['title'],
+            'address' => $location['street'],
+        );
 
-        // Update the webhook request.
-        $this->setRequestData(array('location' => $send));
+        // Add additional information to the payload.
+        if (isset($location['additional']) && !empty($location['additional'])) {
+            $send['address'] .= ', ' . $location['additional'];
+        }
+        if (isset($location['city']) && !empty($location['city'])) {
+            $send['address'] .= '. ' . $location['city'];
+        }
+        if (isset($location['province']) && !empty($location['province'])) {
+            $send['address'] .= ', ' . $location['province'];
+        }
+        if (isset($location['postal_code']) && !empty($location['postal_code'])) {
+            $send['address'] .= '. ' . $location['postal_code'];
+        }
+        if (isset($location['country']) && !empty($location['country'])) {
+            $send['address'] .= '. ' . strtoupper($location['country']) . '.';
+        }
 
+        // Set the payload data.
+        $send = array('location' => $send);
+        $this->setRequestData($send);
+
+        // Create or update the Location resource on TeamSnap.
         if (isset($id['external_resource_id'])) {
-            // Update the existing partner-mapping resource.
             $id = $id['external_resource_id'];
+
+            // Update the payload domain.
             $this->domain = $original_domain . '/teams/' . $team . '/as_roster/'
                 . $this->webhook->subscriber['commissioner_id'] . '/locations/'
                 . $id;
 
+            // Update the request type.
             parent::put();
+
+            // Manually send the request.
             $this->send();
         } else {
-            // Create a new partner-mapping resource.
+            // Update the payload domain.
             $this->domain = $original_domain . '/teams/' . $team . '/as_roster/'
                 . $this->webhook->subscriber['commissioner_id'] . '/locations';
 
+            // Update the request type.
             parent::post();
+
+            // Manually send the request and process the response.
             $response = $this->send();
             $response = $this->helper->processJsonResponse($response);
 
+            // Add the new location resource to the partner-mapping. This will
+            // also handle the default team LocationID if an AllPlayers resource
+            // is not included.
             if (isset($location['uuid']) && !empty($location['uuid'])) {
                 // Associate an AllPlayers resource UUID with the TeamSnap
                 // LocationID.
@@ -626,87 +665,6 @@ class SimpleWebhook extends Webhook
     }
 
     /**
-     * Add the Users Address, using the given webhook data.
-     *
-     * @param array $send
-     *   The array to append the new user data.
-     */
-    protected function addAddress(&$send)
-    {
-        // Get the original data sent from the AllPlayers webhook.
-        $data = $this->getAllplayersData();
-
-        // Use the webform data.
-        $webform = $data['webform']['data'];
-
-        // Add address fields, if defined in the AllPlayers webform.
-        if (isset($webform['profile__field_home_address_street__profile'])) {
-            $send['address'] = $webform['profile__field_home_address_street__profile'];
-        }
-        if (isset($webform['profile__field_home_address_additional__profile'])) {
-            $send['address2'] = $webform['profile__field_home_address_additional__profile'];
-        }
-        if (isset($webform['profile__field_home_address_city__profile'])) {
-            $send['city'] = $webform['profile__field_home_address_city__profile'];
-        }
-        if (isset($webform['profile__field_home_address_province__profile'])) {
-            $send['state'] = $webform['profile__field_home_address_province__profile'];
-        }
-        if (isset($webform['profile__field_home_address_postal_code__profile'])) {
-            $send['zip'] = $webform['profile__field_home_address_postal_code__profile'];
-        }
-        if (isset($webform['profile__field_home_address_country__profile'])) {
-            $send['country'] = $webform['profile__field_home_address_country__profile'];
-        }
-    }
-
-    /**
-     * Add the Users Birthday, using the given webhook data.
-     *
-     * @param array $send
-     *   The array to append the new user data.
-     */
-    protected function addBirthday(&$send)
-    {
-        // Get the original data sent from the AllPlayers webhook.
-        $data = $this->getAllplayersData();
-
-        // Use the webform data.
-        $webform = $data['webform']['data'];
-
-        // Set the users birthday, if defined in the AllPlayers webform.
-        if (isset($webform['profile__field_birth_date__profile'])) {
-            $send['birthdate'] = $webform['profile__field_birth_date__profile'];
-        }
-    }
-
-    /**
-     * Add the Users email address, using the given webhook data.
-     *
-     * Note: If a guardian is present, their email will be used.
-     *
-     * @param array $send
-     *   The array to append the new user data.
-     */
-    protected function addEmail(&$send)
-    {
-        // Get the original data sent from the AllPlayers webhook.
-        $data = $this->getAllplayersData();
-
-        // Determine if we are using the guardian or users email address.
-        $email_address = isset($data['member']['guardian'])
-            ? $data['member']['guardian']['email']
-            : $data['member']['email'];
-
-        // Set the email information for this roster based on the given data.
-        $send['roster_email_addresses_attributes'] = $this->getEmailResource(
-            $email_address,
-            $data['member']['uuid'],
-            $data['group']['uuid']
-        );
-    }
-
-    /**
      * Add the Event details, using the given webhook data.
      *
      * @param array $send
@@ -787,12 +745,125 @@ class SimpleWebhook extends Webhook
     }
 
     /**
+     * Add the scores of an event, if present, in reference to a specific group.
+     *
+     * @param $send
+     *   The array to append new score data.
+     * @param array $group
+     *   The group to add the scores in reference to.
+     */
+    protected function addEventScores(&$send, array $group)
+    {
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getAllplayersData();
+
+        // Add additional information to the payload.
+        foreach ($data['event']['competitor'] as $competitor) {
+            if ($competitor['uuid'] == $group['uuid']) {
+                $send['score_for'] = $competitor['score'];
+
+                // Determine the teams status.
+                if (strcasecmp($competitor['label'], 'Home') == 0) {
+                    // The group is home.
+                    $send['home_or_away'] = 1;
+                } elseif (strcasecmp($competitor['label'], 'Away') == 0) {
+                    // The group is away.
+                    $send['home_or_away'] = 2;
+                }
+            } else {
+                $send['score_against'] = $competitor['score'];
+            }
+        }
+    }
+
+    /**
+     * Add the Users Address, using the given webhook data.
+     *
+     * @param array $send
+     *   The array to append the new user data.
+     */
+    protected function addRosterAddress(&$send)
+    {
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getAllplayersData();
+
+        // Use the webform data.
+        $webform = $data['webform']['data'];
+
+        // Add address fields, if defined in the AllPlayers webform.
+        if (isset($webform['profile__field_home_address_street__profile'])) {
+            $send['address'] = $webform['profile__field_home_address_street__profile'];
+        }
+        if (isset($webform['profile__field_home_address_additional__profile'])) {
+            $send['address2'] = $webform['profile__field_home_address_additional__profile'];
+        }
+        if (isset($webform['profile__field_home_address_city__profile'])) {
+            $send['city'] = $webform['profile__field_home_address_city__profile'];
+        }
+        if (isset($webform['profile__field_home_address_province__profile'])) {
+            $send['state'] = $webform['profile__field_home_address_province__profile'];
+        }
+        if (isset($webform['profile__field_home_address_postal_code__profile'])) {
+            $send['zip'] = $webform['profile__field_home_address_postal_code__profile'];
+        }
+        if (isset($webform['profile__field_home_address_country__profile'])) {
+            $send['country'] = $webform['profile__field_home_address_country__profile'];
+        }
+    }
+
+    /**
+     * Add the Users Birthday, using the given webhook data.
+     *
+     * @param array $send
+     *   The array to append the new user data.
+     */
+    protected function addRosterBirthday(&$send)
+    {
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getAllplayersData();
+
+        // Use the webform data.
+        $webform = $data['webform']['data'];
+
+        // Set the users birthday, if defined in the AllPlayers webform.
+        if (isset($webform['profile__field_birth_date__profile'])) {
+            $send['birthdate'] = $webform['profile__field_birth_date__profile'];
+        }
+    }
+
+    /**
+     * Add the Users email address, using the given webhook data.
+     *
+     * Note: If a guardian is present, their email will be used.
+     *
+     * @param array $send
+     *   The array to append the new user data.
+     */
+    protected function addRosterEmail(&$send)
+    {
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getAllplayersData();
+
+        // Determine if we are using the guardian or users email address.
+        $email_address = isset($data['member']['guardian'])
+            ? $data['member']['guardian']['email']
+            : $data['member']['email'];
+
+        // Set the email information for this roster based on the given data.
+        $send['roster_email_addresses_attributes'] = $this->getEmailResource(
+            $email_address,
+            $data['member']['uuid'],
+            $data['group']['uuid']
+        );
+    }
+
+    /**
      * Add the Users Gender, using the given webhook data.
      *
      * @param array $send
      *   The array to append the new user data.
      */
-    protected function addGender(&$send)
+    protected function addRosterGender(&$send)
     {
         // Get the original data sent from the AllPlayers webhook.
         $data = $this->getAllplayersData();
@@ -810,46 +881,6 @@ class SimpleWebhook extends Webhook
     }
 
     /**
-     * Add the Event location, using the given webhook data.
-     *
-     * @param array $send
-     *   The array to append the new event data.
-     * @param array $location
-     *   The Event location information from the AllPlayers Webhook.
-     */
-    protected function addLocation(&$send, array $location)
-    {
-        // Set the default data, if required information is missing.
-        if (!isset($location['title']) || empty($location['title'])) {
-            $location['title'] = '(TBD)';
-        }
-        if (!isset($location['street']) || empty($location['street'])) {
-            $location['street'] = '(TBD)';
-        }
-
-        // Build the request payload for making a location resource.
-        $send['location_name'] = $location['title'];
-        $send['address'] = $location['street'];
-
-        // Add additional information to the payload.
-        if (isset($location['additional']) && !empty($location['additional'])) {
-            $send['address'] .= ', ' . $location['additional'];
-        }
-        if (isset($location['city']) && !empty($location['city'])) {
-            $send['address'] .= '. ' . $location['city'];
-        }
-        if (isset($location['province']) && !empty($location['province'])) {
-            $send['address'] .= ', ' . $location['province'];
-        }
-        if (isset($location['postal_code']) && !empty($location['postal_code'])) {
-            $send['address'] .= '. ' . $location['postal_code'];
-        }
-        if (isset($location['country']) && !empty($location['country'])) {
-            $send['address'] .= '. ' . strtoupper($location['country']) . '.';
-        }
-    }
-
-    /**
      * Add the Users Name, using the given webhook data.
      *
      * Note: This will use webform data over the profile, if present.
@@ -862,7 +893,7 @@ class SimpleWebhook extends Webhook
      * @see Webhook::HTTP_POST
      * @see Webhook::HTTP_PUT
      */
-    protected function addName(&$send, $method)
+    protected function addRosterName(&$send, $method)
     {
         // Get the original data sent from the AllPlayers webhook.
         $data = $this->getAllplayersData();
@@ -897,7 +928,7 @@ class SimpleWebhook extends Webhook
      * @param array $send
      *   The array to append the new user data.
      */
-    protected function addPhoneNumber(&$send)
+    protected function addRosterPhoneNumber(&$send)
     {
         // Get the original data sent from the AllPlayers webhook.
         $data = $this->getAllplayersData();
@@ -987,38 +1018,6 @@ class SimpleWebhook extends Webhook
     }
 
     /**
-     * Add the scores of an event, if present, in reference to a specific group.
-     *
-     * @param $send
-     *   The array to append new score data.
-     * @param array $group
-     *   The group to add the scores in reference to.
-     */
-    protected function addScores(&$send, array $group)
-    {
-        // Get the original data sent from the AllPlayers webhook.
-        $data = $this->getAllplayersData();
-
-        // Add additional information to the payload.
-        foreach ($data['event']['competitor'] as $competitor) {
-            if ($competitor['uuid'] == $group['uuid']) {
-                $send['score_for'] = $competitor['score'];
-
-                // Determine the teams status.
-                if (strcasecmp($competitor['label'], 'Home') == 0) {
-                    // The group is home.
-                    $send['home_or_away'] = 1;
-                } elseif (strcasecmp($competitor['label'], 'Away') == 0) {
-                    // The group is away.
-                    $send['home_or_away'] = 2;
-                }
-            } else {
-                $send['score_against'] = $competitor['score'];
-            }
-        }
-    }
-
-    /**
      * Add the Users roles, using the given webhook data.
      *
      * @param array $send
@@ -1029,7 +1028,7 @@ class SimpleWebhook extends Webhook
      * @see Webhook::HTTP_POST
      * @see Webhook::HTTP_PUT
      */
-    protected function addRole(&$send, $method)
+    protected function addRosterRole(&$send, $method)
     {
         // Get the original data sent from the AllPlayers webhook.
         $data = $this->getAllplayersData();
