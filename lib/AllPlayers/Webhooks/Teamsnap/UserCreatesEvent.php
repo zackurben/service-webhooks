@@ -7,7 +7,6 @@
 namespace AllPlayers\Webhooks\Teamsnap;
 
 use AllPlayers\Webhooks\ProcessInterface;
-use AllPlayers\Utilities\PartnerMap;
 use Guzzle\Http\Message\Response;
 
 /**
@@ -28,17 +27,22 @@ class UserCreatesEvent extends SimpleWebhook implements ProcessInterface
             return;
         }
 
-        // Get the data from the AllPlayers webhook.
-        $data = $this->getData();
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getRequestData();
 
-        // Build the webhook payload.
-        $send = $this->addTeamsnapEventData();
+        // Build the request payload.
+        $send = array();
+        $this->addEvent($send);
+        $this->addEventLocation($send);
+        $this->addEventDescription($send);
 
         // Determine if this is a game or an event.
-        if (isset($data['event']['competitor']) && !empty($data['event']['competitor'])) {
-            $this->finishGame($send);
+        if (isset($data['event']['competitor'])
+            && !empty($data['event']['competitor'])
+        ) {
+            $this->createGame($send);
         } else {
-            $this->finishPractice($send);
+            $this->createPractice($send);
         }
     }
 
@@ -50,133 +54,17 @@ class UserCreatesEvent extends SimpleWebhook implements ProcessInterface
      */
     public function processResponse(Response $response)
     {
+        // Convert the raw Guzzle Response object to an array.
         $response = $this->helper->processJsonResponse($response);
 
         // Get the original data sent from the AllPlayers webhook.
-        $original_data = $this->getOriginalData();
+        $original_data = $this->getAllplayersData();
 
-        // Associate an AllPlayers event UUID with a TeamSnap EventID.
-        $this->partner_mapping->createPartnerMap(
+        // Create/Update the event in the partner-mapping API.
+        $this->partner_mapping->setEventId(
             $response['practice']['id'],
-            PartnerMap::PARTNER_MAP_EVENT,
             $original_data['event']['uuid'],
             $original_data['group']['uuid']
-        );
-    }
-
-    /**
-     * Build the webhook payload and manage the partner-mapping API calls.
-     *
-     * @return array
-     *   The event data to send to create an event resource on TeamSnap.
-     */
-    protected function addTeamsnapEventData()
-    {
-        // Get the data from the AllPlayers webhook.
-        $data = $this->getData();
-
-        // Build the initial payload information.
-        $send = array(
-            'eventname' => $data['event']['title'],
-            'division_id' => $this->webhook->subscriber['division_id'],
-            'event_date_start' => $data['event']['start'],
-            'event_date_end' => $data['event']['end'],
-        );
-
-        // Add additional information if present.
-        $this->addLocation($send);
-        $this->addNotes($send);
-
-        return $send;
-    }
-
-    /**
-     * Add the TeamSnap LocationID to the event creation payload.
-     *
-     * @param array $send
-     *   The array to append new event data.
-     */
-    protected function addLocation(&$send)
-    {
-        // Get the data from the AllPlayers webhook.
-        $data = $this->getData();
-
-        // Make/get a location resource.
-        $location = $this->getLocationResource(
-            $data['group']['uuid'],
-            isset($data['event']['location']) ? $data['event']['location'] : null
-        );
-
-        $send['location_id'] = $location;
-    }
-
-    /**
-     * Add an event description to the event creation payload.
-     *
-     * @param array $send
-     *   The array to append new event data.
-     */
-    protected function addNotes(&$send)
-    {
-        // Get the data from the AllPlayers webhook.
-        $data = $this->getData();
-
-        // Add additional information to the payload.
-        if (isset($data['event']['description']) && !empty($data['event']['description'])) {
-            $send['notes'] = $data['event']['description'];
-        }
-    }
-
-    /**
-     * Add the scores of an event to the event creation payload, if present.
-     *
-     * @param $send
-     *   The array to append new event data.
-     * @param $group
-     *   The group
-     */
-    protected function addScores(&$send, $group)
-    {
-        // Get the original data sent from the AllPlayers webhook.
-        $data = $this->getOriginalData();
-
-        // Get the score data from webhook.
-        $score = $this->getGameScores(
-            $group['uuid'],
-            $data['event']['competitor']
-        );
-
-        // Add additional information to the payload.
-        if (isset($score['score_for']) && !empty($score['score_for'])) {
-            $send['score_for'] = $score['score_for'];
-        }
-        if (isset($score['score_against']) && !empty($score['score_against'])) {
-            $send['score_against'] = $score['score_against'];
-        }
-        if (isset($score['home_or_away']) && !empty($score['home_or_away'])) {
-            $send['home_or_away'] = $score['home_or_away'];
-        }
-    }
-
-    /**
-     * Fetch and attach the TeamSnap OpponentID for the given team and opponent.
-     *
-     * @param $send
-     *   The array to append new event data.
-     * @param $team
-     *   The TeamSnap TeamID for the group.
-     * @param $opponent
-     *   The AllPlayers team to attach as the competitor.
-     */
-    protected function addOpponent(&$send, $team, $opponent)
-    {
-        // Get the original data sent from the AllPlayers webhook.
-        $data = $this->getOriginalData();
-
-        $send['opponent_id'] = $this->getOpponentResource(
-            $opponent['uuid'],
-            $team,
-            $data['event']['competitor']
         );
     }
 
@@ -186,10 +74,10 @@ class UserCreatesEvent extends SimpleWebhook implements ProcessInterface
      * @param $send
      *   The array to append new event data.
      */
-    protected function finishGame(&$send)
+    protected function createGame(&$send)
     {
         // Get the original data sent from the AllPlayers webhook.
-        $data = $this->getOriginalData();
+        $data = $this->getAllplayersData();
 
         // Store the core variables for each iteration of adding competitors.
         $original_domain = $this->domain;
@@ -199,8 +87,7 @@ class UserCreatesEvent extends SimpleWebhook implements ProcessInterface
         // create the mapping for each competitor to the game event.
         foreach ($data['event']['competitor'] as $group) {
             // Check if the event already exists.
-            $event = $this->partner_mapping->readPartnerMap(
-                PartnerMap::PARTNER_MAP_EVENT,
+            $event = $this->partner_mapping->getEventId(
                 $data['event']['uuid'],
                 $group['uuid']
             );
@@ -208,39 +95,39 @@ class UserCreatesEvent extends SimpleWebhook implements ProcessInterface
 
             // Skip creating this event because it already exists, it is not
             // applicable to update here because the event was just made in
-            // another webhook (this is the other teams webhook event).
+            // another request (this is the other teams webhook event).
             if (isset($event)) {
                 continue;
             }
 
             // Get TeamID from the partner-mapping API.
-            $team = $this->partner_mapping->readPartnerMap(
-                PartnerMap::PARTNER_MAP_GROUP,
-                $group['uuid'],
-                $group['uuid']
-            );
+            $team = $this->partner_mapping->getTeamId($group['uuid']);
             $team = $team['external_resource_id'];
 
             // Attach the opponent for the event.
-            $this->addOpponent($send, $team, $group);
+            $this->addEventOpponent($send, $team, $group);
 
             // Attach the scores to the event if they are present.
             $this->addScores($send, $group);
 
-            // Update the payload and process the response.
-            $this->domain = $original_domain . '/teams/' . $team
-                . '/as_roster/'
+            // Update the domain to make a game event.
+            $this->domain = $original_domain . '/teams/' . $team . '/as_roster/'
                 . $this->webhook->subscriber['commissioner_id']
                 . '/games';
-            $this->setData(array('game' => $send));
+
+            // Set the payload data.
+            $this->setRequestData(array('game' => $send));
+
+            // Update the request type.
             parent::post();
+
+            // Manually send the request and process the response.
             $response = $this->send();
             $response = $this->helper->processJsonResponse($response);
 
             // Manually create an event partner-mapping.
-            $this->partner_mapping->createPartnerMap(
+            $this->partner_mapping->setEventId(
                 $response['game']['id'],
-                PartnerMap::PARTNER_MAP_EVENT,
                 $data['event']['uuid'],
                 $group['uuid']
             );
@@ -250,7 +137,7 @@ class UserCreatesEvent extends SimpleWebhook implements ProcessInterface
             $send = $original_send;
         }
 
-        // Cancel the webhook for game events (manually processed).
+        // Cancel this primary request (manually processed).
         parent::setSend(parent::WEBHOOK_CANCEL);
     }
 
@@ -260,25 +147,24 @@ class UserCreatesEvent extends SimpleWebhook implements ProcessInterface
      * @param $send
      *   The array to append new event data.
      */
-    protected function finishPractice(&$send)
+    protected function createPractice(&$send)
     {
         // Get the original data sent from the AllPlayers webhook.
-        $data = $this->getOriginalData();
+        $data = $this->getAllplayersData();
 
         // Get TeamID from the partner-mapping API.
-        $team = $this->partner_mapping->readPartnerMap(
-            PartnerMap::PARTNER_MAP_GROUP,
-            $data['group']['uuid'],
-            $data['group']['uuid']
-        );
+        $team = $this->partner_mapping->getTeamId($data['group']['uuid']);
         $team = $team['external_resource_id'];
 
+        // Update the domain to make a practice event.
         $this->domain .= '/teams/' . $team . '/as_roster/'
             . $this->webhook->subscriber['commissioner_id']
             . '/practices';
 
-        // Update the request and let PostWebhooks complete.
-        $this->setData(array('practice' => $send));
+        // Set the payload data.
+        $this->setRequestData(array('practice' => $send));
+
+        // Update the request type and let PostWebhooks complete.
         parent::post();
     }
 }

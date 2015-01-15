@@ -707,6 +707,86 @@ class SimpleWebhook extends Webhook
     }
 
     /**
+     * Add the Event details, using the given webhook data.
+     *
+     * @param array $send
+     *   The array to append the new user data.
+     */
+    protected function addEvent(&$send)
+    {
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getAllplayersData();
+
+        // Set the event information contained in the webhook payload.
+        $send['eventname'] = $data['event']['title'];
+        $send['division_id'] = $this->webhook->subscriber['division_id'];
+        $send['event_date_start'] = $data['event']['start'];
+        $send['event_date_end'] = $data['event']['end'];
+    }
+
+    /**
+     * Add the Event Description, using the given webhook data.
+     *
+     * @param array $send
+     *   The array to append new event data.
+     */
+    protected function addEventDescription(&$send)
+    {
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getAllplayersData();
+
+        // Add the event description, if present.
+        if (isset($data['event']['description'])
+            && !empty($data['event']['description'])
+        ) {
+            $send['notes'] = $data['event']['description'];
+        }
+    }
+
+    /**
+     * Add the Event Location details, using the given webhook data.
+     *
+     * @param array $send
+     *   The array to append the new user data.
+     */
+    protected function addEventLocation(&$send)
+    {
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getAllplayersData();
+
+        // Set the event location using the partner-mapping API.
+        $send['location_id'] = $this->getLocationResource(
+            $data['group']['uuid'],
+            isset($data['event']['location'])
+            ? $data['event']['location']
+            : null
+        );
+    }
+
+    /**
+     * Add the Event OpponentID, using the given webhook data.
+     *
+     * @param $send
+     *   The array to append new event data.
+     * @param $team
+     *   The TeamSnap TeamID for the group.
+     * @param $opponent
+     *   The AllPlayers team to attach as the competitor.
+     */
+    protected function addEventOpponent(&$send, $team, $opponent)
+    {
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getAllplayersData();
+
+        // Set the event opponent using the partner-mapping API.
+        $send['opponent_id'] = $this->getOpponentResource(
+            $opponent['uuid'],
+            $team,
+            $data['event']['competitor']
+        );
+    }
+
+    /**
      * Add the Users Gender, using the given webhook data.
      *
      * @param array $send
@@ -1063,6 +1143,11 @@ class SimpleWebhook extends Webhook
     {
         // Get the original data sent from the AllPlayers webhook.
         $original_data = $this->getAllplayersData();
+
+        // Skip checking for phone numbers, if they are not included.
+        if (!isset($response['roster']['roster_telephone_numbers'])) {
+            return;
+        }
 
         // Add/update the mapping of phones with a Roster.
         $phones = $response['roster']['roster_telephone_numbers'];
