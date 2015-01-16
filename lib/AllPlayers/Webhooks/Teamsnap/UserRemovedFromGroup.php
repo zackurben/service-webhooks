@@ -7,7 +7,6 @@
 namespace AllPlayers\Webhooks\Teamsnap;
 
 use AllPlayers\Webhooks\ProcessInterface;
-use AllPlayers\Utilities\PartnerMap;
 use Guzzle\Http\Message\Response;
 
 /**
@@ -22,14 +21,47 @@ class UserRemovedFromGroup extends SimpleWebhook implements ProcessInterface
     {
         parent::process();
 
-        // Stop processing if this webhook isn't being sent.
+        // Stop processing if this request isn't being sent.
         $send = $this->checkSend();
         if (!$send) {
             return;
         }
 
-        // Delete the given user from TeamSnap.
-        $this->removeUser();
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getAllplayersData();
+
+        // Get the TeamID from partner-mapping API.
+        $team = $this->partner_mapping->getTeamId($data['group']['uuid']);
+        if (isset($team['external_resource_id'])) {
+            $team = $team['external_resource_id'];
+        } else {
+            // @TODO: We need to confirm this entity does not exist on TeamSnap.
+            // Skip this request because the Team was not found.
+            parent::setSend(parent::WEBHOOK_CANCEL);
+            return;
+        }
+
+        // Get the RosterID from the partner-mapping API.
+        $roster = $this->partner_mapping->getRosterId(
+            $data['member']['uuid'],
+            $data['group']['uuid']
+        );
+        if (isset($roster['external_resource_id'])) {
+            $roster = $roster['external_resource_id'];
+        } else {
+            // @TODO: We need to confirm this entity does not exist on TeamSnap.
+            // Skip this request because the User was not found.
+            parent::setSend(parent::WEBHOOK_CANCEL);
+            return;
+        }
+
+        // Update the payload domain.
+        $this->domain .= '/teams/' . $team . '/as_roster/'
+            . $this->webhook->subscriber['commissioner_id'] . '/rosters/'
+            . $roster;
+
+        // Update the request type and let PostWebhooks complete.
+        parent::delete();
     }
 
     /**
@@ -40,56 +72,19 @@ class UserRemovedFromGroup extends SimpleWebhook implements ProcessInterface
      */
     public function processResponse(Response $response)
     {
-        $response = $this->helper->processJsonResponse($response);
-
         // Get the original data sent from the AllPlayers webhook.
-        $original_data = $this->getOriginalData();
+        $original_data = $this->getAllplayersData();
 
         // Delete the User from the partner-mapping API.
-        $this->partner_mapping->deletePartnerMap(
-            PartnerMap::PARTNER_MAP_USER,
-            $original_data['group']['uuid'],
-            $original_data['member']['uuid']
+        $this->partner_mapping->deleteUser(
+            $original_data['member']['uuid'],
+            $original_data['group']['uuid']
         );
 
         // Delete the Users Email from the partner-mapping API.
-        $this->partner_mapping->deletePartnerMap(
-            PartnerMap::PARTNER_MAP_RESOURCE,
-            $original_data['group']['uuid'],
+        $this->partner_mapping->deleteUserEmail(
             $original_data['member']['uuid'],
-            PartnerMap::PARTNER_MAP_SUBTYPE_USER_EMAIL
+            $original_data['group']['uuid']
         );
-    }
-
-    /**
-     * Deletes the users resources on TeamSnap.
-     */
-    private function removeUser()
-    {
-        // Get the data from the AllPlayers webhook.
-        $data = $this->getData();
-
-        // Get the TeamID from the partner-mapping API.
-        $team = $this->partner_mapping->readPartnerMap(
-            PartnerMap::PARTNER_MAP_GROUP,
-            $data['group']['uuid'],
-            $data['group']['uuid']
-        );
-        $team = $team['external_resource_id'];
-
-        // Get the RosterID from the partner-mapping API.
-        $roster = $this->partner_mapping->readPartnerMap(
-            PartnerMap::PARTNER_MAP_USER,
-            $data['member']['uuid'],
-            $data['group']['uuid']
-        );
-        $roster = $roster['external_resource_id'];
-
-        // Delete the user from the team.
-        $this->domain .= '/teams/' . $team . '/as_roster/'
-            . $this->webhook->subscriber['commissioner_id']
-            . '/rosters/' . $roster;
-
-        parent::delete();
     }
 }
