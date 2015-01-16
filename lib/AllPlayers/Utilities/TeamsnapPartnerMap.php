@@ -430,6 +430,42 @@ class TeamsnapPartnerMap extends PartnerMap
     }
 
     /**
+     * Add or Update the TeamSnap Team ID.
+     *
+     * @param integer $id
+     *   The TeamSnap Team ID to link with the given group.
+     * @param string $group
+     *   The AllPlayers UUID for the Group.
+     */
+    public function setTeamId($id, $group)
+    {
+        $this->partner_mapping->createPartnerMap(
+            $id,
+            PartnerMap::PARTNER_MAP_GROUP,
+            $group,
+            $group
+        );
+    }
+
+    /**
+     * Delete all the Partner Mapping resources for the given AllPlayers event.
+     *
+     * @param string $event
+     *   The AllPlayers UUID for the Event.
+     * @param string $group
+     *   The AllPlayers UUID for the Group.
+     */
+    public function deleteEvent($event, $group)
+    {
+        // Delete the partner-mapping with an event UUID for the given group.
+        $this->partner_mapping->deletePartnerMap(
+            PartnerMap::PARTNER_MAP_EVENT,
+            $event,
+            $group
+        );
+    }
+
+    /**
      * Delete all the Partner Mapping resources for the given AllPlayers group.
      *
      * @param string $group

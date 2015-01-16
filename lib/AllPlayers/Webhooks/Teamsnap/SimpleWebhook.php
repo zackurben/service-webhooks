@@ -1152,7 +1152,7 @@ class SimpleWebhook extends Webhook
         // Get the original data sent from the AllPlayers webhook.
         $original_data = $this->getAllplayersData();
 
-        // Get RosterID from the partner-mapping API.
+        // Get the RosterID from the partner-mapping API.
         $query = $this->partner_mapping->getRosterId(
             $original_data['member']['uuid'],
             $original_data['group']['uuid']

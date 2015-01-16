@@ -7,7 +7,6 @@
 namespace AllPlayers\Webhooks\Teamsnap;
 
 use AllPlayers\Webhooks\ProcessInterface;
-use AllPlayers\Utilities\PartnerMap;
 use Guzzle\Http\Message\Response;
 
 /**
@@ -22,17 +21,19 @@ class UserDeletesEvent extends SimpleWebhook implements ProcessInterface
     {
         parent::process();
 
-        // Stop processing if this webhook isn't being sent.
+        // Stop processing if this request isn't being sent.
         $send = $this->checkSend();
         if (!$send) {
             return;
         }
 
-        // Get the data from the AllPlayers webhook.
-        $data = $this->getData();
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getAllplayersData();
 
         // Determine if this is a game or an event, and remove its resources.
-        if (isset($data['event']['competitor']) && !empty($data['event']['competitor'])) {
+        if (isset($data['event']['competitor'])
+            && !empty($data['event']['competitor'])
+        ) {
             $this->deleteGame();
         } else {
             $this->deletePractice();
@@ -47,16 +48,13 @@ class UserDeletesEvent extends SimpleWebhook implements ProcessInterface
      */
     public function processResponse(Response $response)
     {
-        $response = $this->helper->processJsonResponse($response);
-
         // Get the original data sent from the AllPlayers webhook.
-        $original_data = $this->getOriginalData();
+        $original_data = $this->getAllplayersData();
 
         // Delete the partner-mapping with an event UUID.
-        $this->partner_mapping->deletePartnerMap(
-            PartnerMap::PARTNER_MAP_EVENT,
-            $original_data['group']['uuid'],
-            $original_data['event']['uuid']
+        $this->partner_mapping->deleteEvent(
+            $original_data['event']['uuid'],
+            $original_data['group']['uuid']
         );
     }
 
@@ -65,42 +63,50 @@ class UserDeletesEvent extends SimpleWebhook implements ProcessInterface
      */
     private function deleteGame()
     {
-        // Get the data from the AllPlayers webhook.
-        $data = $this->getData();
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getAllplayersData();
 
         // Store the base domain to revert back to for each iteration.
         $original_domain = $this->domain;
 
         foreach ($data['event']['competitor'] as $group) {
-            // Get TeamID from the partner-mapping API.
-            $team = $this->partner_mapping->readPartnerMap(
-                PartnerMap::PARTNER_MAP_GROUP,
-                $group['uuid'],
-                $group['uuid']
-            );
-            $team = $team['external_resource_id'];
+            // Get the TeamID from the partner-mapping API.
+            $team = $this->partner_mapping->getTeamId($group['uuid']);
+            if (isset($team['external_resource_id'])) {
+                $team = $team['external_resource_id'];
+            } else {
+                // Skip this request because the Team was not found.
+                continue;
+            }
 
-            // Get EventID from the partner-mapping API.
-            $event = $this->partner_mapping->readPartnerMap(
-                PartnerMap::PARTNER_MAP_EVENT,
+            // Get the EventID from the partner-mapping API.
+            $event = $this->partner_mapping->getEventId(
                 $data['event']['uuid'],
                 $group['uuid']
             );
-            $event = $event['external_resource_id'];
+            if (isset($event['external_resource_id'])) {
+                $event = $event['external_resource_id'];
+            } else {
+                // Skip this request because the Event was not found.
+                continue;
+            }
 
-            // Update the request payload and send.
-            $this->domain = $original_domain . '/teams/' . $team
-                . '/as_roster/'
-                . $this->webhook->subscriber['commissioner_id']
-                . '/games/' . $event;
+            // Update the domain to delete a game event.
+            $this->domain = $original_domain . '/teams/' . $team . '/as_roster/'
+                . $this->webhook->subscriber['commissioner_id'] . '/games/'
+                . $event;
+
+            // Update the request type.
             parent::delete();
+
+            // Manually send the request
             $this->send();
 
             // Reset the temp variables for the next iteration.
             $this->domain = $original_domain;
         }
 
-        // Cancel the webhook for game events (manually processed).
+        // Cancel this primary request (manually processed).
         parent::setSend(parent::WEBHOOK_CANCEL);
     }
 
@@ -109,29 +115,38 @@ class UserDeletesEvent extends SimpleWebhook implements ProcessInterface
      */
     private function deletePractice()
     {
-        // Get the data from the AllPlayers webhook.
-        $data = $this->getData();
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getAllplayersData();
 
-        // Get TeamID from the partner-mapping API.
-        $team = $this->partner_mapping->readPartnerMap(
-            PartnerMap::PARTNER_MAP_GROUP,
-            $data['group']['uuid'],
-            $data['group']['uuid']
-        );
-        $team = $team['external_resource_id'];
+        // Get the TeamID from the partner-mapping API.
+        $team = $this->partner_mapping->getTeamId($data['group']['uuid']);
+        if (isset($team['external_resource_id'])) {
+            $team = $team['external_resource_id'];
+        } else {
+            // Skip this request because the Team was not found.
+            parent::setSend(parent::WEBHOOK_CANCEL);
+            return;
+        }
 
-        // Get EventID from partner-mapping API.
-        $event = $this->partner_mapping->readPartnerMap(
-            PartnerMap::PARTNER_MAP_EVENT,
+        // Get the EventID from the partner-mapping API.
+        $event = $this->partner_mapping->getEventId(
             $data['event']['uuid'],
             $data['group']['uuid']
         );
-        $event = $event['external_resource_id'];
+        if (isset($event['external_resource_id'])) {
+            $event = $event['external_resource_id'];
+        } else {
+            // Skip this request because the Event was not found.
+            parent::setSend(parent::WEBHOOK_CANCEL);
+            return;
+        }
 
-        // Update the request and let PostWebhooks complete.
+        // Update the domain to delete a game event.
         $this->domain .= '/teams/' . $team . '/as_roster/'
-            . $this->webhook->subscriber['commissioner_id']
-            . '/practices/' . $event;
+            . $this->webhook->subscriber['commissioner_id'] . '/practices/'
+            . $event;
+
+        // Update the request type.
         parent::delete();
     }
 }
