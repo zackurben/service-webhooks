@@ -7,7 +7,6 @@
 namespace AllPlayers\Webhooks\Teamsnap;
 
 use AllPlayers\Webhooks\ProcessInterface;
-use AllPlayers\Utilities\PartnerMap;
 use Guzzle\Http\Message\Response;
 
 /**
@@ -22,13 +21,33 @@ class UserDeletesGroup extends SimpleWebhook implements ProcessInterface
     {
         parent::process();
 
-        // Stop processing if this webhook isn't being sent.
+        // Stop processing if this request isn't being sent.
         $send = $this->checkSend();
         if (!$send) {
             return;
         }
 
-        $this->deleteGroup();
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getAllplayersData();
+
+        // Get the TeamID from partner-mapping API.
+        $team = $this->partner_mapping->getTeamId($data['group']['uuid']);
+        if (isset($team['external_resource_id'])) {
+            $team = $team['external_resource_id'];
+        } else {
+            // Skip this request because the Team was not found.
+            parent::setSend(parent::WEBHOOK_CANCEL);
+            return;
+        }
+
+        // Update the payload domain.
+        $this->domain .= '/teams/' . $team;
+
+        // Update the request headers.
+        $this->headers['X-Teamsnap-Features'] = '{"partner.delete_team": 1}';
+
+        // Update the request type and let PostWebhooks complete.
+        parent::delete();
     }
 
     /**
@@ -39,37 +58,10 @@ class UserDeletesGroup extends SimpleWebhook implements ProcessInterface
      */
     public function processResponse(Response $response)
     {
-        $response = $this->helper->processJsonResponse($response);
-
         // Get the original data sent from the AllPlayers webhook.
-        $original_data = $this->getOriginalData();
+        $original_data = $this->getAllplayersData();
 
         // Delete partner-mapping with the group UUID.
-        $this->partner_mapping->deletePartnerMap(
-            null,
-            $original_data['group']['uuid']
-        );
-    }
-
-    /**
-     * Deletes all the resources on TeamSnap/AllPlayers for a group.
-     */
-    private function deleteGroup()
-    {
-        // Get the data from the AllPlayers webhook.
-        $data = $this->getData();
-
-        // Get TeamID from partner-mapping API.
-        $team = $this->partner_mapping->readPartnerMap(
-            PartnerMap::PARTNER_MAP_GROUP,
-            $data['group']['uuid'],
-            $data['group']['uuid']
-        );
-        $team = $team['external_resource_id'];
-        $this->domain .= '/teams/' . $team;
-
-        // Update the request and let PostWebhooks complete.
-        $this->headers['X-Teamsnap-Features'] = '{"partner.delete_team": 1}';
-        parent::delete();
+        $this->partner_mapping->deleteGroup($original_data['group']['uuid']);
     }
 }
