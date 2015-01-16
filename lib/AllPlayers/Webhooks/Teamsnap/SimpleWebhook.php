@@ -1069,6 +1069,34 @@ class SimpleWebhook extends Webhook
     }
 
     /**
+     * Add the Users removed roles, using the given webhook data.
+     *
+     * @param array $send
+     *   The array to append the new user data.
+     */
+    protected function addRosterRoleRemoved(&$send)
+    {
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getAllplayersData();
+
+        // Update the roles by negating the data sent in the webhook.
+        switch ($data['member']['role_name']) {
+            case 'Player':
+                $send['non_player'] = 1;
+                break;
+            case 'Admin':
+            case 'Manager':
+            case 'Coach':
+                $send['is_manager'] = 0;
+                break;
+            case 'Guardian':
+                // Ignore AllPlayers guardian changes.
+                $this->setSend(self::WEBHOOK_CANCEL);
+                break;
+        }
+    }
+
+    /**
      * Add the Teams details, using the given webhook data.
      *
      * @param array $send

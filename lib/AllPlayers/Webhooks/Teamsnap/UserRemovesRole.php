@@ -7,7 +7,6 @@
 namespace AllPlayers\Webhooks\Teamsnap;
 
 use AllPlayers\Webhooks\ProcessInterface;
-use AllPlayers\Utilities\PartnerMap;
 use Guzzle\Http\Message\Response;
 
 /**
@@ -22,44 +21,59 @@ class UserRemovesRole extends SimpleWebhook implements ProcessInterface
     {
         parent::process();
 
-        // Stop processing if this webhook isn't being sent.
+        // Stop processing if this request isn't being sent.
         $send = $this->checkSend();
         if (!$send) {
             return;
         }
 
-        // Get the data from the AllPlayers webhook.
-        $data = $this->getData();
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getAllplayersData();
 
-        // Get RosterID from the partner-mapping API.
-        $roster = $this->partner_mapping->readPartnerMap(
-            PartnerMap::PARTNER_MAP_USER,
+        // Get the RosterID from the partner-mapping API.
+        $roster = $this->partner_mapping->getRosterId(
             $data['member']['uuid'],
             $data['group']['uuid']
         );
-        $roster = $roster['external_resource_id'];
+        if (isset($roster['external_resource_id'])) {
+            $roster = $roster['external_resource_id'];
+        } else {
+            // @TODO: We need to confirm this entity does not exist on TeamSnap.
+            // Skip this request because the User was not found.
+            parent::setSend(parent::WEBHOOK_CANCEL);
+            return;
+        }
 
-        // Get TeamID from the partner-mapping API.
-        $team = $this->partner_mapping->readPartnerMap(
-            PartnerMap::PARTNER_MAP_GROUP,
-            $data['group']['uuid'],
-            $data['group']['uuid']
-        );
-        $team = $team['external_resource_id'];
+        // Get the TeamID from the partner-mapping API.
+        $team = $this->partner_mapping->getTeamId($data['group']['uuid']);
+        if (isset($team['external_resource_id'])) {
+            $team = $team['external_resource_id'];
+        } else {
+            // @TODO: We need to confirm this entity does not exist on TeamSnap.
+            // Skip this request because the Team was not found.
+            parent::setSend(parent::WEBHOOK_CANCEL);
+            return;
+        }
 
-        // Update the request domain, using the TeamSnap Resource ID's.
+        // Build the request payload.
+        $send = array();
+        $this->addRosterRoleRemoved($send);
+        $send = array('roster' => $send);
+
+        // Update the payload domain.
         $this->domain .= '/teams/' . $team . '/as_roster/'
-            . $this->webhook->subscriber['commissioner_id']
-            . '/rosters/' . $roster;
+            . $this->webhook->subscriber['commissioner_id'] . '/rosters/'
+            . $roster;
 
-        // Build the webhook payload to update the status of a user on TeamSnap.
-        $send = $this->updateTeamsnapRole();
+        // Set the payload data.
+        $this->setRequestData($send);
 
         // Only continue if update data is present.
         if (empty($send)) {
+            // Skip this request because the role removed is not supported.
             $this->setSend(self::WEBHOOK_CANCEL);
         } else {
-            $this->setData(array('roster' => $send));
+            // Update the request type and let PostWebhooks complete.
             parent::put();
         }
     }
@@ -73,49 +87,5 @@ class UserRemovesRole extends SimpleWebhook implements ProcessInterface
     public function processResponse(Response $response)
     {
 
-    }
-
-
-    /**
-     * Build the webhook payload to update the users roles.
-     *
-     * @return array
-     *   The user data to send to update the user account.
-     */
-    private function updateTeamsnapRole()
-    {
-        // Build the webhook payload to update the status of a user on TeamSnap.
-        $send = array();
-        $this->addRoleChanges($send);
-
-        return $send;
-    }
-
-    /**
-     * Edit the Users roles, using the given webhook data.
-     *
-     * @param array $send
-     *   The array to append the new user data.
-     */
-    private function addRoleChanges(&$send)
-    {
-        // Get the data from the AllPlayers webhook.
-        $data = $this->getData();
-
-        // Update the roles by negating the data sent in the webhook.
-        switch ($data['member']['role_name']) {
-            case 'Player':
-                $send['non_player'] = 1;
-                break;
-            case 'Admin':
-            case 'Manager':
-            case 'Coach':
-                $send['is_manager'] = 0;
-                break;
-            case 'Guardian':
-                // Ignore AllPlayers guardian changes.
-                $this->setSend(self::WEBHOOK_CANCEL);
-                break;
-        }
     }
 }
