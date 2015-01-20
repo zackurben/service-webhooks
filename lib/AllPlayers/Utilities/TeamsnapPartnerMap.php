@@ -439,7 +439,7 @@ class TeamsnapPartnerMap extends PartnerMap
      */
     public function setTeamId($id, $group)
     {
-        $this->partner_mapping->createPartnerMap(
+        $this->createPartnerMap(
             $id,
             PartnerMap::PARTNER_MAP_GROUP,
             $group,
@@ -458,7 +458,7 @@ class TeamsnapPartnerMap extends PartnerMap
     public function deleteEvent($event, $group)
     {
         // Delete the partner-mapping with an event UUID for the given group.
-        $this->partner_mapping->deletePartnerMap(
+        $this->deletePartnerMap(
             PartnerMap::PARTNER_MAP_EVENT,
             $event,
             $group

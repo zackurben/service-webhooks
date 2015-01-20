@@ -75,5 +75,11 @@ class PostWebhooks
                 $webhook->getWebhook()->processResponse($response);
             }
         }
+
+        $data = $webhook->getWebhook()->getAllplayersData();
+        if (isset($data['change_webhook']) && $data['change_webhook'] == 1) {
+            // Make a temporary job with modified contents to queue.
+            \AllPlayers\ResquePlugins\ChangeWebhookPlugin::queueJob($this->job, $data);
+        }
     }
 }
