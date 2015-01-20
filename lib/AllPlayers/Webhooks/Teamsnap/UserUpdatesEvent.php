@@ -7,7 +7,6 @@
 namespace AllPlayers\Webhooks\Teamsnap;
 
 use AllPlayers\Webhooks\ProcessInterface;
-use AllPlayers\Utilities\PartnerMap;
 use Guzzle\Http\Message\Response;
 
 /**
@@ -22,23 +21,28 @@ class UserUpdatesEvent extends SimpleWebhook implements ProcessInterface
     {
         parent::process();
 
-        // Stop processing if this webhook isn't being sent.
+        // Stop processing if this request isn't being sent.
         $send = $this->checkSend();
         if (!$send) {
             return;
         }
 
-        // Get the data from the AllPlayers webhook.
-        $data = $this->getData();
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getAllplayersData();
 
-        // Build the webhook payload.
-        $send = $this->updateTeamsnapEvent();
+        // Build the request payload.
+        $send = array();
+        $this->addEvent($send);
+        $this->addEventDescription($send);
+        $this->addEventLocation($send);
 
         // Determine if this is a game or an event.
-        if (isset($data['event']['competitor']) && !empty($data['event']['competitor'])) {
-            $this->finishGame($send);
+        if (isset($data['event']['competitor'])
+            && !empty($data['event']['competitor'])
+        ) {
+            $this->updateGame($send);
         } else {
-            $this->finishPractice($send);
+            $this->updatePractice($send);
         }
     }
 
@@ -54,176 +58,80 @@ class UserUpdatesEvent extends SimpleWebhook implements ProcessInterface
     }
 
     /**
-     * Build the webhook payload to update the event.
-     *
-     * @return array
-     *   The event data to send to update the TeamSnap event.
-     */
-    private function updateTeamsnapEvent()
-    {
-        // Get the original data sent from the AllPlayers webhook.
-        $data = $this->getOriginalData();
-
-        // Build the webhook payload.
-        $send = array(
-            'eventname' => $data['event']['title'],
-            'division_id' => $this->webhook->subscriber['division_id'],
-            'event_date_start' => $data['event']['start'],
-            'event_date_end' => $data['event']['end'],
-        );
-        $this->addLocation($send);
-        $this->addNotes($send);
-
-        return $send;
-    }
-
-    /**
-     * Add the TeamSnap LocationID to the event creation payload.
-     *
-     * @param array $send
-     *   The array to append new event data.
-     */
-    private function addLocation(&$send)
-    {
-        // Get the original data sent from the AllPlayers webhook.
-        $data = $this->getOriginalData();
-
-        // Make/get a location resource.
-        $location = $this->getLocationResource(
-            $data['group']['uuid'],
-            isset($data['event']['location']) ? $data['event']['location'] : null
-        );
-
-        $send['location_id'] = $location;
-    }
-
-    /**
-     * Add an event description to the event creation payload.
-     *
-     * @param array $send
-     *   The array to append new event data.
-     */
-    private function addNotes(&$send)
-    {
-        // Get the original data sent from the AllPlayers webhook.
-        $data = $this->getOriginalData();
-
-        // Add additional information to the payload.
-        if (isset($data['event']['description']) && !empty($data['event']['description'])) {
-            $send['notes'] = $data['event']['description'];
-        }
-    }
-
-    /**
-     * Add the scores of an event to the event creation payload, if present.
-     *
-     * @param $send
-     *   The array to append new event data.
-     * @param $group
-     *   The AllPlayers group that owns the event.
-     */
-    private function addScores(&$send, $group)
-    {
-        // Get the original data sent from the AllPlayers webhook.
-        $data = $this->getOriginalData();
-
-        // Get the score data from webhook.
-        $score = $this->getGameScores(
-            $group['uuid'],
-            $data['event']['competitor']
-        );
-
-        // Add additional information to the payload.
-        if (isset($score['score_for']) && !empty($score['score_for'])) {
-            $send['score_for'] = $score['score_for'];
-        }
-        if (isset($score['score_against']) && !empty($score['score_against'])) {
-            $send['score_against'] = $score['score_against'];
-        }
-        if (isset($score['home_or_away']) && !empty($score['home_or_away'])) {
-            $send['home_or_away'] = $score['home_or_away'];
-        }
-    }
-
-    /**
-     * Fetch and attach the TeamSnap OpponentID for the given team and opponent.
-     *
-     * @param $send
-     *   The array to append new event data.
-     * @param $team
-     *   The TeamSnap TeamID for the group.
-     * @param $opponent
-     *   The AllPlayers team to attach as the competitor.
-     */
-    private function addOpponent(&$send, $team, $opponent)
-    {
-        // Get the original data sent from the AllPlayers webhook.
-        $data = $this->getOriginalData();
-
-        $send['opponent_id'] = $this->getOpponentResource(
-            $opponent['uuid'],
-            $team,
-            $data['event']['competitor']
-        );
-    }
-
-    /**
      * Finish processing the event as a game for TeamSnap.
      *
      * @param $send
      *   The array to append new event data.
      */
-    private function finishGame(&$send)
+    private function updateGame(&$send)
     {
         // Get the original data sent from the AllPlayers webhook.
-        $data = $this->getOriginalData();
+        $data = $this->getAllplayersData();
 
+        // Store the core variables for each iteration of updating events.
         $original_domain = $this->domain;
         $original_send = $send;
 
+        // Iterate each available competitor and send a request to TeamSnap to
+        // update the mapping for each competitor to the game event.
         foreach ($data['event']['competitor'] as $group) {
-            // Get TeamID from the partner-mapping API.
-            $team = $this->partner_mapping->readPartnerMap(
-                PartnerMap::PARTNER_MAP_GROUP,
-                $group['uuid'],
-                $group['uuid']
-            );
-            $team = $team['external_resource_id'];
+            // Get the TeamID from the partner-mapping API.
+            $team = $this->partner_mapping->getTeamId($group['uuid']);
+            if (isset($team['external_resource_id'])) {
+                $team = $team['external_resource_id'];
+            } else {
+                // This can occur for a few reasons: The queue is backed up, the
+                // group webhook is being processed by another worker, or the team
+                // exists on TeamSnap but not in the partner-mapping API.
 
-            // Get EventID from the partner-mapping API.
-            $event = $this->partner_mapping->readPartnerMap(
-                PartnerMap::PARTNER_MAP_EVENT,
+                // TODO: If the team is null, requeue this webhook, for another
+                // TODO: attempt, and discard after maximum number of attempts.
+                // Skip this request because the Team was not found.
+                parent::setSend(parent::WEBHOOK_CANCEL);
+                return;
+            }
+
+            // Get the EventID from the partner-mapping API.
+            $event = $this->partner_mapping->getEventId(
                 $data['event']['uuid'],
                 $group['uuid']
             );
-            $event = $event['external_resource_id'];
-
-            // The event does not exist, cancel this webhook and create it.
-            if (!isset($event)) {
-                $this->createEvent();
+            if (isset($event['external_resource_id'])) {
+                $event = $event['external_resource_id'];
             } else {
-                // Attach the opponent for the event.
-                $this->addOpponent($send, $team, $group);
-
-                // Attach the scores to the event if they are present.
-                $this->addScores($send, $group);
-
-                // Update the request payload and send.
-                $this->domain = $original_domain . '/teams/' . $team
-                    . '/as_roster/'
-                    . $this->webhook->subscriber['commissioner_id']
-                    . '/games/' . $event;
-                $this->setData(array('game' => $send));
-                parent::put();
-                $this->send();
-
-                // Reset the temp variables for the next iteration.
-                $this->domain = $original_domain;
-                $send = $original_send;
+                // The event does not exist, cancel this webhook and create it.
+                $this->createEvent();
+                continue;
             }
+
+            // Attach the opponent for the event.
+            $this->addEventOpponent($send, $team, $group);
+
+            // Attach the scores to the event if they are present.
+            $this->addEventScores($send, $group);
+
+            // Update the domain to update our event.
+            $this->domain = $original_domain . '/teams/' . $team
+                . '/as_roster/'
+                . $this->webhook->subscriber['commissioner_id'] . '/games/'
+                . $event;
+
+            // Set the payload data.
+            $this->setRequestData(array('game' => $send));
+
+            // Update the request type.
+            parent::put();
+
+            // Manually send the request.
+            $this->send();
+
+            // Reset the temp variables for the next iteration.
+            $this->domain = $original_domain;
+            $send = $original_send;
         }
 
-        // Cancel the webhook for game events (manually processed).
+
+        // Cancel this primary request (manually processed).
         parent::setSend(parent::WEBHOOK_CANCEL);
     }
 
@@ -233,38 +141,50 @@ class UserUpdatesEvent extends SimpleWebhook implements ProcessInterface
      * @param $send
      *   The array to append new event data.
      */
-    private function finishPractice(&$send)
+    private function updatePractice(&$send)
     {
         // Get the original data sent from the AllPlayers webhook.
-        $data = $this->getOriginalData();
+        $data = $this->getAllplayersData();
 
-        // Get TeamID from the partner-mapping API.
-        $team = $this->partner_mapping->readPartnerMap(
-            PartnerMap::PARTNER_MAP_GROUP,
-            $data['group']['uuid'],
-            $data['group']['uuid']
-        );
-        $team = $team['external_resource_id'];
+        // Get the TeamID from the partner-mapping API.
+        $team = $this->partner_mapping->getTeamId($data['group']['uuid']);
+        if (isset($team['external_resource_id'])) {
+            $team = $team['external_resource_id'];
+        } else {
+            // This can occur for a few reasons: The queue is backed up, the
+            // group webhook is being processed by another worker, or the team
+            // exists on TeamSnap but not in the partner-mapping API.
+
+            // TODO: If the team is null, requeue this webhook, for another
+            // TODO: attempt, and discard after maximum number of attempts.
+            // Skip this request because the Team was not found.
+            parent::setSend(parent::WEBHOOK_CANCEL);
+            return;
+        }
 
         // Get EventID from the partner-mapping API.
-        $event = $this->partner_mapping->readPartnerMap(
-            PartnerMap::PARTNER_MAP_EVENT,
+        $event = $this->partner_mapping->getEventId(
             $data['event']['uuid'],
             $data['group']['uuid']
         );
-        $event = $event['external_resource_id'];
-
-        if (!isset($event)) {
-            // The event does not exist, cancel this webhook and create it.
-            $this->createEvent();
+        if (isset($event['external_resource_id'])) {
+            $event = $event['external_resource_id'];
         } else {
-            // Update the request and let PostWebhooks complete.
-            $this->domain .= '/teams/' . $team . '/as_roster/'
-                . $this->webhook->subscriber['commissioner_id']
-                . '/practices/' . $event;
-            $this->setData(array('practice' => $send));
-            parent::put();
+            // The event does not exist, cancel this request and create it.
+            $this->createEvent();
+            return;
         }
+
+        // Update the request and let PostWebhooks complete.
+        $this->domain .= '/teams/' . $team . '/as_roster/'
+            . $this->webhook->subscriber['commissioner_id'] . '/practices/'
+            . $event;
+
+        // Set the payload data.
+        $this->setRequestData(array('practice' => $send));
+
+        // Update the request type.
+        parent::put();
     }
 
     /**
@@ -273,26 +193,28 @@ class UserUpdatesEvent extends SimpleWebhook implements ProcessInterface
     private function createEvent()
     {
         // Get the original data sent from the AllPlayers webhook.
-        $data = $this->getOriginalData();
+        $data = $this->getAllplayersData();
 
-        // Stop the call PostWebhooks#send() because this is an
-        // incorrect webhook.
+        // Cancel this primary request, since we are manually changing it.
         $this->setSend(self::WEBHOOK_CANCEL);
 
-        // Create a UserCreatesEvent webhook with the contents given.
-        $temp_data = $data;
-        $temp_data['webhook_type'] = self::WEBHOOK_CREATE_EVENT;
+        // Manipulate the original webhook payload to be a
+        // user_creates_event webhook.
+        $data['webhook_type'] = self::WEBHOOK_CREATE_EVENT;
 
-        $temp = new \AllPlayers\Webhooks\Teamsnap\UserCreatesEvent(
+        // Create a new webhook to be manually processed.
+        $webhook = new UserCreatesEvent(
             array(),
-            $temp_data
+            $data
         );
-        $temp->process();
+        $webhook->process();
 
-        if ($temp->getSend() == self::WEBHOOK_SEND) {
-            $temp_response = $temp->send();
-            $temp->processResponse($temp_response);
-            $temp->setSend(self::WEBHOOK_CANCEL);
+        // Send the webhook if it hasn't been canceled and process the
+        // response.
+        if ($webhook->getSend() == self::WEBHOOK_SEND) {
+            $response = $webhook->send();
+            $webhook->processResponse($response);
+            $webhook->setSend(self::WEBHOOK_CANCEL);
         }
     }
 }
