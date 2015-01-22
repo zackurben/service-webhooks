@@ -18,11 +18,16 @@ class PostWebhooks
     {
         include __DIR__ . '/config/config.php';
 
-        if (!empty($config['redis_password']) && !empty($config['redis_host'])) {
-            $REDIS_BACKEND = 'redis://redis:' . $config['redis_password'] . '@' . $config['redis_host'];
+        if (!empty($config['redis_password'])
+            && !empty($config['redis_host'])
+        ) {
+            $REDIS_BACKEND = 'redis://redis:' . $config['redis_password'] . '@'
+                . $config['redis_host'];
             Resque::setBackend($REDIS_BACKEND);
         }
-        elseif (!empty($config['redis_host']) && empty($config['redis_password'])) {
+        elseif (!empty($config['redis_host'])
+            && empty($config['redis_password'])
+        ) {
             $REDIS_BACKEND = $config['redis_host'];
             Resque::setBackend($REDIS_BACKEND);
         }
@@ -52,7 +57,8 @@ class PostWebhooks
         $event_data = $this->args['event_data'];
 
         // Create a new WebhookProcessor for the given partner.
-        $classname = 'AllPlayers\\Webhooks\\' . $hook['name'] . '\\' . $hook['name'];
+        $classname = 'AllPlayers\\Webhooks\\' . $hook['name'] . '\\'
+            . $hook['name'];
         $webhook = new $classname(
             $subscriber['variables'],
             $event_data
@@ -76,10 +82,18 @@ class PostWebhooks
             }
         }
 
+        // Get the requests final data, to determine if we need to make a new
+        // webhook of a new tyoe.
         $data = $webhook->getWebhook()->getAllplayersData();
         if (isset($data['change_webhook']) && $data['change_webhook'] == 1) {
             // Make a temporary job with modified contents to queue.
-            \AllPlayers\ResquePlugins\ChangeWebhookPlugin::queueJob($this->job, $data);
+            \AllPlayers\ResquePlugins\AllplayersPlugin::queueJob(
+                $this->job,
+                $data
+            );
+        } elseif (isset($data['requeue']) && $data['requeue'] == 1) {
+            // Requeue this webhook because it was requested.
+            \AllPlayers\ResquePlugins\AllplayersPlugin::requeueJob($this->job);
         }
     }
 }
