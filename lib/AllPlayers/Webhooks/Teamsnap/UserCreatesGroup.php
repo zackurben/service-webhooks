@@ -7,7 +7,6 @@
 namespace AllPlayers\Webhooks\Teamsnap;
 
 use AllPlayers\Webhooks\ProcessInterface;
-use AllPlayers\Utilities\PartnerMap;
 use Guzzle\Http\Message\Response;
 
 /**
@@ -28,7 +27,7 @@ class UserCreatesGroup extends SimpleWebhook implements ProcessInterface
             return;
         }
 
-        // Only allow a user_creates_webhook to continue if the group does not
+        // Only allow a user_creates_group to continue if the group does not
         // already exist on TeamSnap.
         $send = $this->checkNotWebhookSync();
         if (!$send) {
@@ -44,13 +43,12 @@ class UserCreatesGroup extends SimpleWebhook implements ProcessInterface
         $this->addTeamRegion($send);
         $this->addTeamSport($send);
         $this->addTeamLogo($send);
-        $send = array('team' => $send);
 
         // Update the payload domain.
         $this->domain .= '/teams';
 
         // Set the payload data.
-        $this->setRequestData($send);
+        $this->setRequestData(array('team' => $send));
 
         // Update the request type.
         parent::post();
@@ -67,28 +65,10 @@ class UserCreatesGroup extends SimpleWebhook implements ProcessInterface
             return;
         }
 
-        // Cancel this primary request (manually processed).
-        $this->setSend(self::WEBHOOK_CANCEL);
-
-        // Manipulate the original webhook payload to be a
-        // user_updates_group webhook.
-        $data['webhook_type'] = self::WEBHOOK_ADD_ROLE;
+        // Change the type of this webhook and requeue it, to make the owner.
         $data['member']['role_name'] = 'Owner';
-
-        // Create a new webhook to be manually processed.
-        $webhook = new UserAddsRole(
-            array(),
-            $data
-        );
-        $webhook->process();
-
-        // Send the webhook if it hasn't been canceled and process the
-        // response.
-        if ($webhook->getSend() == self::WEBHOOK_SEND) {
-            $temp_response = $webhook->send();
-            $webhook->processResponse($temp_response);
-            $webhook->setSend(self::WEBHOOK_CANCEL);
-        }
+        $this->setAllplayersData($data);
+        $this->changeWebhook(self::WEBHOOK_ADD_ROLE);
     }
 
     /**
@@ -106,10 +86,8 @@ class UserCreatesGroup extends SimpleWebhook implements ProcessInterface
         $original_data = $this->getAllplayersData();
 
         // Associate an AllPlayers group UUID with a TeamSnap TeamID.
-        $this->partner_mapping->createPartnerMap(
+        $this->partner_mapping->setTeamId(
             $response['team']['id'],
-            PartnerMap::PARTNER_MAP_GROUP,
-            $original_data['group']['uuid'],
             $original_data['group']['uuid']
         );
     }
@@ -136,27 +114,8 @@ class UserCreatesGroup extends SimpleWebhook implements ProcessInterface
         // user_creates_group webhook; change to user_updates_group to ensure
         // the team information on TeamSnap is not stale.
         if (isset($team['external_resource_id'])) {
-            // Cancel this request from sending.
-            $this->setSend(self::WEBHOOK_CANCEL);
-
-            // Manipulate the original webhook payload to be a
-            // user_updates_group webhook.
-            $data['webhook_type'] = self::WEBHOOK_UPDATE_GROUP;
-
-            // Create a new webhook to be manually processed.
-            $webhook = new UserUpdatesGroup(
-                array(),
-                $data
-            );
-            $webhook->process();
-
-            // Send the webhook if it hasn't been canceled and process the
-            // response.
-            if ($webhook->getSend() == self::WEBHOOK_SEND) {
-                $response = $webhook->send();
-                $webhook->processResponse($response);
-                $webhook->setSend(self::WEBHOOK_CANCEL);
-            }
+            // Change the type of this webhook and requeue it.
+            $this->changeWebhook(self::WEBHOOK_UPDATE_GROUP);
 
             // Return false since this webhook was triggered by a webhook sync.
             return false;

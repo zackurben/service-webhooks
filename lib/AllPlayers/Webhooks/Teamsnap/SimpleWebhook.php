@@ -250,11 +250,12 @@ class SimpleWebhook extends Webhook
     ) {
         include __DIR__ . '/../../../../resque/config/config.php';
         if (isset($config['teamsnap'])) {
-            // Determing if we have a defined organization.
-            $org = isset($data['group']['organization_id'][0]) && array_key_exists(
-                $data['group']['organization_id'][0],
-                $config['teamsnap']
-            );
+            // Determine if we have a defined organization.
+            $org = isset($data['group']['organization_id'][0])
+                && array_key_exists(
+                    $data['group']['organization_id'][0],
+                    $config['teamsnap']
+                );
 
             // Define webhook specific variables for the organization.
             if ($org) {
@@ -461,7 +462,15 @@ class SimpleWebhook extends Webhook
 
         // Get TeamID from the partner-mapping API.
         $team = $this->partner_mapping->getTeamId($group);
-        $team = $team['external_resource_id'];
+        if (isset($team['external_resource_id'])) {
+            $team = $team['external_resource_id'];
+        } else {
+            // The team should be in the partner-mapping API before this point.
+            throw new \Exception(
+                'The given group is not present in the partner-mapping API: '
+                . $group
+            );
+        }
 
         // Get the LocationID for the event or the default LocationID for the
         // Team on TeamSnap.
@@ -641,7 +650,9 @@ class SimpleWebhook extends Webhook
                     $response = $this->getHelper()->processJsonResponse($response);
 
                     // If an Opponent resource was just created, map it here.
-                    if (isset($competitor['uuid']) && !empty($competitor['uuid'])) {
+                    if (isset($competitor['uuid'])
+                        && !empty($competitor['uuid'])
+                    ) {
                         // Associate an AllPlayers Group UUID with the
                         // Competitor UUID and its TeamSnap TeamID.
                         $this->partner_mapping->setOpponentId(
@@ -717,7 +728,7 @@ class SimpleWebhook extends Webhook
             $data['group']['uuid'],
             isset($data['event']['location'])
             ? $data['event']['location']
-            : null
+            : array()
         );
     }
 
@@ -788,7 +799,9 @@ class SimpleWebhook extends Webhook
         $data = $this->getAllplayersData();
 
         // Use the webform data.
-        $webform = $data['webform']['data'];
+        $webform = isset($data['webform']['data'])
+            ? $data['webform']['data']
+            : null;
 
         // Add address fields, if defined in the AllPlayers webform.
         if (isset($webform['profile__field_home_address_street__profile'])) {
@@ -823,7 +836,9 @@ class SimpleWebhook extends Webhook
         $data = $this->getAllplayersData();
 
         // Use the webform data.
-        $webform = $data['webform']['data'];
+        $webform = isset($data['webform']['data'])
+            ? $data['webform']['data']
+            : null;
 
         // Set the users birthday, if defined in the AllPlayers webform.
         if (isset($webform['profile__field_birth_date__profile'])) {
@@ -869,7 +884,9 @@ class SimpleWebhook extends Webhook
         $data = $this->getAllplayersData();
 
         // Use the webform data.
-        $webform = $data['webform']['data'];
+        $webform = isset($data['webform']['data'])
+            ? $data['webform']['data']
+            : null;
 
         // Set the users gender, if defined in the AllPlayers webform.
         if (isset($webform['profile__field_user_gender__profile'])) {
@@ -899,7 +916,9 @@ class SimpleWebhook extends Webhook
         $data = $this->getAllplayersData();
 
         // Use the webform data.
-        $webform = $data['webform']['data'];
+        $webform = isset($data['webform']['data'])
+            ? $data['webform']['data']
+            : null;
 
         // Update/Add the users First Name.
         if (isset($webform['profile__field_firstname__profile'])) {
@@ -934,7 +953,9 @@ class SimpleWebhook extends Webhook
         $data = $this->getAllplayersData();
 
         // Use the webform data.
-        $webform = $data['webform']['data'];
+        $webform = isset($data['webform']['data'])
+            ? $data['webform']['data']
+            : null;
 
         // Store phone numbers to add.
         $payload = array();
@@ -1210,20 +1231,24 @@ class SimpleWebhook extends Webhook
             if (isset($team['external_resource_id'])) {
                 $team = $team['external_resource_id'];
             } else {
-                $team = null;
+                // The team should be in the partner-mapping API before this
+                // point.
+                throw new \Exception(
+                    'The given group is not present in the partner-mapping API:'
+                    . ' ' . $original_data['group']['uuid']
+                );
             }
 
             // Build the request payload.
-            $send = array('rosters' => array($response['roster']['id']));
+            $send = array($response['roster']['id']);
 
             // Update the payload domain, to send an email invite.
-            $this->domain = 'https://api.teamsnap.com/v2/teams/'
-                . $team . '/as_roster/'
-                . $this->webhook->subscriber['commissioner_id']
+            $this->domain = 'https://api.teamsnap.com/v2/teams/' . $team
+                . '/as_roster/' . $this->webhook->subscriber['commissioner_id']
                 . '/invitations';
 
             // Set the payload data.
-            $this->setRequestData($send);
+            $this->setRequestData(array('rosters' => $send));
 
             // Update the request and send the TeamSnap account an invitation.
             parent::post();

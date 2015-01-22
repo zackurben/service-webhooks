@@ -75,8 +75,10 @@ class UserDeletesEvent extends SimpleWebhook implements ProcessInterface
             if (isset($team['external_resource_id'])) {
                 $team = $team['external_resource_id'];
             } else {
-                // Skip this request because the Team was not found.
-                continue;
+                // If the team is null, requeue this webhook, for another
+                // attempt, and discard after maximum number of attempts.
+                $this->requeueWebhook();
+                return;
             }
 
             // Get the EventID from the partner-mapping API.
@@ -123,8 +125,9 @@ class UserDeletesEvent extends SimpleWebhook implements ProcessInterface
         if (isset($team['external_resource_id'])) {
             $team = $team['external_resource_id'];
         } else {
-            // Skip this request because the Team was not found.
-            parent::setSend(parent::WEBHOOK_CANCEL);
+            // If the team is null, requeue this webhook, for another attempt,
+            // and discard after maximum number of attempts.
+            $this->requeueWebhook();
             return;
         }
 

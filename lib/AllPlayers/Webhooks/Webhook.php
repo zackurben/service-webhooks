@@ -660,4 +660,65 @@ class Webhook
             return null;
         }
     }
+
+    /**
+     * Change the payload of the current webhook and queue it.
+     *
+     * @param string $type
+     *   The supported type of webhook to change this to.
+     *
+     * @see WEBHOOK_CREATE_GROUP
+     * @see WEBHOOK_UPDATE_GROUP
+     * @see WEBHOOK_DELETE_GROUP
+     * @see WEBHOOK_ADD_ROLE
+     * @see WEBHOOK_REMOVE_ROLE
+     * @see WEBHOOK_ADD_SUBMISSION
+     * @see WEBHOOK_DELETE_USER
+     * @see WEBHOOK_CREATE_EVENT
+     * @see WEBHOOK_UPDATE_EVENT
+     * @see WEBHOOK_DELETE_EVENT
+     *
+     * @throws \Exception
+     */
+    public function changeWebhook($type)
+    {
+        // Cancel this webhook.
+        $this->setSend(self::WEBHOOK_CANCEL);
+
+        // Get the current data for the webhook.
+        $data = $this->getAllplayersData();
+
+        // Manipulate the original webhook payload to be the given type.
+        if (isset(Webhook::$classes[$type])) {
+            $data['webhook_type'] = $type;
+            $data['change_webhook'] = 1;
+            $this->setAllplayersData($data);
+            return;
+        } else {
+            throw new \Exception(
+                'Cannot change webhook; webhook type, ' . $type . ', not found.'
+            );
+        }
+    }
+
+    /**
+     * Requeue this webhook.
+     *
+     * Note: Used when the job should fail, but we want to requeue it and not
+     * spam the fail log with duplicates. Will requeue the webhook until the
+     * requeue limit is reached.
+     */
+    public function requeueWebhook()
+    {
+        // Cancel this webhook.
+        $this->setSend(self::WEBHOOK_CANCEL);
+
+        // Get the current data for the webhook.
+        $data = $this->getAllplayersData();
+
+        // Manipulate the original webhook payload to force the requeue.
+        $data['requeue'] = 1;
+        $this->setAllplayersData($data);
+        return;
+    }
 }

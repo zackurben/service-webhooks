@@ -35,9 +35,9 @@ class UserRemovedFromGroup extends SimpleWebhook implements ProcessInterface
         if (isset($team['external_resource_id'])) {
             $team = $team['external_resource_id'];
         } else {
-            // @TODO: We need to confirm this entity does not exist on TeamSnap.
-            // Skip this request because the Team was not found.
-            parent::setSend(parent::WEBHOOK_CANCEL);
+            // If the team is null, requeue this webhook, for another attempt,
+            // and discard after maximum number of attempts.
+            $this->requeueWebhook();
             return;
         }
 
@@ -49,7 +49,6 @@ class UserRemovedFromGroup extends SimpleWebhook implements ProcessInterface
         if (isset($roster['external_resource_id'])) {
             $roster = $roster['external_resource_id'];
         } else {
-            // @TODO: We need to confirm this entity does not exist on TeamSnap.
             // Skip this request because the User was not found.
             parent::setSend(parent::WEBHOOK_CANCEL);
             return;

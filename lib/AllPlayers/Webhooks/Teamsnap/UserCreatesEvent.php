@@ -28,7 +28,7 @@ class UserCreatesEvent extends SimpleWebhook implements ProcessInterface
         }
 
         // Get the original data sent from the AllPlayers webhook.
-        $data = $this->getRequestData();
+        $data = $this->getAllplayersData();
 
         // Build the request payload.
         $send = array();
@@ -91,18 +91,23 @@ class UserCreatesEvent extends SimpleWebhook implements ProcessInterface
                 $data['event']['uuid'],
                 $group['uuid']
             );
-            $event = $event['external_resource_id'];
-
-            // Skip creating this event because it already exists, it is not
-            // applicable to update here because the event was just made in
-            // another request (this is the other teams webhook event).
-            if (isset($event)) {
+            if (isset($event['external_resource_id'])) {
+                // Skip creating this event because it already exists, it is not
+                // applicable to update here because the event was just made in
+                // another request (this is the other teams webhook event).
                 continue;
             }
 
-            // Get TeamID from the partner-mapping API.
+            // Get the TeamID from the partner-mapping API.
             $team = $this->partner_mapping->getTeamId($group['uuid']);
-            $team = $team['external_resource_id'];
+            if (isset($team['external_resource_id'])) {
+                $team = $team['external_resource_id'];
+            } else {
+                // If the team is null, requeue this webhook, for another
+                // attempt, and discard after maximum number of attempts.
+                $this->requeueWebhook();
+                return;
+            }
 
             // Attach the opponent for the event.
             $this->addEventOpponent($send, $team, $group);
@@ -112,8 +117,7 @@ class UserCreatesEvent extends SimpleWebhook implements ProcessInterface
 
             // Update the domain to make a game event.
             $this->domain = $original_domain . '/teams/' . $team . '/as_roster/'
-                . $this->webhook->subscriber['commissioner_id']
-                . '/games';
+                . $this->webhook->subscriber['commissioner_id'] . '/games';
 
             // Set the payload data.
             $this->setRequestData(array('game' => $send));
@@ -152,14 +156,20 @@ class UserCreatesEvent extends SimpleWebhook implements ProcessInterface
         // Get the original data sent from the AllPlayers webhook.
         $data = $this->getAllplayersData();
 
-        // Get TeamID from the partner-mapping API.
+        // Get the TeamID from the partner-mapping API.
         $team = $this->partner_mapping->getTeamId($data['group']['uuid']);
-        $team = $team['external_resource_id'];
+        if (isset($team['external_resource_id'])) {
+            $team = $team['external_resource_id'];
+        } else {
+            // If the team is null, requeue this webhook, for another attempt,
+            // and discard after maximum number of attempts.
+            $this->requeueWebhook();
+            return;
+        }
 
         // Update the domain to make a practice event.
         $this->domain .= '/teams/' . $team . '/as_roster/'
-            . $this->webhook->subscriber['commissioner_id']
-            . '/practices';
+            . $this->webhook->subscriber['commissioner_id'] . '/practices';
 
         // Set the payload data.
         $this->setRequestData(array('practice' => $send));

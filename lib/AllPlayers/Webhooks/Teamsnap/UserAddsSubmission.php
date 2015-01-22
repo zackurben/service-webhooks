@@ -50,8 +50,10 @@ class UserAddsSubmission extends SimpleWebhook implements ProcessInterface
         if (isset($team['external_resource_id'])) {
             $team = $team['external_resource_id'];
         } else {
-            // @TODO: If the team is null, requeue this webhook.
-            $team = null;
+            // If the team is null, requeue this webhook, for another attempt,
+            // and discard after maximum number of attempts.
+            $this->requeueWebhook();
+            return;
         }
 
         // Build the request payload.
@@ -62,21 +64,19 @@ class UserAddsSubmission extends SimpleWebhook implements ProcessInterface
         $this->addRosterGender($send);
         $this->addRosterPhoneNumber($send);
         $this->addRosterAddress($send);
-        $send = array('roster' => $send);
 
         // Cancel this request if payload is empty.
-        if (empty($send['roster'])) {
+        if (empty($send)) {
             $this->setSend(Webhook::WEBHOOK_CANCEL);
             return;
         }
 
         // Update the payload domain.
         $this->domain .= '/teams/' . $team . '/as_roster/'
-            . $this->webhook->subscriber['commissioner_id']
-            . '/rosters';
+            . $this->webhook->subscriber['commissioner_id'] . '/rosters';
 
         // Set the payload data.
-        $this->setRequestData($send);
+        $this->setRequestData(array('roster' => $send));
 
         // Create/update partner-mapping information.
         if ($method == self::HTTP_POST) {

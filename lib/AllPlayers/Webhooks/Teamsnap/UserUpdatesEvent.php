@@ -80,14 +80,9 @@ class UserUpdatesEvent extends SimpleWebhook implements ProcessInterface
             if (isset($team['external_resource_id'])) {
                 $team = $team['external_resource_id'];
             } else {
-                // This can occur for a few reasons: The queue is backed up, the
-                // group webhook is being processed by another worker, or the team
-                // exists on TeamSnap but not in the partner-mapping API.
-
-                // TODO: If the team is null, requeue this webhook, for another
-                // TODO: attempt, and discard after maximum number of attempts.
-                // Skip this request because the Team was not found.
-                parent::setSend(parent::WEBHOOK_CANCEL);
+                // If the team is null, requeue this webhook, for another attempt,
+                // and discard after maximum number of attempts.
+                $this->requeueWebhook();
                 return;
             }
 
@@ -100,8 +95,8 @@ class UserUpdatesEvent extends SimpleWebhook implements ProcessInterface
                 $event = $event['external_resource_id'];
             } else {
                 // The event does not exist, cancel this webhook and create it.
-                $this->createEvent();
-                continue;
+                $this->changeWebhook(self::WEBHOOK_CREATE_EVENT);
+                return;
             }
 
             // Attach the opponent for the event.
@@ -111,8 +106,7 @@ class UserUpdatesEvent extends SimpleWebhook implements ProcessInterface
             $this->addEventScores($send, $group);
 
             // Update the domain to update our event.
-            $this->domain = $original_domain . '/teams/' . $team
-                . '/as_roster/'
+            $this->domain = $original_domain . '/teams/' . $team . '/as_roster/'
                 . $this->webhook->subscriber['commissioner_id'] . '/games/'
                 . $event;
 
@@ -151,14 +145,9 @@ class UserUpdatesEvent extends SimpleWebhook implements ProcessInterface
         if (isset($team['external_resource_id'])) {
             $team = $team['external_resource_id'];
         } else {
-            // This can occur for a few reasons: The queue is backed up, the
-            // group webhook is being processed by another worker, or the team
-            // exists on TeamSnap but not in the partner-mapping API.
-
-            // TODO: If the team is null, requeue this webhook, for another
-            // TODO: attempt, and discard after maximum number of attempts.
-            // Skip this request because the Team was not found.
-            parent::setSend(parent::WEBHOOK_CANCEL);
+            // If the team is null, requeue this webhook, for another attempt,
+            // and discard after maximum number of attempts.
+            $this->requeueWebhook();
             return;
         }
 
@@ -171,7 +160,7 @@ class UserUpdatesEvent extends SimpleWebhook implements ProcessInterface
             $event = $event['external_resource_id'];
         } else {
             // The event does not exist, cancel this request and create it.
-            $this->createEvent();
+            $this->changeWebhook(self::WEBHOOK_CREATE_EVENT);
             return;
         }
 
@@ -185,36 +174,5 @@ class UserUpdatesEvent extends SimpleWebhook implements ProcessInterface
 
         // Update the request type.
         parent::put();
-    }
-
-    /**
-     * Create an event rather than attempt to update a non-existant one.
-     */
-    private function createEvent()
-    {
-        // Get the original data sent from the AllPlayers webhook.
-        $data = $this->getAllplayersData();
-
-        // Cancel this primary request, since we are manually changing it.
-        $this->setSend(self::WEBHOOK_CANCEL);
-
-        // Manipulate the original webhook payload to be a
-        // user_creates_event webhook.
-        $data['webhook_type'] = self::WEBHOOK_CREATE_EVENT;
-
-        // Create a new webhook to be manually processed.
-        $webhook = new UserCreatesEvent(
-            array(),
-            $data
-        );
-        $webhook->process();
-
-        // Send the webhook if it hasn't been canceled and process the
-        // response.
-        if ($webhook->getSend() == self::WEBHOOK_SEND) {
-            $response = $webhook->send();
-            $webhook->processResponse($response);
-            $webhook->setSend(self::WEBHOOK_CANCEL);
-        }
     }
 }

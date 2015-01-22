@@ -35,15 +35,8 @@ class UserUpdatesGroup extends SimpleWebhook implements ProcessInterface
         if (isset($team['external_resource_id'])) {
             $team = $team['external_resource_id'];
         } else {
-            // This can occur for a few reasons: The queue is backed up, the
-            // group webhook is being processed by another worker, or the team
-            // exists on TeamSnap but not in the partner-mapping API.
-
-            // TODO: If the team is null, requeue this webhook, for another
-            // TODO: attempt, and discard after maximum number of attempts.
-            // Skip this request because the Team was not found.
-            parent::setSend(parent::WEBHOOK_CANCEL);
-            return;
+            // The group does not exist, cancel this request and create it.
+            $this->changeWebhook(self::WEBHOOK_CREATE_GROUP);
         }
 
         // Build the request payload.
