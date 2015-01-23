@@ -34,7 +34,7 @@ class QueuePlugin
     }
 
     /**
-     * Attempts to requeue a Resque job by accessing the requeue and limit vars.
+     * Attempts to requeue a job by accessing its requeue and limit state.
      *
      * @param Resque_Job $job
      *   The base job to requeue.

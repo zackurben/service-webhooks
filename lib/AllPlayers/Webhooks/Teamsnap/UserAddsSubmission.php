@@ -29,7 +29,7 @@ class UserAddsSubmission extends SimpleWebhook implements ProcessInterface
         }
 
         // Get the original data sent from the AllPlayers webhook.
-        $data = $this->getRequestData();
+        $data = $this->getAllplayersData();
 
         // Get the RosterID from partner-mapping API.
         $roster = $this->partner_mapping->getRosterId(

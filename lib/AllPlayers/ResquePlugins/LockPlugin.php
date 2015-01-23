@@ -25,7 +25,7 @@ class LockPlugin
      * @return bool
      *   If the job was acquired.
      *
-     * @throws \Exception
+     * @throws \Resque_Job_DontPerform
      */
     public static function beforePerform(Resque_Job $job)
     {
@@ -37,6 +37,7 @@ class LockPlugin
         } else {
             // Attempt to requeue this job.
             QueuePlugin::requeueJob($job);
+            throw new \Resque_Job_DontPerform;
         }
     }
 
