@@ -54,9 +54,6 @@ class AllplayersPlugin extends QueuePlugin
         // Remove requeue flag, to stop infinite loops.
         unset($job->payload['args'][0]['event_data']['requeue']);
 
-//        // Delete the old key before updating the key.
-//        LockPlugin::unlockJob($job);
-
         // Requeue the modified job.
         parent::requeueJob($job);
     }
@@ -123,6 +120,6 @@ class AllplayersPlugin extends QueuePlugin
     {
         // Update/add the requeue and limit variables.
         $job->payload['args'][0]['requeue'] = true;
-        $job->payload['args'][0]['limit'] = 2;
+        $job->payload['args'][0]['limit'] = 5;
     }
 }
