@@ -275,7 +275,8 @@ class Webhook
     ) {
         $this->webhook = new \stdClass();
         $this->setSubscriber($subscriber);
-        $this->setRequestData($data);
+        $this->setAllplayersData($data);
+        $this->setRequestData(array());
 
         $this->client = new Client($this->domain);
         if ($this->authentication != self::AUTHENTICATION_NONE) {
@@ -335,7 +336,7 @@ class Webhook
 
         // Get the send settings for the partner.
         if ($config_dev) {
-            $data = $this->getRequestData();
+            $data = $this->getAllplayersData();
             if (isset($data['group']['organization_id'][0]) && array_key_exists(
                 $data['group']['organization_id'][0],
                 $config[$webhook_processor]
@@ -410,6 +411,17 @@ class Webhook
     public function getSend()
     {
         return $this->send;
+    }
+
+    /**
+     * Get the subscriber for the webhook.
+     *
+     * @return array
+     *   The subscriber data from the Resque_Job.
+     */
+    public function getSubscriber()
+    {
+        return $this->webhook->subscriber;
     }
 
     /**
@@ -528,6 +540,20 @@ class Webhook
     }
 
     /**
+     * Set the authentication type.
+     *
+     * @param int $authentication
+     *
+     * @see AUTHENTICATION_NONE
+     * @see AUTHENTICATION_BASIC
+     * @see AUTHENTICATION_OAUTH
+     */
+    public function setAuthentication($authentication)
+    {
+        $this->authentication = $authentication;
+    }
+
+    /**
      * Wrapper function to redirect the request if testing is enabled.
      */
     protected function setDomain()
@@ -535,7 +561,9 @@ class Webhook
         include __DIR__ . '/../../../resque/config/config.php';
 
         // Redirect if we are in test env and we have a test domain.
-        if (isset($config['test_env'], $this->test_domain) && $config['test_env'] && $this->test_domain != '') {
+        if (isset($config['test_env'], $this->test_domain)
+            && $config['test_env'] && $this->test_domain != ''
+        ) {
             $this->webhook->request_data['original_url'] = $this->domain;
             $this->client->setBaseUrl($this->test_domain);
         } else {
@@ -647,7 +675,10 @@ class Webhook
                     array('Content-Type' => 'application/json'),
                     json_encode(
                         array(
-                            'Body' => json_decode($this->request->getBody(), true),
+                            'Body' => json_decode(
+                                $this->request->getBody(),
+                                true
+                            ),
                             'URL' => $this->request->getUrl(),
                         )
                     )

@@ -37,11 +37,6 @@ class TeamsnapTest extends WebhookTest
     public function testWebhookHelper()
     {
         $this->assertObjectHasAttribute('helper', $this->webhook);
-        $this->assertNotNull($this->webhook->getHelper());
-        $this->assertInstanceOf(
-            "AllPlayers\Utilities\Helper",
-            $this->webhook->getHelper()
-        );
     }
 
     /**
@@ -50,11 +45,6 @@ class TeamsnapTest extends WebhookTest
     public function testWebhookPartnerMap()
     {
         $this->assertObjectHasAttribute('partner_mapping', $this->webhook);
-        $this->assertNotNull($this->webhook->getPartnerMap());
-        $this->assertInstanceOf(
-            "AllPlayers\Utilities\PartnerMap",
-            $this->webhook->getPartnerMap()
-        );
     }
 
     /**
@@ -79,42 +69,6 @@ class TeamsnapTest extends WebhookTest
         $this->assertNotNull($obj['timezone']);
         $this->assertArrayHasKey('location', $obj);
         $this->assertNotNull($obj['location']);
-    }
-
-    /**
-     * Confirm that getGameScores() returns an array of results.
-     */
-    public function testWebhookGetGameScores()
-    {
-        // Test data.
-        $home_uuid = '00000000-0000-0000-0000-000000000000';
-        $home_score = 10;
-        $away_uuid = '10000000-0000-0000-0000-000000000000';
-        $away_score = 5;
-        $competitors = array(
-            array(
-                'uuid' => $home_uuid,
-                'label' => 'Home',
-                'score' => $home_score,
-            ),
-            array(
-                'uuid' => $away_uuid,
-                'label' => 'Away',
-                'score' => $away_score,
-            ),
-        );
-
-        $obj = $this->webhook->getGameScores($home_uuid, $competitors);
-
-        // Check the contents of the array returned from getGameScore().
-        $this->assertInternalType('array', $obj);
-        $this->assertArrayHasKey('score_for', $obj);
-        $this->assertEquals($home_score, $obj['score_for']);
-        $this->assertArrayHasKey('home_or_away', $obj);
-        // Check if the team is home.
-        $this->assertEquals(1, $obj['home_or_away']);
-        $this->assertArrayHasKey('score_against', $obj);
-        $this->assertEquals($away_score, $obj['score_against']);
     }
 
     /**

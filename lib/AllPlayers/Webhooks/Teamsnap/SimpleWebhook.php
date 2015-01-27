@@ -339,7 +339,7 @@ class SimpleWebhook extends Webhook
      * @return integer
      *   The SportID corresponding to the available sports on TeamSnap.
      */
-    protected function getSport($data)
+    public function getSport($data)
     {
         // Return the TeamSnap SportID or the 'Non-Sport Group' default.
         if (isset(self::$sports[$data])) {
@@ -358,7 +358,7 @@ class SimpleWebhook extends Webhook
      * @return array
      *   An associative keyed array with the location and timezone information.
      */
-    protected function getRegion($timezone)
+    public function getRegion($timezone)
     {
         // Calculate the users timezone from UTC.
         $user_timezone = timezone_offset_get(

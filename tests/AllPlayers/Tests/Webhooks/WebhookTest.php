@@ -27,7 +27,7 @@ class WebhookTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * Confirm that the webhook object has a reference to supported webhooks.
+     * Confirm public access to supported webhooks.
      */
     public function testWebhookClasses()
     {
@@ -37,7 +37,17 @@ class WebhookTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * Confirm that the webhook has a subscriber attribute and that it was set correctly.
+     * Confirm that the getWebhook function returns expected results.
+     */
+    public function testWebhookGetWebhook()
+    {
+        $this->assertObjectHasAttribute('webhook', $this->webhook);
+        $this->assertNotNull($this->webhook->getWebhook());
+        $this->assertInternalType('object', $this->webhook->getWebhook());
+    }
+
+    /**
+     * Confirm that the webhook has a subscriber.
      */
     public function testWebhookSubscriber()
     {
@@ -50,26 +60,54 @@ class WebhookTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * Confirm that the webhook has a data attribute and that it was set correctly.
+     * Confirm that we can manipulate the subscriber data.
      */
-    public function testWebhookData()
+    public function testWebhookSubscriberMutate()
+    {
+        // Dummy data to use.
+        $expected = array('test1', 'test2');
+
+        $this->webhook->setSubscriber($expected);
+        $this->assertEquals($expected, $this->webhook->getSubscriber());
+    }
+
+    /**
+     * Confirm that the webhook has request data.
+     */
+    public function testWebhookRequestData()
     {
         // The webhook data.
         $obj = $this->webhook->getWebhook();
 
-        $this->assertObjectHasAttribute('data', $obj);
-        $this->assertNotNull($obj->data);
-        $this->assertInternalType('array', $obj->data);
+        $this->assertObjectHasAttribute('request_data', $obj);
+        $this->assertNotNull($obj->request_data);
+        $this->assertInternalType('array', $obj->request_data);
     }
 
     /**
-     * Confirm that the webhook has an Guzzle Client and that it is initalized.
+     * Confirm that the webhook has allplayers data.
+     */
+    public function testWebhookAllplayersData()
+    {
+        // The webhook data.
+        $obj = $this->webhook->getWebhook();
+
+        $this->assertObjectHasAttribute('allplayers_data', $obj);
+        $this->assertNotNull($obj->allplayers_data);
+        $this->assertInternalType('array', $obj->allplayers_data);
+    }
+
+    /**
+     * Confirm that the webhook has an Guzzle Client and that it is initialized.
      */
     public function testWebhookClient()
     {
         $this->assertObjectHasAttribute('client', $this->webhook);
         $this->assertNotNull($this->webhook->getClient());
-        $this->assertInstanceOf("Guzzle\Http\Client", $this->webhook->getClient());
+        $this->assertInstanceOf(
+            'Guzzle\\Http\\Client',
+            $this->webhook->getClient()
+        );
     }
 
     /**
@@ -83,7 +121,7 @@ class WebhookTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * Confirm that the webhook has an enumerated value for the Authentication variable.
+     * Confirm that the webhook has an enumerated value for the Authentication.
      */
     public function testWebhookAuthentication()
     {
@@ -93,7 +131,7 @@ class WebhookTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * Confirm that the webhook has an enumerated value for the transmission method variable.
+     * Confirm that the webhook has an enumerated value for the transmission.
      */
     public function testWebhookMethod()
     {
@@ -116,7 +154,7 @@ class WebhookTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * Confirm that the api request has valid headers for a Guzzle request object.
+     * Confirm that the api request has valid headers for a Guzzle request.
      */
     public function testWebhookApiHeaders()
     {
@@ -139,8 +177,11 @@ class WebhookTest extends \PHPUnit_Framework_TestCase
         // The webhook request object.
         $request = $this->webhook->getRequest();
         $this->assertNotNull($request);
-        $this->assertInstanceOf("\Guzzle\Http\Message\EntityEnclosingRequest", $request);
-        $this->assertEquals($request->getMethod(), "POST");
+        $this->assertInstanceOf(
+            '\\Guzzle\\Http\\Message\\EntityEnclosingRequest',
+            $request
+        );
+        $this->assertEquals($request->getMethod(), 'POST');
     }
 
     /**
@@ -154,8 +195,11 @@ class WebhookTest extends \PHPUnit_Framework_TestCase
         // The webhook request object.
         $request = $this->webhook->getRequest();
         $this->assertNotNull($request);
-        $this->assertInstanceOf("\Guzzle\Http\Message\EntityEnclosingRequest", $request);
-        $this->assertEquals($request->getMethod(), "PUT");
+        $this->assertInstanceOf(
+            '\\Guzzle\\Http\\Message\\EntityEnclosingRequest',
+            $request
+        );
+        $this->assertEquals($request->getMethod(), 'PUT');
     }
 
     /**
@@ -169,8 +213,11 @@ class WebhookTest extends \PHPUnit_Framework_TestCase
         // The webhook request object.
         $request = $this->webhook->getRequest();
         $this->assertNotNull($request);
-        $this->assertInstanceOf("\Guzzle\Http\Message\EntityEnclosingRequest", $request);
-        $this->assertEquals($request->getMethod(), "DELETE");
+        $this->assertInstanceOf(
+            '\\Guzzle\\Http\\Message\\EntityEnclosingRequest',
+            $request
+        );
+        $this->assertEquals($request->getMethod(), 'DELETE');
     }
 
     /**
