@@ -319,9 +319,8 @@ class SimpleWebhook extends Webhook
      */
     public function process()
     {
-        // Set the original webhook data.
-        $data = $this->getRequestData();
-        $this->setAllplayersData($data);
+        // Get the original data sent from the AllPlayers webhook.
+        $data = $this->getAllplayersData();
 
         // Determine if the current webhook is for a Team, cancel it otherwise,
         // because TeamSnap does not currently support any hierarchy of groups.
